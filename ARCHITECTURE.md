@@ -47,13 +47,19 @@ Three rules, no exceptions:
 
 ## 3. File map
 
+This is the **target architecture**. Directories arrive with the phase that first needs them —
+[docs/ROADMAP.md](docs/ROADMAP.md) is the record of what is built today. A file that exists must
+appear here; a file here that does not yet exist is a commitment, not a lie.
+
 ```
 Fleeting/
 │
 ├── README.md                        ← product-facing overview (portfolio front door)
 ├── ARCHITECTURE.md                  ← you are here
 ├── CLAUDE.md                        ← working agreement for AI sessions
-├── .swiftlint.yml
+├── .swiftlint.yml                   ← incl. custom rules enforcing the Date() and cross-feature bans
+├── .swiftformat
+├── project.yml                      ← XcodeGen source of truth; *.xcodeproj is generated + gitignored
 ├── .github/workflows/ci.yml         ← build · test · lint on every push
 │
 ├── docs/
@@ -104,7 +110,8 @@ Fleeting/
 │   │       ├── Mapping/
 │   │       │   └── ThoughtEntity+Domain.swift ← entity ⇄ Core.Thought, in one file, both directions
 │   │       ├── Repositories/
-│   │       │   └── SwiftDataThoughtRepository.swift
+│   │       │   ├── SwiftDataThoughtRepository.swift
+│   │       │   └── InMemoryThoughtRepository.swift  ← previews and tests; no store required
 │   │       ├── Maintenance/
 │   │       │   └── ArchiveSweeper.swift      ← runs the decay engine, archives what expired
 │   │       └── Container/
@@ -129,12 +136,13 @@ Fleeting/
 │   │       │   ├── WriteUpPrompt.swift
 │   │       │   ├── NudgePrompt.swift         ← daily "you forgot about this" copy
 │   │       │   └── EscalationPrompt.swift    ← composes the prompt handed to Claude/ChatGPT
-│   │       └── Fallback/
-│   │           └── ResilientIntelligence.swift ← tries on-device, degrades to heuristic on failure
+│   │       ├── Fallback/
+│   │       │   └── ResilientIntelligence.swift ← tries on-device, degrades to heuristic on failure
+│   │       └── IntelligenceAvailability.swift  ← which implementation is answering, and why
 │   │
 │   ├── DesignSystem/                ← The app's visual vocabulary. No business logic.
 │   │   └── Sources/DesignSystem/
-│   │       ├── Tokens/              ← Color, Typography, Spacing, Radius, Motion
+│   │       ├── Tokens/              ← Palette, Typography, Spacing, Motion
 │   │       ├── Components/          ← ThoughtRow, FreshnessIndicator, CardStack, PrimaryButton
 │   │       └── Modifiers/
 │   │
@@ -149,6 +157,7 @@ Fleeting/
 │   │
 │   └── Notifications/               ← Scheduling and background composition of nudges.
 │       └── Sources/Notifications/
+│           ├── NudgeKind.swift                ← the three permitted notifications (ADR-0009)
 │           ├── NudgeScheduler.swift
 │           ├── BackgroundNudgeTask.swift     ← composes tomorrow's nudge with the on-device model
 │           └── PermissionCoordinator.swift   ← asks late and only in Settings, never on launch

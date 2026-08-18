@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  packages:
+    name: Packages — build and test
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test Core
+        run: swift test --package-path Packages/Core
+      - name: Build every other package
+        run: |
+          for package in DesignSystem Persistence Intelligence Notifications Features; do
+            echo "::group::$package"
+            swift build --package-path "Packages/$package"
+            echo "::endgroup::"
+          done
+
+  lint:
+    name: Lint and format
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install swiftlint swiftformat
+      - run: swiftlint --strict
+      - run: swiftformat --lint .
+
+  app:
+    name: App — iOS build
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Requires a runner image carrying Xcode 26. Until GitHub's images include it,
+      # this job is expected to fail on the hosted runners and passes locally only.
+      - run: brew install xcodegen
+      - run: xcodegen generate
+      - name: Build for iOS
+        run: |
+          xcodebuild build \
+            -project Fleeting.xcodeproj \
+            -scheme Fleeting \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO

@@ -1,6 +1,6 @@
+@testable import Core
 import Foundation
 import Testing
-@testable import Core
 
 @Suite("Thought")
 struct ThoughtTests {
@@ -22,7 +22,7 @@ struct ThoughtTests {
 
         clock.advance(days: 9)
 
-        #expect(thought.timeSinceLastAction(at: clock.now) == 9 * 86_400)
+        #expect(thought.timeSinceLastAction(at: clock.now) == 9 * 86400)
     }
 
     @Test("acting on a thought restores its freshness")

@@ -1,0 +1,55 @@
+included:
+  - App
+  - Packages
+
+excluded:
+  - "**/.build"
+
+disabled_rules:
+  - todo
+
+opt_in_rules:
+  - empty_count
+  - explicit_init
+  - first_where
+  - force_unwrapping
+  - implicitly_unwrapped_optional
+  - last_where
+  - modifier_order
+  - redundant_nil_coalescing
+  - toggle_bool
+  - unneeded_parentheses_in_closure_argument
+
+line_length:
+  warning: 110
+  error: 140
+  ignores_comments: false
+
+type_body_length:
+  warning: 200
+
+file_length:
+  warning: 300
+  error: 500
+
+identifier_name:
+  excluded: [id, up, to, at]
+
+# Architectural rules from CLAUDE.md, enforced rather than remembered.
+custom_rules:
+  injected_time:
+    name: "Injected time"
+    regex: '\bDate\(\)'
+    message: "Read time from an injected WallClock. Only SystemClock may call Date(). See CLAUDE.md."
+    severity: error
+    excluded:
+      - ".*WallClock\\.swift"
+      - ".*/Tests/.*"
+
+  no_cross_feature_import:
+    name: "Cross-feature import"
+    regex: '^import \w+Feature'
+    message: "Features must not import each other. Route through Core or the app layer."
+    severity: error
+    excluded:
+      - ".*/App/.*"

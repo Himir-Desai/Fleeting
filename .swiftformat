@@ -1,0 +1,13 @@
+--swiftversion 6.0
+--indent 4
+--maxwidth 110
+--wraparguments before-first
+--wrapparameters before-first
+--wrapcollections before-first
+--closingparen balanced
+--commas inline
+--self remove
+--stripunusedargs closure-only
+--emptybraces no-space
+--header ignore
+--exclude .build,Packages/*/.build

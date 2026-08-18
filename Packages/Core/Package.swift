@@ -1,4 +1,4 @@
-// swift-tools-version: 6.2
+// swift-tools-version: 6.0
 
 import PackageDescription
 
@@ -7,7 +7,7 @@ import PackageDescription
 /// and implemented by a package above it.
 let package = Package(
     name: "Core",
-    platforms: [.iOS(.v26), .macOS(.v26)],
+    platforms: [.iOS("26.0"), .macOS("14.0")],
     products: [
         .library(name: "Core", targets: ["Core"])
     ],

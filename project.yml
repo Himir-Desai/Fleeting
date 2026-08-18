@@ -1,0 +1,56 @@
+name: Fleeting
+
+options:
+  bundleIdPrefix: com.himirdesai
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    SWIFT_UPCOMING_FEATURE_EXISTENTIAL_ANY: YES
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    DEAD_CODE_STRIPPING: YES
+
+packages:
+  Core:
+    path: Packages/Core
+  DesignSystem:
+    path: Packages/DesignSystem
+  Persistence:
+    path: Packages/Persistence
+  Intelligence:
+    path: Packages/Intelligence
+  Notifications:
+    path: Packages/Notifications
+  Features:
+    path: Packages/Features
+
+targets:
+  Fleeting:
+    type: application
+    platform: iOS
+    sources:
+      - path: App
+    dependencies:
+      # The app target is the only place that may see every module at once:
+      # it is the composition root, and nothing else wires concrete types.
+      - package: Core
+      - package: DesignSystem
+      - package: Persistence
+      - package: Intelligence
+      - package: Notifications
+      - package: Features
+        product: CaptureFeature
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.himirdesai.Fleeting
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        TARGETED_DEVICE_FAMILY: "1"

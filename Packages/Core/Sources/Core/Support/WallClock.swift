@@ -13,7 +13,9 @@ public protocol WallClock: Sendable {
 ///
 /// This is the only type in the app permitted to construct a `Date` from the system clock.
 public struct SystemClock: WallClock {
-    public var now: Date { Date() }
+    public var now: Date {
+        Date()
+    }
 
     /// Creates a clock reading the system time.
     public init() {}
