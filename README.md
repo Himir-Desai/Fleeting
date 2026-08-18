@@ -13,6 +13,8 @@
 ![AI](https://img.shields.io/badge/AI-on--device%20Foundation%20Models-purple)
 ![Status](https://img.shields.io/badge/status-in%20development-yellow)
 
+[![CI](https://github.com/Himir-Desai/Fleeting/actions/workflows/ci.yml/badge.svg)](https://github.com/Himir-Desai/Fleeting/actions/workflows/ci.yml)
+
 </div>
 
 ---
@@ -185,8 +187,8 @@ Detail and acceptance criteria for each phase in **[docs/ROADMAP.md](docs/ROADMA
 
 | Phase | Name | Ships | Status |
 |---|---|---|---|
-| 0 | Foundations | Project, packages, CI, design tokens, docs | 🟡 In progress |
-| 1 | Capture | Launch-to-cursor, persistence, raw inbox | ⚪️ Planned |
+| 0 | Foundations | Project, packages, CI, design tokens, docs | 🟢 Done |
+| 1 | Capture | Launch-to-cursor, persistence, raw inbox | 🟡 In progress |
 | 2 | Decay | Freshness engine, visual fade, auto-archive, search | ⚪️ Planned |
 | 3 | Classification | Heuristic + on-device titling and typing, per-kind behaviour | ⚪️ Planned |
 | 4 | Sharpen | Interview flow, structured write-up, escalation | ⚪️ Planned |

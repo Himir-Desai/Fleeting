@@ -8,7 +8,7 @@ Status legend: ⚪️ planned · 🟡 in progress · 🟢 done
 
 ---
 
-## Phase 0 · Foundations 🟡
+## Phase 0 · Foundations 🟢
 
 Set up the skeleton the whole app hangs off, so no later phase has to stop and do infrastructure.
 
@@ -25,9 +25,21 @@ Set up the skeleton the whole app hangs off, so no later phase has to stop and d
 **Done when** — CI is green on a clean checkout; `swift test` passes in `Core` without a simulator;
 attempting to import `Persistence` from a `Features` target fails to compile.
 
+**Outcome.** All three met, and each was demonstrated rather than asserted:
+
+- CI green on the first run, all three jobs, including the iOS app build
+  ([run 32145278022](https://github.com/Himir-Desai/Fleeting/actions/runs/32145278022)).
+- `swift test --package-path Packages/Core` — 10 tests in ~1ms, no simulator.
+- Adding `import Persistence` to `CaptureFeature` failed with `no such module 'Persistence'`.
+- Beyond the criteria, two of CLAUDE.md's hard rules became custom SwiftLint rules; a probe file
+  containing `Date()` was rejected with the intended message.
+
+Local note: this Mac's Xcode has no iOS platform installed, so `xcodebuild` finds no destination
+here. CI proves it is a machine gap, not a project one.
+
 ---
 
-## Phase 1 · Capture ⚪️
+## Phase 1 · Capture 🟡
 
 The sacred path, and nothing else. If this phase is wrong, the app has no reason to exist.
 

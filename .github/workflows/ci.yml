@@ -38,8 +38,6 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-      # Requires a runner image carrying Xcode 26. Until GitHub's images include it,
-      # this job is expected to fail on the hosted runners and passes locally only.
       - run: brew install xcodegen
       - run: xcodegen generate
       - name: Build for iOS
