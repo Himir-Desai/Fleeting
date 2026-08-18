@@ -9,6 +9,11 @@ struct RootView: View {
     let environment: AppEnvironment
 
     var body: some View {
-        CaptureView()
+        CaptureView(
+            model: CaptureModel(
+                repository: environment.thoughts,
+                clock: environment.clock
+            )
+        )
     }
 }

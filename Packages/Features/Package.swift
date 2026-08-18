@@ -15,6 +15,7 @@ let package = Package(
         .package(path: "../DesignSystem")
     ],
     targets: [
-        .target(name: "CaptureFeature", dependencies: ["Core", "DesignSystem"])
+        .target(name: "CaptureFeature", dependencies: ["Core", "DesignSystem"]),
+        .testTarget(name: "CaptureFeatureTests", dependencies: ["CaptureFeature", "Core"])
     ]
 )

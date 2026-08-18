@@ -94,6 +94,11 @@ been used, explained, and answered back correctly.
 | Storage vs domain types, and why they differ | 🟡 | `StoredState`, `ThoughtEntity+Domain` |
 | `any` existentials vs generics | 🔴 | `AppEnvironment` — not yet explained |
 | Modules as the unit of architecture | 🟡 | six packages; layering proven by compiler error |
+| Why `mutating` + `async` cannot mix | 🟢 | proven by compiler; drove `CaptureModel` being a class |
+| `@Observable` and reference-type view state | 🟡 | `CaptureModel` |
+| `@State`, `@FocusState`, `$` bindings | 🟡 | `CaptureView` |
+| `some View` and result builders | 🟡 | `CaptureView.body` |
+| XCUITest as an architectural guard | 🟡 | `CapturePathTests` enforces ADR-0008 |
 
 Legend: 🟢 confident · 🟡 explained, not yet applied unaided · 🔴 explained, still shaky
 

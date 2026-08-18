@@ -150,6 +150,8 @@ Fleeting/
 │   ├── Features/                    ← One target per feature. Features never import each other.
 │   │   └── Sources/
 │   │       ├── CaptureFeature/      ← the sacred path: launch → cursor → save → clear
+│   │       │   ├── CaptureModel.swift   ← @Observable; the rules, unit-tested without a simulator
+│   │       │   └── CaptureView.swift    ← the field, autofocused; save sits in a safeAreaInset
 │   │       ├── InboxFeature/        ← the living list, sorted and faded by freshness
 │   │       ├── SharpenFeature/      ← interview → write-up → escalate
 │   │       ├── ReviewFeature/       ← the weekly capped card stack

@@ -85,6 +85,9 @@ flowchart LR
 ## Feature tour
 
 ### ✎ Capture — the only screen that matters
+
+<img src="docs/screenshots/capture.png" width="260" align="right" alt="The capture screen on cold launch: an empty field with the cursor already blinking and the keyboard already up." />
+
 Cold launch lands on a cursor. Type, hit save, the field clears and waits for the next one. No
 navigation, no decisions, no confirmation. Also reachable without unlocking, from a lock-screen
 widget, a Control Center control, and an App Intent so Siri can take dictation into it.
@@ -188,7 +191,7 @@ Detail and acceptance criteria for each phase in **[docs/ROADMAP.md](docs/ROADMA
 | Phase | Name | Ships | Status |
 |---|---|---|---|
 | 0 | Foundations | Project, packages, CI, design tokens, docs | 🟢 Done |
-| 1 | Capture | Launch-to-cursor, persistence, raw inbox | 🟡 In progress |
+| 1 | Capture | Launch-to-cursor, persistence, raw inbox | 🟡 Capture path done; inbox next |
 | 2 | Decay | Freshness engine, visual fade, auto-archive, search | ⚪️ Planned |
 | 3 | Classification | Heuristic + on-device titling and typing, per-kind behaviour | ⚪️ Planned |
 | 4 | Sharpen | Interview flow, structured write-up, escalation | ⚪️ Planned |

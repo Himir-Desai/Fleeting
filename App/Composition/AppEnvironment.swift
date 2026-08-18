@@ -14,15 +14,36 @@ final class AppEnvironment {
     /// Storage for captured thoughts.
     let thoughts: any ThoughtRepository
 
+    /// Whether the on-disk store failed to open and captures are being held in memory only.
+    ///
+    /// Surfaced quietly inside the app rather than at launch: a storage problem must never
+    /// stand between a cold launch and a focused field (ADR-0008).
+    let storageIsDegraded: Bool
+
     /// Creates the environment.
     /// - Parameters:
     ///   - clock: Time source. Defaults to the system clock.
-    ///   - thoughts: Thought storage. Defaults to an in-memory store until Phase 1 adds SwiftData.
-    init(
-        clock: any WallClock = SystemClock(),
-        thoughts: any ThoughtRepository = InMemoryThoughtRepository()
-    ) {
+    ///   - thoughts: Thought storage. Defaults to the on-disk SwiftData store, falling back to
+    ///     an in-memory store if it cannot be opened.
+    init(clock: any WallClock = SystemClock(), thoughts: (any ThoughtRepository)? = nil) {
         self.clock = clock
-        self.thoughts = thoughts
+        if let thoughts {
+            self.thoughts = thoughts
+            storageIsDegraded = false
+        } else {
+            let store = Self.openStore()
+            self.thoughts = store.repository
+            storageIsDegraded = store.degraded
+        }
+    }
+
+    /// Opens the on-disk store, degrading to memory rather than failing to launch.
+    /// - Returns: The repository to use, and whether it is the degraded in-memory one.
+    private static func openStore() -> (repository: any ThoughtRepository, degraded: Bool) {
+        do {
+            return try (SwiftDataThoughtRepository(modelContainer: ModelContainerFactory.store()), false)
+        } catch {
+            return (InMemoryThoughtRepository(), true)
+        }
     }
 }
