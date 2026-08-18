@@ -8,6 +8,9 @@ import Persistence
 /// is a change to this file alone.
 @MainActor
 final class AppEnvironment {
+    /// Launch argument that makes the app start from an empty store, used by the UI tests.
+    static let resetStoreArgument = "--reset-store"
+
     /// The time source injected into everything that decays.
     let clock: any WallClock
 
@@ -40,8 +43,10 @@ final class AppEnvironment {
     /// Opens the on-disk store, degrading to memory rather than failing to launch.
     /// - Returns: The repository to use, and whether it is the degraded in-memory one.
     private static func openStore() -> (repository: any ThoughtRepository, degraded: Bool) {
+        let reset = ProcessInfo.processInfo.arguments.contains(resetStoreArgument)
         do {
-            return try (SwiftDataThoughtRepository(modelContainer: ModelContainerFactory.store()), false)
+            let container = try ModelContainerFactory.store(resettingFirst: reset)
+            return (SwiftDataThoughtRepository(modelContainer: container), false)
         } catch {
             return (InMemoryThoughtRepository(), true)
         }

@@ -255,3 +255,30 @@ rung 2 onward code is written only after a design question is answered. Design r
 disciplined about going to the ADR log rather than into comments, which is where it belongs anyway.
 The phase order in the roadmap now serves double duty as a teaching sequence — and needs to keep
 doing so if phases are reordered.
+
+---
+
+## ADR-0012 · DesignSystem stays domain-free; domain-shaped views live in features
+
+**Status:** Accepted · Phase 1
+
+**Context.** ARCHITECTURE.md originally listed `ThoughtRow` among the shared components in
+`DesignSystem`. Building the inbox exposed the contradiction: `DesignSystem` declares no
+dependencies, so it cannot name a `Thought`.
+
+**Decision.** `DesignSystem` holds only domain-agnostic material — colour, type, spacing, motion,
+and components parameterised by primitives. Any view that takes a domain type lives in the feature
+that renders it. `ThoughtRow` therefore lives in `InboxFeature`.
+
+**Alternatives.**
+- *Let `DesignSystem` depend on `Core`* — allows a shared `ThoughtRow`, and is what the original
+  file map implied. Rejected: the design layer would then have opinions about the domain, and every
+  domain change would ripple into styling. The one genuinely shared piece, the freshness treatment,
+  can be expressed as a function of a `Double` rather than of a `Thought`.
+- *A third package between them* — a real option if several features later need the same row, but
+  premature with one consumer.
+
+**Consequences.** A row rendered by two features in future must either be duplicated or promoted
+deliberately. That is the intended pressure: duplication is visible, whereas a creeping dependency
+from design to domain is not. Phase 2's freshness indicator must be written to take a number, not
+a thought.

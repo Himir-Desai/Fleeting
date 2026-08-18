@@ -45,6 +45,8 @@ targets:
       - package: Notifications
       - package: Features
         product: CaptureFeature
+      - package: Features
+        product: InboxFeature
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.himirdesai.Fleeting

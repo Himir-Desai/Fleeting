@@ -11,11 +11,17 @@ import SwiftUI
 public struct CaptureView: View {
     @State private var model: CaptureModel
     @FocusState private var isFieldFocused: Bool
+    private let onBrowse: () -> Void
 
     /// Creates the capture screen.
-    /// - Parameter model: State and rules for capture, built by the composition root.
-    public init(model: CaptureModel) {
+    /// - Parameters:
+    ///   - model: State and rules for capture, built by the composition root.
+    ///   - onBrowse: Called when the user asks to see what they have already captured. Capture
+    ///     declares the intent; the app layer decides what it opens, because a feature may not
+    ///     import another feature.
+    public init(model: CaptureModel, onBrowse: @escaping () -> Void) {
         _model = State(initialValue: model)
+        self.onBrowse = onBrowse
     }
 
     public var body: some View {
@@ -45,6 +51,14 @@ public struct CaptureView: View {
         }
         .safeAreaInset(edge: .bottom) {
             HStack {
+                Button(action: onBrowse) {
+                    Image(systemName: "list.bullet")
+                }
+                .font(Typography.title)
+                .tint(Palette.inkMuted)
+                .accessibilityIdentifier("capture.browse")
+                .accessibilityLabel("Browse captured thoughts")
+
                 Spacer()
                 Button("Save") {
                     Task { await model.save() }
@@ -63,7 +77,10 @@ public struct CaptureView: View {
 }
 
 #Preview {
-    CaptureView(model: CaptureModel(repository: PreviewRepository(), clock: PreviewClock()))
+    CaptureView(
+        model: CaptureModel(repository: PreviewRepository(), clock: PreviewClock()),
+        onBrowse: {}
+    )
 }
 
 /// Storage that discards everything, so previews need no store.

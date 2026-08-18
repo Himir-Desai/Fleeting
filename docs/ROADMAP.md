@@ -39,7 +39,7 @@ here. CI proves it is a machine gap, not a project one.
 
 ---
 
-## Phase 1 · Capture 🟡
+## Phase 1 · Capture 🟢
 
 The sacred path, and nothing else. If this phase is wrong, the app has no reason to exist.
 
@@ -56,9 +56,21 @@ The sacred path, and nothing else. If this phase is wrong, the app has no reason
 **Done when** — the UI test asserting an unobstructed cold-launch capture path passes; thoughts
 survive a force-quit; capture works in Low Power Mode and with a cold store.
 
+**Outcome.** Met. 32 unit tests run in milliseconds with no simulator; 6 UI tests run on one.
+
+- `CapturePathTests` — cold launch reaches a focused field with the keyboard up, with no alert or
+  sheet before it. This is ADR-0008 in executable form.
+- `InboxTests` — a captured thought appears in the inbox, can be edited and deleted, and survives
+  `app.terminate()` followed by a relaunch against the existing store.
+- A failed save keeps the user's text rather than clearing the field, and a storage fault degrades
+  to an in-memory store instead of blocking launch.
+
+Deferred from this phase: an inbox screenshot for the README. Phase 2 replaces the row's timestamp
+with the freshness treatment, so any screenshot taken now would be stale within one phase.
+
 ---
 
-## Phase 2 · Decay ⚪️
+## Phase 2 · Decay 🟡
 
 Turn the list into something that prunes itself. This is the mechanic the app exists for.
 

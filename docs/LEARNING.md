@@ -98,7 +98,11 @@ been used, explained, and answered back correctly.
 | `@Observable` and reference-type view state | 🟡 | `CaptureModel` |
 | `@State`, `@FocusState`, `$` bindings | 🟡 | `CaptureView` |
 | `some View` and result builders | 🟡 | `CaptureView.body` |
-| XCUITest as an architectural guard | 🟡 | `CapturePathTests` enforces ADR-0008 |
+| XCUITest as an architectural guard | 🟢 | `CapturePathTests`, `InboxTests` |
+| Closures as dependency inversion (`onBrowse`) | 🟡 | capture cannot import inbox; app decides |
+| `List`, `ForEach`, `onDelete`, `NavigationLink` | 🟡 | `InboxView` |
+| `@Environment(\.dismiss)` and view-driven navigation | 🟡 | `ThoughtEditor` |
+| `OptionSet` for composable flags | 🟡 | `SpyRepository.Failures` in tests |
 
 Legend: 🟢 confident · 🟡 explained, not yet applied unaided · 🔴 explained, still shaky
 

@@ -144,7 +144,8 @@ Fleeting/
 │   ├── DesignSystem/                ← The app's visual vocabulary. No business logic.
 │   │   └── Sources/DesignSystem/
 │   │       ├── Tokens/              ← Palette, Typography, Spacing, Motion
-│   │       ├── Components/          ← ThoughtRow, FreshnessIndicator, CardStack, PrimaryButton
+│   │       ├── Components/          ← domain-AGNOSTIC only (ADR-0012): parameterised by
+│   │       │                          primitives, never by a Thought
 │   │       └── Modifiers/
 │   │
 │   ├── Features/                    ← One target per feature. Features never import each other.
@@ -153,6 +154,10 @@ Fleeting/
 │   │       │   ├── CaptureModel.swift   ← @Observable; the rules, unit-tested without a simulator
 │   │       │   └── CaptureView.swift    ← the field, autofocused; save sits in a safeAreaInset
 │   │       ├── InboxFeature/        ← the living list, sorted and faded by freshness
+│   │       │   ├── InboxModel.swift     ← @Observable; load, revise, delete
+│   │       │   ├── InboxView.swift      ← plain list; swipe to delete, tap to edit
+│   │       │   ├── ThoughtRow.swift     ← lives here, not DesignSystem (ADR-0012)
+│   │       │   └── ThoughtEditor.swift  ← edits raw text; commits only on save
 │   │       ├── SharpenFeature/      ← interview → write-up → escalate
 │   │       ├── ReviewFeature/       ← the weekly capped card stack
 │   │       ├── ArchiveFeature/      ← search the dead
@@ -173,7 +178,8 @@ Fleeting/
 └── Tests/                           ← ONLY cross-cutting tests. Unit tests live inside their own
     └── UITests/                        package (Packages/Core/Tests/CoreTests, and so on), so
         └── CapturePathTests.swift      `swift test` on one package runs its suite in isolation.
-                                     ← asserts launch → typing is unobstructed by any modal
+                                     ← CapturePathTests: launch → typing is unobstructed
+                                       InboxTests: browse, edit, delete, survive a force-quit
 ```
 
 ## 4. Where do I add…?

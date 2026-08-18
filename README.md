@@ -191,8 +191,8 @@ Detail and acceptance criteria for each phase in **[docs/ROADMAP.md](docs/ROADMA
 | Phase | Name | Ships | Status |
 |---|---|---|---|
 | 0 | Foundations | Project, packages, CI, design tokens, docs | 🟢 Done |
-| 1 | Capture | Launch-to-cursor, persistence, raw inbox | 🟡 Capture path done; inbox next |
-| 2 | Decay | Freshness engine, visual fade, auto-archive, search | ⚪️ Planned |
+| 1 | Capture | Launch-to-cursor, persistence, raw inbox | 🟢 Done |
+| 2 | Decay | Freshness engine, visual fade, auto-archive, search | 🟡 In progress |
 | 3 | Classification | Heuristic + on-device titling and typing, per-kind behaviour | ⚪️ Planned |
 | 4 | Sharpen | Interview flow, structured write-up, escalation | ⚪️ Planned |
 | 5 | Review | Curated card stack, ambient sharpening | ⚪️ Planned |
