@@ -34,16 +34,22 @@ jobs:
       - run: swiftformat --lint .
 
   app:
-    name: App — iOS build
+    name: App — build and UI test
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       - run: brew install xcodegen
       - run: xcodegen generate
-      - name: Build for iOS
+      # Runs the UI tests, not just a build. CapturePathTests is the executable form of
+      # ADR-0008 -- a guard that only runs locally is a guard nobody enforces.
+      - name: Test on a simulator
         run: |
-          xcodebuild build \
+          set -eo pipefail
+          NAME=$(xcrun simctl list devices available \
+                 | grep -oE '^ +iPhone [^(]+' | head -1 | sed 's/^ *//;s/ *$//')
+          echo "Testing on: $NAME"
+          xcodebuild test \
             -project Fleeting.xcodeproj \
             -scheme Fleeting \
-            -destination 'generic/platform=iOS' \
+            -destination "platform=iOS Simulator,name=$NAME" \
             CODE_SIGNING_ALLOWED=NO
