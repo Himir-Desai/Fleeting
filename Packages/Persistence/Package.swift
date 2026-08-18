@@ -13,6 +13,7 @@ let package = Package(
         .package(path: "../Core")
     ],
     targets: [
-        .target(name: "Persistence", dependencies: ["Core"])
+        .target(name: "Persistence", dependencies: ["Core"]),
+        .testTarget(name: "PersistenceTests", dependencies: ["Persistence", "Core"])
     ]
 )

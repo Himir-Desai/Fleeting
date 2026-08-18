@@ -35,13 +35,16 @@ public struct Thought: Identifiable, Equatable, Sendable {
     ///   - kind: What the thought is. Defaults to `.unsorted`, since classification is deferred.
     ///   - state: Lifecycle position. Defaults to `.inbox`.
     ///   - title: A generated title, if one already exists.
+    ///   - lastActedAt: When the thought was last acted on. Defaults to `capturedAt`, which is
+    ///     correct for a new capture; storage passes the stored value to reconstitute a thought.
     public init(
         id: UUID = UUID(),
         body: String,
         capturedAt: Date,
         kind: ThoughtKind = .unsorted,
         state: ThoughtState = .inbox,
-        title: String? = nil
+        title: String? = nil,
+        lastActedAt: Date? = nil
     ) {
         self.id = id
         self.body = body
@@ -49,7 +52,7 @@ public struct Thought: Identifiable, Equatable, Sendable {
         self.kind = kind
         self.state = state
         self.title = title
-        lastActedAt = capturedAt
+        self.lastActedAt = lastActedAt ?? capturedAt
     }
 
     /// Replaces the captured text with a user-supplied revision, and counts as deliberate action.

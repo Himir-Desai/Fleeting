@@ -104,11 +104,12 @@ Fleeting/
 │   │
 │   ├── Persistence/                 ← SwiftData + CloudKit. The only module that knows about storage.
 │   │   └── Sources/Persistence/
+│   │       ├── PersistenceError.swift    ← failures the store reports to the domain
 │   │       ├── Schema/
 │   │       │   ├── ThoughtEntity.swift      ← @Model; CloudKit-safe (all attrs optional/defaulted)
 │   │       │   └── SchemaV1.swift           ← versioned schema + migration plan
 │   │       ├── Mapping/
-│   │       │   └── ThoughtEntity+Domain.swift ← entity ⇄ Core.Thought, in one file, both directions
+│   │       │   └── ThoughtEntity+Domain.swift ← entity ⇄ Core.Thought + StoredState, both directions
 │   │       ├── Repositories/
 │   │       │   ├── SwiftDataThoughtRepository.swift
 │   │       │   └── InMemoryThoughtRepository.swift  ← previews and tests; no store required
@@ -167,12 +168,10 @@ Fleeting/
 │   ├── FreshnessWidget/             ← inbox count and the oldest fading thought
 │   └── Intents/                     ← AppIntent so Siri and Shortcuts can capture
 │
-└── Tests/                           ← Each package owns its tests; this holds cross-cutting ones
-    ├── CoreTests/                   ← decay engine and review selector, against a fake clock
-    ├── PersistenceTests/            ← in-memory SwiftData container round-trips
-    ├── IntelligenceTests/           ← prompt shaping and fallback behaviour, no live model
-    └── UITests/
-        └── CapturePathTests.swift   ← asserts launch → typing is unobstructed by any modal
+└── Tests/                           ← ONLY cross-cutting tests. Unit tests live inside their own
+    └── UITests/                        package (Packages/Core/Tests/CoreTests, and so on), so
+        └── CapturePathTests.swift      `swift test` on one package runs its suite in isolation.
+                                     ← asserts launch → typing is unobstructed by any modal
 ```
 
 ## 4. Where do I add…?

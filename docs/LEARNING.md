@@ -87,7 +87,11 @@ been used, explained, and answered back correctly.
 | Argument labels and default parameter values | 🟡 | `Thought.init` |
 | Swift Testing (`@Suite`, `@Test`, `#expect`, `arguments:`) | 🟡 | `ThoughtTests` |
 | `Sendable` and Swift 6 strict concurrency | 🔴 | flagged only — earns its keep in Phase 3 |
-| `actor` for serialised mutable state | 🔴 | `InMemoryThoughtRepository` — not yet explained |
+| `actor` for serialised mutable state | 🟡 | `SwiftDataThoughtRepository` via `@ModelActor` |
+| `guard let` / early return | 🟡 | `SwiftDataThoughtRepository.update` |
+| KeyPath shorthand (`map(\.domain)`) | 🟡 | repository fetches |
+| Macros in practice (`@Model`, `#Predicate`) | 🟡 | `ThoughtEntity`, entity lookup |
+| Storage vs domain types, and why they differ | 🟡 | `StoredState`, `ThoughtEntity+Domain` |
 | `any` existentials vs generics | 🔴 | `AppEnvironment` — not yet explained |
 | Modules as the unit of architecture | 🟡 | six packages; layering proven by compiler error |
 
