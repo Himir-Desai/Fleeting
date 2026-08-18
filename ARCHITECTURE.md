@@ -94,8 +94,7 @@ Fleeting/
 │   │       │   ├── IntelligenceService.swift← implemented by Intelligence
 │   │       │   └── NudgeScheduling.swift    ← implemented by Notifications
 │   │       └── Support/
-│   │           ├── Clock.swift              ← injected time; makes decay deterministic in tests
-│   │           └── Identified.swift
+│   │           └── WallClock.swift          ← injected time; makes decay deterministic in tests
 │   │
 │   ├── Persistence/                 ← SwiftData + CloudKit. The only module that knows about storage.
 │   │   └── Sources/Persistence/
@@ -190,8 +189,8 @@ comment justifying it.
 dependencies as protocols. Views hold no business logic and read no globals — everything arrives
 through the initialiser or the environment.
 
-**Time.** Nothing calls `Date()` directly outside the composition root. Anything time-dependent takes
-a `Clock` from `Core/Support`. This is what makes the decay engine testable in milliseconds.
+**Time.** Nothing calls `Date()` anywhere but `SystemClock`. Anything time-dependent takes
+a `WallClock` from `Core/Support`. This is what makes the decay engine testable in milliseconds.
 
 **Intelligence is always optional.** Every call into `IntelligenceService` must have a defined
 behaviour when the model is unavailable, slow, or wrong. `ResilientIntelligence` handles the

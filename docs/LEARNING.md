@@ -79,7 +79,14 @@ been used, explained, and answered back correctly.
 
 | Concept | Status | Covered in |
 |---|---|---|
-| *(nothing yet — Phase 0 not started)* | | |
+| Value vs reference semantics (`struct` / `class`) | 🟡 | `Thought`, `SystemClock`, `TestClock` |
+| Enums with associated values as sum types | 🟡 | `ThoughtState` |
+| Optionals as encoded absence | 🟡 | `Thought.title`, `ThoughtState.enteredAt` |
+| `private(set)` + `mutating` to protect an invariant | 🟡 | `Thought.body`, `Thought.lastActedAt` |
+| Protocols as capability, not inheritance | 🟡 | `WallClock` |
+| Argument labels and default parameter values | 🟡 | `Thought.init` |
+| Swift Testing (`@Suite`, `@Test`, `#expect`, `arguments:`) | 🟡 | `ThoughtTests` |
+| `Sendable` and Swift 6 strict concurrency | 🔴 | flagged only — earns its keep in Phase 3 |
 
 Legend: 🟢 confident · 🟡 explained, not yet applied unaided · 🔴 explained, still shaky
 

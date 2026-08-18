@@ -31,7 +31,7 @@ The docs are maintained continuously, without being asked:
 - **Decay never deletes.** Expiry archives; only an explicit human action destroys anything.
 - **Intelligence is always optional.** Every AI call needs a defined behaviour when the model is
   missing, slow, or wrong. Implement new capabilities in all three implementations.
-- **Never call `Date()` outside the composition root.** Inject `Clock`.
+- **Never call `Date()` anywhere but `SystemClock`.** Inject `WallClock`.
 
 ## Teaching is part of the job
 The developer is fluent in other languages and new to Swift. **[docs/LEARNING.md](docs/LEARNING.md)
