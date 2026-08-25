@@ -282,3 +282,32 @@ that renders it. `ThoughtRow` therefore lives in `InboxFeature`.
 deliberately. That is the intended pressure: duplication is visible, whereas a creeping dependency
 from design to domain is not. Phase 2's freshness indicator must be written to take a number, not
 a thought.
+
+---
+
+## ADR-0013 · Linear decay with a grace period, and snooze stops the clock
+
+**Status:** Accepted · Phase 2
+
+**Context.** ARCHITECTURE.md originally described the decay profile as a per-kind *half-life*, which
+implies exponential decay. Implementing it exposed two problems.
+
+**Decision.** Freshness falls **linearly** from 1 to 0 over a fixed lifetime, after a grace period
+at full freshness. The standard policy is two days of grace then a slide to expiry at thirty days.
+A snoozed thought is held at full freshness until its snooze ends, so decay is measured from
+`max(lastActedAt, snoozedUntil)`.
+
+**Alternatives.**
+- *Exponential half-life* — the original plan, and the more natural model of forgetting. Rejected on
+  two grounds: it never actually reaches zero, so archiving needs an arbitrary cutoff anyway; and it
+  cannot answer "when does this archive?" with a date. "Archives tomorrow" is the single most useful
+  thing the row can say, and linear decay makes it exactly true.
+- *No grace period* — simpler, but every capture would begin visibly dying the instant it was
+  written, which reads as punishment rather than as a signal.
+- *Snooze merely hides the thought* — much simpler, but a thought snoozed for a week would return
+  a week closer to death, so snoozing would quietly cost you time instead of buying it.
+
+**Consequences.** `FreshnessPolicy` carries `grace` and `lifetime` rather than a half-life, and
+`expiryDate(of:)` is exact rather than an estimate. Per-kind rates in Phase 3 become two numbers per
+kind instead of one. A degenerate policy where grace equals lifetime is clamped to a hard cliff at
+expiry rather than dividing by zero.

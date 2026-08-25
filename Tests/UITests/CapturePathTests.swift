@@ -147,3 +147,86 @@ final class InboxTests: XCTestCase {
         )
     }
 }
+
+/// Covers Phase 2: decay archives rather than deletes, and the archive stays reachable.
+@MainActor
+final class ArchiveTests: XCTestCase {
+    override func setUp() {
+        continueAfterFailure = false
+    }
+
+    private func launch(resetting: Bool = true) -> XCUIApplication {
+        let app = XCUIApplication()
+        app.launchArguments = resetting ? ["--reset-store"] : []
+        app.launch()
+        return app
+    }
+
+    private func capture(_ text: String, in app: XCUIApplication) {
+        let field = app.descendants(matching: .any)["capture.field"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap()
+        field.typeText(text)
+        app.buttons["capture.save"].tap()
+    }
+
+    func testTheArchiveIsReachableAndStartsEmpty() {
+        let app = launch()
+        _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 5)
+
+        app.buttons["capture.browse"].tap()
+        XCTAssertTrue(app.buttons["inbox.archive"].waitForExistence(timeout: 5))
+        app.buttons["inbox.archive"].tap()
+
+        XCTAssertTrue(app.staticTexts["archive.empty"].waitForExistence(timeout: 5))
+    }
+
+    func testArchivingMovesAThoughtOutOfTheInboxWithoutDestroyingIt() {
+        let thought = "an idea whose time has passed"
+        let app = launch()
+        capture(thought, in: app)
+
+        app.buttons["capture.browse"].tap()
+        XCTAssertTrue(app.staticTexts[thought].waitForExistence(timeout: 5))
+
+        app.staticTexts[thought].swipeLeft()
+        XCTAssertTrue(app.buttons["Archive"].waitForExistence(timeout: 5))
+        app.buttons["Archive"].tap()
+
+        XCTAssertTrue(
+            app.staticTexts["inbox.empty"].waitForExistence(timeout: 5),
+            "An archived thought must leave the inbox."
+        )
+
+        app.buttons["inbox.archive"].tap()
+        XCTAssertTrue(
+            app.staticTexts[thought].waitForExistence(timeout: 5),
+            "Archiving must never destroy the thought."
+        )
+    }
+
+    func testAnArchivedThoughtCanBeRestoredToTheInbox() {
+        let thought = "worth another look"
+        let app = launch()
+        capture(thought, in: app)
+
+        app.buttons["capture.browse"].tap()
+        XCTAssertTrue(app.staticTexts[thought].waitForExistence(timeout: 5))
+        app.staticTexts[thought].swipeLeft()
+        app.buttons["Archive"].tap()
+        XCTAssertTrue(app.staticTexts["inbox.empty"].waitForExistence(timeout: 5))
+
+        app.buttons["inbox.archive"].tap()
+        XCTAssertTrue(app.staticTexts[thought].waitForExistence(timeout: 5))
+        app.staticTexts[thought].swipeRight()
+        XCTAssertTrue(app.buttons["Restore"].waitForExistence(timeout: 5))
+        app.buttons["Restore"].tap()
+
+        XCTAssertTrue(app.staticTexts["archive.empty"].waitForExistence(timeout: 5))
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        XCTAssertTrue(
+            app.staticTexts[thought].waitForExistence(timeout: 5),
+            "A restored thought must return to the inbox."
+        )
+    }
+}

@@ -13,11 +13,15 @@ public actor SwiftDataThoughtRepository: ThoughtRepository {
         try modelContext.save()
     }
 
-    public func all() async throws -> [Thought] {
-        let descriptor = FetchDescriptor<ThoughtEntity>(
-            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
-        )
-        return try modelContext.fetch(descriptor).map(\.domain)
+    public func thoughts(in scope: ThoughtScope) async throws -> [Thought] {
+        try fetch(scope: scope, query: nil)
+    }
+
+    /// Matches the query inside the store rather than in memory, so the archive stays searchable
+    /// as it grows.
+    public func search(_ query: String, in scope: ThoughtScope) async throws -> [Thought] {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        return try fetch(scope: scope, query: trimmed.isEmpty ? nil : trimmed)
     }
 
     public func update(_ thought: Thought) async throws {
@@ -34,6 +38,47 @@ public actor SwiftDataThoughtRepository: ThoughtRepository {
         }
         modelContext.delete(entity)
         try modelContext.save()
+    }
+
+    /// Fetches rows matching a scope and an optional text query.
+    /// - Parameters:
+    ///   - scope: Which part of the collection to read.
+    ///   - query: Text the raw captured body must contain, or `nil` for no text filter.
+    /// - Returns: Matching thoughts, newest capture first.
+    private func fetch(scope: ThoughtScope, query: String?) throws -> [Thought] {
+        let descriptor = FetchDescriptor<ThoughtEntity>(
+            predicate: Self.predicate(scope: scope, query: query),
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
+        )
+        return try modelContext.fetch(descriptor).map(\.domain)
+    }
+
+    /// Builds the store predicate for a scope and optional text query.
+    ///
+    /// Written as one explicit predicate per combination rather than a single composed boolean.
+    /// SwiftData compiles these to SQL, and a composed expression mixing captured booleans with a
+    /// collection membership test crashes that compiler.
+    /// - Parameters:
+    ///   - scope: Which part of the collection to read.
+    ///   - query: Text the raw captured body must contain, or `nil` for no text filter.
+    /// - Returns: The predicate, or `nil` when nothing needs filtering.
+    private static func predicate(scope: ThoughtScope, query: String?) -> Predicate<ThoughtEntity>? {
+        let live = StoredState.liveRawValues
+
+        switch (scope, query) {
+        case (.all, .none):
+            return nil
+        case let (.all, .some(text)):
+            return #Predicate { $0.body.localizedStandardContains(text) }
+        case (.live, .none):
+            return #Predicate { live.contains($0.stateRaw) }
+        case let (.live, .some(text)):
+            return #Predicate { live.contains($0.stateRaw) && $0.body.localizedStandardContains(text) }
+        case (.archived, .none):
+            return #Predicate { !live.contains($0.stateRaw) }
+        case let (.archived, .some(text)):
+            return #Predicate { !live.contains($0.stateRaw) && $0.body.localizedStandardContains(text) }
+        }
     }
 
     /// Fetches the row for an identity.

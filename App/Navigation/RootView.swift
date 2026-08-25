@@ -1,3 +1,4 @@
+import ArchiveFeature
 import CaptureFeature
 import Core
 import InboxFeature
@@ -6,12 +7,13 @@ import SwiftUI
 /// The app's root view.
 ///
 /// Capture is the root, not a destination reached from one, so no screen can precede the field.
-/// This is also the only place that knows both features exist: capture asks to browse, and the
-/// app decides that browsing means the inbox.
+/// This is also the only place that knows every feature exists: capture asks to browse and the
+/// inbox asks for the archive, and the app decides what each of those means.
 struct RootView: View {
     let environment: AppEnvironment
 
     @State private var isBrowsing = false
+    @State private var isShowingArchive = false
 
     var body: some View {
         CaptureView(
@@ -26,10 +28,23 @@ struct RootView: View {
                 InboxView(
                     model: InboxModel(
                         repository: environment.thoughts,
+                        sweeper: environment.sweeper,
+                        engine: environment.engine,
                         clock: environment.clock
-                    )
+                    ),
+                    onOpenArchive: { isShowingArchive = true }
                 )
+                .navigationDestination(isPresented: $isShowingArchive) {
+                    ArchiveView(
+                        model: ArchiveModel(
+                            repository: environment.thoughts,
+                            clock: environment.clock
+                        )
+                    )
+                }
             }
         }
+        // Runs after the field is on screen, never before it.
+        .task { await environment.prepare() }
     }
 }

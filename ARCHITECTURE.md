@@ -90,13 +90,14 @@ Fleeting/
 │   │       │   ├── Sharpening.swift         ← interview questions, answers, write-up
 │   │       │   └── Streak.swift             ← habit-specific payload
 │   │       ├── Decay/
-│   │       │   ├── Freshness.swift          ← 0…1 value type + presentation buckets
-│   │       │   ├── FreshnessPolicy.swift    ← per-kind half-life and archive threshold
+│   │       │   ├── Freshness.swift          ← 0…1 value type + presentation bands
+│   │       │   ├── FreshnessPolicy.swift    ← grace + lifetime, linear decay (ADR-0013)
 │   │       │   └── DecayEngine.swift        ← pure: (Thought, Date) → Freshness
 │   │       ├── Review/
 │   │       │   └── ReviewSelector.swift     ← pure: [Thought] → at most 7 that need a decision
 │   │       ├── Protocols/
-│   │       │   ├── ThoughtRepository.swift  ← implemented by Persistence
+│   │       │   ├── ThoughtRepository.swift  ← implemented by Persistence; scoped + searchable
+│   │       │   ├── ArchiveSweeping.swift    ← lets features trigger a sweep without Persistence
 │   │       │   ├── IntelligenceService.swift← implemented by Intelligence
 │   │       │   └── NudgeScheduling.swift    ← implemented by Notifications
 │   │       └── Support/
@@ -143,7 +144,8 @@ Fleeting/
 │   │
 │   ├── DesignSystem/                ← The app's visual vocabulary. No business logic.
 │   │   └── Sources/DesignSystem/
-│   │       ├── Tokens/              ← Palette, Typography, Spacing, Motion
+│   │       ├── Tokens/              ← Palette, Typography, Spacing, Motion, FreshnessStyle
+│   │       │                          FreshnessStyle takes a Double, never a Thought (ADR-0012)
 │   │       ├── Components/          ← domain-AGNOSTIC only (ADR-0012): parameterised by
 │   │       │                          primitives, never by a Thought
 │   │       └── Modifiers/
@@ -161,6 +163,8 @@ Fleeting/
 │   │       ├── SharpenFeature/      ← interview → write-up → escalate
 │   │       ├── ReviewFeature/       ← the weekly capped card stack
 │   │       ├── ArchiveFeature/      ← search the dead
+│   │       │   ├── ArchiveModel.swift   ← scoped search, restore, permanent delete
+│   │       │   └── ArchiveView.swift    ← .searchable over raw captured text
 │   │       └── SettingsFeature/     ← decay tuning, notification times, intelligence status
 │   │
 │   └── Notifications/               ← Scheduling and background composition of nudges.
@@ -180,6 +184,8 @@ Fleeting/
         └── CapturePathTests.swift      `swift test` on one package runs its suite in isolation.
                                      ← CapturePathTests: launch → typing is unobstructed
                                        InboxTests: browse, edit, delete, survive a force-quit
+                                       ArchiveTests: archive, restore, never destroy
+                                       ScreenshotTests: regenerates README images
 ```
 
 ## 4. Where do I add…?

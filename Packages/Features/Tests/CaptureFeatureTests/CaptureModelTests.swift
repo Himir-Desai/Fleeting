@@ -19,8 +19,8 @@ private actor SpyRepository: ThoughtRepository {
         stored.append(thought)
     }
 
-    func all() async throws -> [Thought] {
-        stored
+    func thoughts(in scope: ThoughtScope) async throws -> [Thought] {
+        stored.filter { scope.contains($0.state) }
     }
 
     func update(_ thought: Thought) async throws {}

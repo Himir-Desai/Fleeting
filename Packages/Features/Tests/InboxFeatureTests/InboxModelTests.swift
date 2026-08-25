@@ -3,60 +3,6 @@ import Foundation
 @testable import InboxFeature
 import Testing
 
-/// Storage that can be inspected and told to fail.
-private actor SpyRepository: ThoughtRepository {
-    /// Which operations should fail. Scoped per operation so a test can fail exactly the call
-    /// it is about without breaking its own setup.
-    struct Failures: OptionSet {
-        let rawValue: Int
-        static let load = Failures(rawValue: 1 << 0)
-        static let update = Failures(rawValue: 1 << 1)
-        static let delete = Failures(rawValue: 1 << 2)
-    }
-
-    private(set) var thoughts: [Thought]
-    private(set) var deletedIDs: [Thought.ID] = []
-    private let failures: Failures
-
-    init(_ thoughts: [Thought] = [], failing failures: Failures = []) {
-        self.thoughts = thoughts
-        self.failures = failures
-    }
-
-    func add(_ thought: Thought) async throws {
-        thoughts.append(thought)
-    }
-
-    func all() async throws -> [Thought] {
-        if failures.contains(.load) {
-            throw StorageFailure()
-        }
-        return thoughts.sorted { $0.capturedAt > $1.capturedAt }
-    }
-
-    func update(_ thought: Thought) async throws {
-        if failures.contains(.update) {
-            throw StorageFailure()
-        }
-        guard let index = thoughts.firstIndex(where: { $0.id == thought.id }) else { return }
-        thoughts[index] = thought
-    }
-
-    func delete(id: Thought.ID) async throws {
-        if failures.contains(.delete) {
-            throw StorageFailure()
-        }
-        deletedIDs.append(id)
-        thoughts.removeAll { $0.id == id }
-    }
-}
-
-private struct StubClock: WallClock {
-    let now: Date
-}
-
-private struct StorageFailure: Error {}
-
 @MainActor
 @Suite("InboxModel")
 struct InboxModelTests {
@@ -68,9 +14,14 @@ struct InboxModelTests {
 
     private func makeModel(
         _ repository: SpyRepository,
-        at now: Date? = nil
+        at now: Date? = nil,
+        sweeper: any ArchiveSweeping = NoopSweeper()
     ) -> InboxModel {
-        InboxModel(repository: repository, clock: StubClock(now: now ?? epoch))
+        InboxModel(
+            repository: repository,
+            sweeper: sweeper,
+            clock: StubClock(now: now ?? epoch)
+        )
     }
 
     @Test("an unread inbox is not the same as an empty one")
@@ -84,7 +35,7 @@ struct InboxModelTests {
         #expect(model.thoughts.isEmpty)
     }
 
-    @Test("thoughts load newest first")
+    @Test("live thoughts load newest first")
     func loadOrdersNewestFirst() async {
         let repository = SpyRepository([thought("older"), thought("newer", offsetDays: 1)])
         let model = makeModel(repository)

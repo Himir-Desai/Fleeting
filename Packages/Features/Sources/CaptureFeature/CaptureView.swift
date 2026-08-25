@@ -86,7 +86,7 @@ public struct CaptureView: View {
 /// Storage that discards everything, so previews need no store.
 private actor PreviewRepository: ThoughtRepository {
     func add(_ thought: Thought) async throws {}
-    func all() async throws -> [Thought] {
+    func thoughts(in _: ThoughtScope) async throws -> [Thought] {
         []
     }
 

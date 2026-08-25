@@ -17,6 +17,12 @@ final class AppEnvironment {
     /// Storage for captured thoughts.
     let thoughts: any ThoughtRepository
 
+    /// Computes freshness and decides what has expired.
+    let engine: DecayEngine
+
+    /// Moves expired thoughts into the archive.
+    let sweeper: any ArchiveSweeping
+
     /// Whether the on-disk store failed to open and captures are being held in memory only.
     ///
     /// Surfaced quietly inside the app rather than at launch: a storage problem must never
@@ -38,6 +44,53 @@ final class AppEnvironment {
             self.thoughts = store.repository
             storageIsDegraded = store.degraded
         }
+        engine = DecayEngine()
+        sweeper = ArchiveSweeper(repository: self.thoughts, engine: engine, clock: clock)
+    }
+
+    /// Prepares the store after launch: seeds demo data when asked, then archives anything that
+    /// expired while the app was closed.
+    ///
+    /// Runs after the capture field is on screen, never before it.
+    func prepare() async {
+        #if DEBUG
+            await seedDemoDataIfRequested()
+        #endif
+        await sweep()
+    }
+
+    #if DEBUG
+        /// Launch argument that fills an empty store with thoughts at a spread of ages, for
+        /// screenshots and for exercising decay by hand. Debug builds only.
+        static let seedDemoArgument = "--seed-demo"
+
+        /// Inserts demo thoughts if asked and the store is empty.
+        private func seedDemoDataIfRequested() async {
+            guard ProcessInfo.processInfo.arguments.contains(Self.seedDemoArgument),
+                  let existing = try? await thoughts.thoughts(in: .all), existing.isEmpty
+            else { return }
+
+            let now = clock.now
+            let demo: [(String, Double)] = [
+                ("ship the decay engine before it decays", 0.2),
+                ("call the dentist back", 12),
+                ("newsletter about tools that do one thing", 22),
+                ("learn to sail? or is that a boat-shaped midlife crisis", 29)
+            ]
+
+            for (body, ageInDays) in demo {
+                let captured = now.addingTimeInterval(-ageInDays * .day)
+                try? await thoughts.add(Thought(body: body, capturedAt: captured))
+            }
+        }
+    #endif
+
+    /// Archives anything that expired while the app was closed.
+    ///
+    /// Failures are ignored on purpose: a sweep that cannot run must never surface at launch or
+    /// interfere with capture (ADR-0008). The next sweep will pick the work up.
+    func sweep() async {
+        _ = try? await sweeper.sweep()
     }
 
     /// Opens the on-disk store, degrading to memory rather than failing to launch.

@@ -18,8 +18,10 @@ public actor InMemoryThoughtRepository: ThoughtRepository {
         storage[thought.id] = thought
     }
 
-    public func all() async throws -> [Thought] {
-        storage.values.sorted { $0.capturedAt > $1.capturedAt }
+    public func thoughts(in scope: ThoughtScope) async throws -> [Thought] {
+        storage.values
+            .filter { scope.contains($0.state) }
+            .sorted { $0.capturedAt > $1.capturedAt }
     }
 
     public func update(_ thought: Thought) async throws {

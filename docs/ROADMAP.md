@@ -70,7 +70,7 @@ with the freshness treatment, so any screenshot taken now would be stale within 
 
 ---
 
-## Phase 2 · Decay 🟡
+## Phase 2 · Decay 🟢
 
 Turn the list into something that prunes itself. This is the mechanic the app exists for.
 
@@ -88,9 +88,19 @@ kinds).
 **Done when** — decay behaviour is proven by advancing a fake clock across weeks in unit tests;
 nothing is ever deleted; archived thoughts are findable in under three seconds.
 
+**Outcome.** Met. 30 Core tests drive decay across simulated months without waiting; the sweeper
+archives and never deletes; the archive is searchable from the inbox in two taps.
+
+- Decay is linear with a grace period rather than a half-life ([ADR-0013](DECISIONS.md)), so a row
+  can truthfully say "archives tomorrow" instead of estimating.
+- Snooze holds a thought at full freshness until it ends, so setting something aside buys time.
+- Freshness resets on action only. A test asserts that repeatedly reading a thought's freshness
+  does not change it.
+- Deletion remains reachable only through an explicit human swipe, in the inbox or the archive.
+
 ---
 
-## Phase 3 · Classification ⚪️
+## Phase 3 · Classification 🟡
 
 Teach the app to sort so the user never has to. First contact with the intelligence layer.
 

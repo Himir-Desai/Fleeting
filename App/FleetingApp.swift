@@ -11,6 +11,8 @@ struct FleetingApp: App {
     var body: some Scene {
         WindowGroup {
             RootView(environment: environment)
+                // The palette is dark-only for now; a proper light-mode pass is Phase 8 work.
+                .preferredColorScheme(.dark)
         }
     }
 }

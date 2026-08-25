@@ -101,3 +101,119 @@ struct StoredStateTests {
         #expect(StoredState.state(raw: "archived", date: nil) == .inbox)
     }
 }
+
+@Suite("Scoped queries and search")
+struct ScopedQueryTests {
+    private let epoch = Date(timeIntervalSince1970: 1_700_000_000)
+
+    private func makeRepository() throws -> SwiftDataThoughtRepository {
+        try SwiftDataThoughtRepository(modelContainer: ModelContainerFactory.inMemory())
+    }
+
+    private func seed(_ repository: SwiftDataThoughtRepository) async throws {
+        try await repository.add(Thought(body: "live idea about coffee", capturedAt: epoch))
+        try await repository.add(
+            Thought(body: "snoozed idea", capturedAt: epoch, state: .snoozed(until: epoch))
+        )
+        try await repository.add(
+            Thought(body: "archived idea about coffee", capturedAt: epoch, state: .archived(at: epoch))
+        )
+    }
+
+    @Test("live excludes archived thoughts")
+    func liveScope() async throws {
+        let repository = try makeRepository()
+        try await seed(repository)
+
+        let live = try await repository.thoughts(in: .live).map(\.body)
+        #expect(live.sorted() == ["live idea about coffee", "snoozed idea"])
+    }
+
+    @Test("archived returns only what has left play")
+    func archivedScope() async throws {
+        let repository = try makeRepository()
+        try await seed(repository)
+
+        #expect(try await repository.thoughts(in: .archived).map(\.body) == ["archived idea about coffee"])
+        #expect(try await repository.thoughts(in: .all).count == 3)
+    }
+
+    @Test("search matches raw captured text and respects the scope")
+    func searchWithinScope() async throws {
+        let repository = try makeRepository()
+        try await seed(repository)
+
+        #expect(try await repository.search("coffee", in: .all).count == 2)
+        #expect(try await repository.search("coffee", in: .archived).count == 1)
+        #expect(try await repository.search("COFFEE", in: .live).count == 1)
+        #expect(try await repository.search("nothing here", in: .all).isEmpty)
+    }
+
+    @Test("a blank query returns the whole scope rather than nothing")
+    func blankQueryReturnsEverything() async throws {
+        let repository = try makeRepository()
+        try await seed(repository)
+
+        #expect(try await repository.search("   ", in: .live).count == 2)
+    }
+
+    @Test("the live raw values are derived from the domain, not hardcoded")
+    func liveRawValuesTrackTheDomain() {
+        #expect(Set(StoredState.liveRawValues) == ["inbox", "active", "snoozed"])
+    }
+}
+
+@Suite("ArchiveSweeper")
+struct ArchiveSweeperTests {
+    private let epoch = Date(timeIntervalSince1970: 1_700_000_000)
+
+    private struct StubClock: WallClock {
+        let now: Date
+    }
+
+    @Test("expired thoughts are archived, not deleted")
+    func expiredAreArchivedNotDeleted() async throws {
+        let repository = InMemoryThoughtRepository(seed: [
+            Thought(body: "expired", capturedAt: epoch),
+            Thought(body: "still fresh", capturedAt: epoch.addingTimeInterval(29 * .day))
+        ])
+        let sweeper = ArchiveSweeper(
+            repository: repository,
+            engine: DecayEngine(),
+            clock: StubClock(now: epoch.addingTimeInterval(31 * .day))
+        )
+
+        let archived = try await sweeper.sweep()
+
+        #expect(archived.map(\.body) == ["expired"])
+        #expect(try await repository.thoughts(in: .live).map(\.body) == ["still fresh"])
+        #expect(try await repository.thoughts(in: .all).count == 2, "nothing may be destroyed")
+    }
+
+    @Test("sweeping twice archives nothing the second time")
+    func sweepIsIdempotent() async throws {
+        let repository = InMemoryThoughtRepository(seed: [Thought(body: "expired", capturedAt: epoch)])
+        let sweeper = ArchiveSweeper(
+            repository: repository,
+            engine: DecayEngine(),
+            clock: StubClock(now: epoch.addingTimeInterval(40 * .day))
+        )
+
+        #expect(try await sweeper.sweep().count == 1)
+        #expect(try await sweeper.sweep().isEmpty)
+    }
+
+    @Test("a snoozed thought is not swept while its snooze is running")
+    func snoozeSurvivesTheSweep() async throws {
+        var snoozed = Thought(body: "later", capturedAt: epoch)
+        snoozed.snooze(until: epoch.addingTimeInterval(60 * .day), at: epoch)
+        let repository = InMemoryThoughtRepository(seed: [snoozed])
+        let sweeper = ArchiveSweeper(
+            repository: repository,
+            engine: DecayEngine(),
+            clock: StubClock(now: epoch.addingTimeInterval(50 * .day))
+        )
+
+        #expect(try await sweeper.sweep().isEmpty)
+    }
+}

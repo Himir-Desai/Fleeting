@@ -5,8 +5,18 @@ import Foundation
 ///
 /// A separate type on purpose: the domain enum may gain cases or change shape without forcing
 /// a store migration, and this is the one place the two vocabularies meet.
-enum StoredState: String {
+enum StoredState: String, CaseIterable {
     case inbox, active, snoozed, archived, done
+
+    /// The raw values whose domain states are still in play.
+    ///
+    /// Derived from the domain rather than duplicated, so a new lifecycle case cannot silently
+    /// fall on the wrong side of the live/archived split.
+    static var liveRawValues: [String] {
+        allCases
+            .filter { ThoughtScope.live.contains(state(raw: $0.rawValue, date: .distantFuture)) }
+            .map(\.rawValue)
+    }
 
     /// Flattens a domain state into a raw case and its associated date, if it has one.
     static func components(of state: ThoughtState) -> (raw: String, date: Date?) {

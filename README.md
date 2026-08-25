@@ -93,6 +93,9 @@ navigation, no decisions, no confirmation. Also reachable without unlocking, fro
 widget, a Control Center control, and an App Intent so Siri can take dictation into it.
 
 ### 🕯 Decay — the anti-hoarding mechanic
+
+<img src="docs/screenshots/inbox.png" width="260" align="right" alt="The inbox: four thoughts at different ages, each fading in proportion to its remaining freshness, with a meter that shrinks and warms from accent to amber, and labels reading archives next month through archives tomorrow." />
+
 Every thought has a **freshness** value that falls over time, rendered as a quiet visual fade in the
 list. Different kinds of thought rot at different speeds: a todo you ignored for two weeks is dead,
 a business idea deserves three months. Freshness resets when you *do* something with a thought —
@@ -192,8 +195,8 @@ Detail and acceptance criteria for each phase in **[docs/ROADMAP.md](docs/ROADMA
 |---|---|---|---|
 | 0 | Foundations | Project, packages, CI, design tokens, docs | 🟢 Done |
 | 1 | Capture | Launch-to-cursor, persistence, raw inbox | 🟢 Done |
-| 2 | Decay | Freshness engine, visual fade, auto-archive, search | 🟡 In progress |
-| 3 | Classification | Heuristic + on-device titling and typing, per-kind behaviour | ⚪️ Planned |
+| 2 | Decay | Freshness engine, visual fade, auto-archive, search | 🟢 Done |
+| 3 | Classification | Heuristic + on-device titling and typing, per-kind behaviour | 🟡 In progress |
 | 4 | Sharpen | Interview flow, structured write-up, escalation | ⚪️ Planned |
 | 5 | Review | Curated card stack, ambient sharpening | ⚪️ Planned |
 | 6 | Ambient | Daily nudge, widgets, Control Center, App Intents | ⚪️ Planned |

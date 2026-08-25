@@ -70,6 +70,34 @@ public struct Thought: Identifiable, Equatable, Sendable {
         lastActedAt = date
     }
 
+    /// Sets the thought aside until a chosen date, which counts as deliberate action.
+    ///
+    /// A snoozed thought is held at full freshness until the snooze ends, so setting something
+    /// aside buys real time rather than only hiding it.
+    /// - Parameters:
+    ///   - date: When the thought should return to the inbox.
+    ///   - now: When the snooze was requested.
+    public mutating func snooze(until date: Date, at now: Date) {
+        state = .snoozed(until: date)
+        markActed(at: now)
+    }
+
+    /// Moves the thought to the archive.
+    ///
+    /// Used both by expiry and by an explicit human archive. Does not count as deliberate action:
+    /// archiving is the end of a thought's active life, not attention paid to it.
+    /// - Parameter date: When the thought was archived.
+    public mutating func archive(at date: Date) {
+        state = .archived(at: date)
+    }
+
+    /// Returns an archived thought to the inbox at full freshness.
+    /// - Parameter date: When the thought was restored.
+    public mutating func restore(at date: Date) {
+        state = .inbox
+        markActed(at: date)
+    }
+
     /// How long the thought has gone without deliberate action.
     /// - Parameter date: The instant to measure from.
     /// - Returns: The interval since ``lastActedAt``, never negative.

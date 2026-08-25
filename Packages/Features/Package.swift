@@ -9,7 +9,8 @@ let package = Package(
     platforms: [.iOS("26.0"), .macOS("14.0")],
     products: [
         .library(name: "CaptureFeature", targets: ["CaptureFeature"]),
-        .library(name: "InboxFeature", targets: ["InboxFeature"])
+        .library(name: "InboxFeature", targets: ["InboxFeature"]),
+        .library(name: "ArchiveFeature", targets: ["ArchiveFeature"])
     ],
     dependencies: [
         .package(path: "../Core"),
@@ -19,6 +20,8 @@ let package = Package(
         .target(name: "CaptureFeature", dependencies: ["Core", "DesignSystem"]),
         .target(name: "InboxFeature", dependencies: ["Core", "DesignSystem"]),
         .testTarget(name: "CaptureFeatureTests", dependencies: ["CaptureFeature", "Core"]),
-        .testTarget(name: "InboxFeatureTests", dependencies: ["InboxFeature", "Core"])
+        .target(name: "ArchiveFeature", dependencies: ["Core", "DesignSystem"]),
+        .testTarget(name: "InboxFeatureTests", dependencies: ["InboxFeature", "Core"]),
+        .testTarget(name: "ArchiveFeatureTests", dependencies: ["ArchiveFeature", "Core"])
     ]
 )

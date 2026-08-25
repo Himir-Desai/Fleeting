@@ -47,6 +47,8 @@ targets:
         product: CaptureFeature
       - package: Features
         product: InboxFeature
+      - package: Features
+        product: ArchiveFeature
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.himirdesai.Fleeting
