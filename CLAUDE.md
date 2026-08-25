@@ -33,11 +33,12 @@ The docs are maintained continuously, without being asked:
   missing, slow, or wrong. Implement new capabilities in all three implementations.
 - **Never call `Date()` anywhere but `SystemClock`.** Inject `WallClock`.
 
-## Teaching is part of the job
-The developer is fluent in other languages and new to Swift. **[docs/LEARNING.md](docs/LEARNING.md)
-is a contract, not a note** — read the current rung before writing code, teach at that rung, and
-update the progress log as concepts land. Teach Swift as a translation from languages already known;
-never explain programming fundamentals.
+## Working rhythm
+**Teaching is paused** (2026-08-18). Do not explain Swift concepts or run comprehension checks
+unless asked. Build **one roadmap phase at a time**, then stop and report what was added and how to
+run the app. Wait for an explicit go-ahead before starting the next phase — never roll straight on.
+
+[docs/LEARNING.md](docs/LEARNING.md) is kept as a record through Phase 1 in case teaching resumes.
 
 ## Git
 Commit at meaningful units of work, not in one dump at the end — the history is part of what an

@@ -1,5 +1,10 @@
 # Learning Swift by building Fleeting
 
+> **Paused as of 2026-08-18.** The developer asked to stop the teaching track and ship phases
+> instead, intending to learn the codebase later. This file is preserved as a record of what was
+> covered through Phase 1, and as the contract to resume from if teaching restarts. Nothing below
+> is active guidance today.
+
 Fleeting is being built by someone fluent in other languages and new to Swift and iOS. This file is
 both the **teaching contract** and the **progress log** — it records how instruction is delivered,
 what has been covered, and when to stop explaining.
