@@ -230,3 +230,67 @@ final class ArchiveTests: XCTestCase {
         )
     }
 }
+
+/// Guards invariant 5: capture is at most one tap away from any screen reachable from it.
+///
+/// A gesture that works but cannot be seen does not count as a way back.
+@MainActor
+final class ReturnToCaptureTests: XCTestCase {
+    override func setUp() {
+        continueAfterFailure = false
+    }
+
+    func testTheInboxOffersAVisibleControlBackToCapture() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--reset-store"]
+        app.launch()
+
+        _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 5)
+        app.buttons["capture.browse"].tap()
+        _ = app.staticTexts["inbox.empty"].waitForExistence(timeout: 5)
+
+        let back = app.buttons["inbox.done"]
+        XCTAssertTrue(
+            back.waitForExistence(timeout: 5),
+            "The inbox must show a visible control back to capture."
+        )
+        XCTAssertTrue(back.isHittable, "That control must be reachable, not merely present.")
+
+        back.tap()
+
+        XCTAssertTrue(
+            app.keyboards.element.waitForExistence(timeout: 5),
+            "One tap must return to a focused capture field with the keyboard up."
+        )
+    }
+
+    func testANewThoughtCanBeCapturedImmediatelyAfterVisitingTheInbox() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--reset-store"]
+        app.launch()
+
+        let field = app.descendants(matching: .any)["capture.field"]
+        _ = field.waitForExistence(timeout: 5)
+
+        app.buttons["capture.browse"].tap()
+        _ = app.staticTexts["inbox.empty"].waitForExistence(timeout: 5)
+        app.buttons["inbox.done"].tap()
+
+        // The whole point: capturing still works after a round trip through the inbox.
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap()
+        field.typeText("a thought I had after browsing")
+        app.buttons["capture.save"].tap()
+
+        XCTAssertFalse(
+            app.buttons["capture.save"].isEnabled,
+            "The field must clear, proving the capture was saved."
+        )
+
+        app.buttons["capture.browse"].tap()
+        XCTAssertTrue(
+            app.staticTexts["a thought I had after browsing"].waitForExistence(timeout: 5),
+            "The thought captured after visiting the inbox must be stored."
+        )
+    }
+}

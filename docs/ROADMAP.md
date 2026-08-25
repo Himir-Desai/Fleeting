@@ -97,6 +97,9 @@ archives and never deletes; the archive is searchable from the inbox in two taps
 - Freshness resets on action only. A test asserts that repeatedly reading a thought's freshness
   does not change it.
 - Deletion remains reachable only through an explicit human swipe, in the inbox or the archive.
+- Fixed after review: the inbox shipped with no visible way back to capture, reachable only by an
+  undiscoverable swipe-down. Now an explicit *Capture* control, protected by invariant 5 in
+  ARCHITECTURE.md and by `ReturnToCaptureTests`.
 
 ---
 

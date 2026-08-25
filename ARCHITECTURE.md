@@ -239,3 +239,6 @@ These are the things that, if broken, mean the app has become the thing it was b
    explicit human act.
 4. **Freshness resets on action, not on attention.** Scrolling past a thought must not keep it alive —
    that is precisely the failure mode of every other app.
+5. **Capture is at most one tap away from any screen.** ADR-0008 protects the cold launch; this
+   protects every moment after it. A screen reachable from capture must offer a *visible* control
+   back to it — a swipe-down that works but cannot be seen does not count. There is a UI test.

@@ -8,6 +8,7 @@ import SwiftUI
 /// starting point (ADR-0008).
 public struct InboxView: View {
     @State private var model: InboxModel
+    @Environment(\.dismiss) private var dismiss
     private let onOpenArchive: () -> Void
 
     /// Creates the inbox.
@@ -75,6 +76,13 @@ public struct InboxView: View {
             .navigationBarTitleDisplayMode(.inline)
         #endif
             .toolbar {
+                // Capture must never be more than one tap away. A swipe-down works, but a
+                // gesture nobody can see is not a way back.
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Capture") { dismiss() }
+                        .accessibilityIdentifier("inbox.done")
+                        .accessibilityLabel("Back to capture")
+                }
                 ToolbarItem(placement: .primaryAction) {
                     Button(action: onOpenArchive) {
                         Image(systemName: "archivebox")
