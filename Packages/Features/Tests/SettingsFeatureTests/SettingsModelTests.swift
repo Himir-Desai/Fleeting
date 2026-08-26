@@ -26,6 +26,13 @@ private struct StubIntelligence: IntelligenceService {
     }
 }
 
+private struct StubSync: SyncReporting {
+    var reported: SyncStatus
+    var status: SyncStatus {
+        reported
+    }
+}
+
 private final class MemoryPreferences: NudgePreferencesStoring, @unchecked Sendable {
     private(set) var stored: NudgePreferences
     private(set) var saveCount = 0
@@ -169,5 +176,46 @@ struct SettingsModelTests {
         await rules.load()
         #expect(rules.status.headline == "Rules")
         #expect(rules.status.detail.contains("turned off"))
+    }
+}
+
+@MainActor
+@Suite("Sync status on the settings screen")
+struct SettingsSyncTests {
+    private func makeModel(_ status: SyncStatus) -> SettingsModel {
+        SettingsModel(
+            intelligence: StubIntelligence(),
+            profiles: .standard,
+            sync: StubSync(reported: status),
+            store: MemoryPreferences(),
+            permissions: SpyPermissions(),
+            onNudgesChanged: {}
+        )
+    }
+
+    @Test("the screen says nothing about syncing until it has asked")
+    func startsUndecided() {
+        #expect(makeModel(.syncing).syncStatus == .checking)
+    }
+
+    @Test("a syncing store is described as syncing")
+    func syncingReads() async {
+        let model = makeModel(.syncing)
+        await model.load()
+        #expect(model.syncStatus == .syncing)
+        #expect(model.syncDescription.headline == "iCloud")
+    }
+
+    @Test("a store that is not syncing says so, and says capture still works")
+    func localOnlyReads() async {
+        var states: [SyncStatus] = [.signedOut]
+        states += SyncUnavailableReason.allCases.map { .localOnly($0) }
+
+        for state in states {
+            let model = makeModel(state)
+            await model.load()
+            #expect(model.syncDescription.headline == "This iPhone only")
+            #expect(model.syncDescription.detail.contains("either way"))
+        }
     }
 }

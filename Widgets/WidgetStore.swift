@@ -46,11 +46,11 @@ enum WidgetStore {
     /// - Parameter date: The instant to describe.
     /// - Returns: What the widget should show now.
     static func entry(at date: Date) async -> FreshnessEntry {
-        guard let container = try? ModelContainerFactory.store() else {
+        guard let store = try? ModelContainerFactory.store(syncing: false) else {
             return .unreadable(at: date)
         }
 
-        let repository = SwiftDataThoughtRepository(modelContainer: container)
+        let repository = SwiftDataThoughtRepository(modelContainer: store.container)
         guard let live = try? await repository.thoughts(in: .live) else {
             return .unreadable(at: date)
         }

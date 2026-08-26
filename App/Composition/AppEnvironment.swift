@@ -40,7 +40,10 @@ final class AppEnvironment {
     let nudges: NudgeScheduler
 
     /// Whether the store lives in the shared container, and is therefore visible to widgets.
-    let storageIsShared = ModelContainerFactory.isShared
+    let storageIsShared: Bool
+
+    /// Reports whether thoughts are reaching iCloud.
+    let sync: any SyncReporting
 
     /// Whether the on-disk store failed to open and captures are being held in memory only.
     ///
@@ -58,10 +61,14 @@ final class AppEnvironment {
         if let thoughts {
             self.thoughts = thoughts
             storageIsDegraded = false
+            storageIsShared = false
+            sync = LocalOnlySync()
         } else {
             let store = Self.openStore()
             self.thoughts = store.repository
             storageIsDegraded = store.degraded
+            storageIsShared = store.isShared
+            sync = store.sync
         }
         engine = DecayEngine()
         sweeper = ArchiveSweeper(repository: self.thoughts, engine: engine, clock: clock)
@@ -223,15 +230,34 @@ final class AppEnvironment {
         await nudges.refresh()
     }
 
+    /// What opening the store produced.
+    private struct Store {
+        let repository: any ThoughtRepository
+        let degraded: Bool
+        let isShared: Bool
+        let sync: any SyncReporting
+    }
+
     /// Opens the on-disk store, degrading to memory rather than failing to launch.
-    /// - Returns: The repository to use, and whether it is the degraded in-memory one.
-    private static func openStore() -> (repository: any ThoughtRepository, degraded: Bool) {
+    /// - Returns: The repository to use, whether it is the degraded in-memory one, and what it
+    ///   can report about sharing and syncing.
+    private static func openStore() -> Store {
         let reset = ProcessInfo.processInfo.arguments.contains(resetStoreArgument)
         do {
-            let container = try ModelContainerFactory.store(resettingFirst: reset)
-            return (SwiftDataThoughtRepository(modelContainer: container), false)
+            let opened = try ModelContainerFactory.store(resettingFirst: reset)
+            return Store(
+                repository: SwiftDataThoughtRepository(modelContainer: opened.container),
+                degraded: false,
+                isShared: opened.isShared,
+                sync: CloudKitSyncReporter(attachment: opened.cloud)
+            )
         } catch {
-            return (InMemoryThoughtRepository(), true)
+            return Store(
+                repository: InMemoryThoughtRepository(),
+                degraded: true,
+                isShared: false,
+                sync: LocalOnlySync(reason: .notAttached)
+            )
         }
     }
 }

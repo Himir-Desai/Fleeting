@@ -108,6 +108,8 @@ Fleeting/
 │   │       │   ├── NudgeSelector.swift      ← pure: what is worth surfacing, and what expires soon
 │   │       │   ├── NudgePreferences.swift   ← when the app may speak + its storage contract
 │   │       │   └── NudgeAuthorization.swift ← permission state + the asking contract
+│   │       ├── Sync/
+│   │       │   └── SyncStatus.swift         ← syncing, signed out, or local-only and why
 │   │       ├── Review/
 │   │       │   └── ReviewSelector.swift     ← pure: [Thought] → at most 7 needing a decision
 │   │       │                                 eligibility and urgency rules (ADR-0017)
@@ -115,7 +117,8 @@ Fleeting/
 │   │       │   ├── ThoughtRepository.swift  ← implemented by Persistence; scoped + searchable
 │   │       │   ├── ArchiveSweeping.swift    ← lets features trigger a sweep without Persistence
 │   │       │   ├── IntelligenceService.swift← the AI contract, Classification, availability
-│   │       │   └── ThoughtChanges.swift     ← change signal so open screens see late work
+│   │       │   ├── ThoughtChanges.swift     ← change signal so open screens see late work
+│   │       │   └── SyncReporting.swift      ← is anything reaching iCloud? + a local-only stub
 │   │       └── Support/
 │   │           └── WallClock.swift          ← injected time; makes decay deterministic in tests
 │   │
@@ -137,8 +140,12 @@ Fleeting/
 │   │       │   └── InMemoryThoughtRepository.swift  ← previews and tests; no store required
 │   │       ├── Maintenance/
 │   │       │   └── ArchiveSweeper.swift      ← runs the decay engine, archives what expired
+│   │       ├── Sync/
+│   │       │   └── CloudKitSyncReporter.swift ← asks CloudKit about the account, only if attached
 │   │       └── Container/
-│   │           └── ModelContainerFactory.swift ← production, in-memory, and preview containers
+│   │           ├── ModelContainerFactory.swift ← production, in-memory, and preview containers
+│   │           ├── OpenedStore.swift        ← the container + what opening it gave up
+│   │           └── CloudAttachment.swift    ← whether iCloud was attached, and why not
 │   │
 │   ├── Intelligence/                ← Everything AI. Swappable, testable, optional at runtime.
 │   │   └── Sources/Intelligence/
@@ -215,6 +222,7 @@ Fleeting/
                                      ← CapturePathTests: launch → typing is unobstructed
                                        InboxTests: browse, edit, delete, survive a force-quit
                                        ArchiveTests: archive, restore, never destroy
+                                       SyncTests: a store that cannot reach iCloud is still whole
                                        ScreenshotTests: regenerates README images
 ```
 

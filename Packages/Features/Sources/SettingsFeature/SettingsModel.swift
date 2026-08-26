@@ -21,7 +21,11 @@ public final class SettingsModel {
     /// Whether the store is shared with the widgets.
     public let storageIsShared: Bool
 
+    /// Whether thoughts are reaching iCloud, or `.checking` until asked.
+    public private(set) var syncStatus: SyncStatus = .checking
+
     private let intelligence: any IntelligenceService
+    private let sync: any SyncReporting
     private let store: any NudgePreferencesStoring
     private let permissions: any NudgePermissions
     private let onNudgesChanged: @Sendable () async -> Void
@@ -31,6 +35,7 @@ public final class SettingsModel {
     ///   - intelligence: Asked what is currently answering.
     ///   - profiles: The decay rates to display.
     ///   - storageIsShared: Whether widgets can read the store.
+    ///   - sync: Asked whether thoughts are reaching iCloud.
     ///   - store: Where notification preferences are kept.
     ///   - permissions: Asks for, and reports, notification permission.
     ///   - onNudgesChanged: Called whenever something changes what should be queued.
@@ -38,6 +43,7 @@ public final class SettingsModel {
         intelligence: any IntelligenceService,
         profiles: DecayProfiles,
         storageIsShared: Bool = true,
+        sync: any SyncReporting = LocalOnlySync(),
         store: any NudgePreferencesStoring,
         permissions: any NudgePermissions,
         onNudgesChanged: @escaping @Sendable () async -> Void
@@ -45,6 +51,7 @@ public final class SettingsModel {
         self.intelligence = intelligence
         self.profiles = profiles
         self.storageIsShared = storageIsShared
+        self.sync = sync
         self.store = store
         self.permissions = permissions
         self.onNudgesChanged = onNudgesChanged
@@ -55,6 +62,7 @@ public final class SettingsModel {
     public func load() async {
         availability = await intelligence.availability
         authorization = await permissions.authorization
+        syncStatus = await sync.status
         preferences = store.load()
     }
 
@@ -105,6 +113,24 @@ public final class SettingsModel {
             ("On", "At most one nudge a day, plus a weekly invitation to review.")
         case .denied:
             ("Off", "Notifications are turned off for Fleeting in the Settings app.")
+        }
+    }
+
+    /// How syncing should be described.
+    /// - Returns: A headline and a supporting sentence.
+    public var syncDescription: (headline: String, detail: String) {
+        switch syncStatus {
+        case .syncing:
+            ("iCloud", "Thoughts follow you to your other devices. Nothing else sees them.")
+        case .signedOut:
+            (
+                "This iPhone only",
+                "Sign in to iCloud to keep thoughts in step across devices. Capture works either way."
+            )
+        case let .localOnly(reason):
+            ("This iPhone only", reason.summary + " Capture works either way.")
+        case .checking:
+            ("Checking…", "")
         }
     }
 

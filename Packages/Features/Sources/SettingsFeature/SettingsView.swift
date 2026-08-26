@@ -102,6 +102,20 @@ public struct SettingsView: View {
                 }
             }
 
+            Section("Syncing") {
+                VStack(alignment: .leading, spacing: Spacing.tight) {
+                    Text(model.syncDescription.headline)
+                        .font(Typography.title)
+                        .foregroundStyle(model.syncStatus.isSyncing ? Palette.ink : Palette.fading)
+                    Text(model.syncDescription.detail)
+                        .font(Typography.caption)
+                        .foregroundStyle(Palette.inkMuted)
+                }
+                .padding(.vertical, Spacing.tight)
+                .listRowBackground(Palette.raised)
+                .accessibilityIdentifier("settings.sync")
+            }
+
             Section("Widgets") {
                 VStack(alignment: .leading, spacing: Spacing.tight) {
                     Text(model.widgetStatus.headline)

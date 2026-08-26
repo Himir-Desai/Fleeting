@@ -61,11 +61,19 @@ targets:
       properties:
         com.apple.security.application-groups:
           - group.com.himirdesai.Fleeting
+        # Remove this block if the signing account is not in the Developer Program.
+        # The store degrades to device-local and the app is otherwise unaffected.
+        com.apple.developer.icloud-services:
+          - CloudKit
+        com.apple.developer.icloud-container-identifiers:
+          - iCloud.com.himirdesai.Fleeting
     info:
       path: App/Info.plist
       properties:
         UILaunchScreen: {}
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        # CloudKit tells SwiftData a record changed by silent push.
+        UIBackgroundModes: [remote-notification]
         CFBundleURLTypes:
           - CFBundleURLName: com.himirdesai.Fleeting
             CFBundleURLSchemes: [fleeting]

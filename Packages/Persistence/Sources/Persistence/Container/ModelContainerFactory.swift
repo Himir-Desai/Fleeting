@@ -1,3 +1,4 @@
+import Core
 import Foundation
 import SwiftData
 
@@ -7,6 +8,9 @@ public enum ModelContainerFactory {
     ///
     /// Widgets run in their own process, so the store has to live somewhere both can reach.
     public static let appGroupIdentifier = "group.com.himirdesai.Fleeting"
+
+    /// The CloudKit container holding the user's private database.
+    public static let cloudContainerIdentifier = "iCloud.com.himirdesai.Fleeting"
 
     /// Where the on-disk store lives. Named explicitly so it can be removed deterministically.
     ///
@@ -26,29 +30,84 @@ public enum ModelContainerFactory {
         ) != nil
     }
 
-    /// The on-disk store the app uses. CloudKit sync is attached in Phase 7.
-    /// - Parameter resettingFirst: When `true`, removes any existing store before opening, so a
-    ///   UI test can begin from a known-empty state.
-    /// - Returns: A container backed by a file in the app's support directory.
-    public static func store(resettingFirst: Bool = false) throws -> ModelContainer {
+    /// The schema the app reads and writes.
+    private static var schema: Schema {
+        Schema(versionedSchema: ThoughtSchemaV2.self)
+    }
+
+    /// The on-disk store the app uses, syncing through iCloud when it can.
+    ///
+    /// Attaches iCloud only when the App Group container is reachable, and falls back to a
+    /// device-local store carrying the same data. A build that cannot reach iCloud — unsigned,
+    /// unentitled, or with iCloud Drive turned off — must still capture (ADR-0019).
+    ///
+    /// The App Group is a proxy for the entitlement being live at all: both are written by the
+    /// same entitlements file, and a build that had them stripped has neither. CloudKit cannot be
+    /// asked directly, because an unentitled process is trapped rather than told.
+    /// - Parameters:
+    ///   - resettingFirst: When `true`, removes any existing store before opening, so a UI test
+    ///     can begin from a known-empty state.
+    ///   - syncing: When `false`, opens the same file without attaching iCloud. Widgets pass
+    ///     `false`: they only read, and a second process mirroring CloudKit on every timeline
+    ///     refresh would spend the app's request budget for nothing.
+    /// - Returns: The container, and what had to be given up to open it.
+    /// - Throws: ``PersistenceError`` if neither store can be opened.
+    public static func store(
+        resettingFirst: Bool = false,
+        syncing: Bool = true
+    ) throws -> OpenedStore {
         let directory = storeURL.deletingLastPathComponent()
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         if resettingFirst {
             removeStoreFiles(in: directory)
         }
 
-        return try ModelContainer(
-            for: ThoughtEntity.self,
-            configurations: ModelConfiguration(url: storeURL)
+        guard syncing, isShared else {
+            return try OpenedStore(
+                container: open(cloudKitDatabase: .none),
+                isShared: isShared,
+                cloud: .unavailable(.notAttached)
+            )
+        }
+
+        if let container = try? open(cloudKitDatabase: .private(cloudContainerIdentifier)) {
+            return OpenedStore(container: container, isShared: isShared, cloud: .attached)
+        }
+
+        return try OpenedStore(
+            container: open(cloudKitDatabase: .none),
+            isShared: isShared,
+            cloud: .unavailable(.refusedByCloudKit)
+        )
+    }
+
+    /// Opens the on-disk store with a given iCloud configuration, migrating it if needed.
+    /// - Parameter cloudKitDatabase: Which CloudKit database to back the store with.
+    /// - Returns: The opened container.
+    private static func open(
+        cloudKitDatabase: ModelConfiguration.CloudKitDatabase
+    ) throws -> ModelContainer {
+        try ModelContainer(
+            for: schema,
+            migrationPlan: ThoughtMigrationPlan.self,
+            configurations: ModelConfiguration(
+                schema: schema,
+                url: storeURL,
+                cloudKitDatabase: cloudKitDatabase
+            )
         )
     }
 
     /// A container that never touches disk, for tests and SwiftUI previews.
+    ///
+    /// Deliberately built without ``ThoughtMigrationPlan``: a store created in memory is empty and
+    /// already at the current version, and running a plan against one makes SwiftData rebuild a
+    /// store that parallel tests are sharing.
     /// - Returns: A container discarded when the process ends.
     public static func inMemory() throws -> ModelContainer {
         try ModelContainer(
-            for: ThoughtEntity.self,
-            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+            for: schema,
+            configurations: ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
         )
     }
 

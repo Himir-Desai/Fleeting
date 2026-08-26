@@ -83,6 +83,7 @@ struct RootView: View {
                             intelligence: environment.intelligence,
                             profiles: environment.engine.profiles,
                             storageIsShared: environment.storageIsShared,
+                            sync: environment.sync,
                             store: environment.nudgePreferences,
                             permissions: environment.nudgePermissions,
                             onNudgesChanged: { await environment.refreshNudges() }
