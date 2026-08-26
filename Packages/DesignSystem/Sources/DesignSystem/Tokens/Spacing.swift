@@ -10,6 +10,8 @@ public enum Spacing {
     public static let snug: CGFloat = 8
     /// 12pt — the default gap.
     public static let regular: CGFloat = 12
+    /// 16pt — a card's own inset from its edge.
+    public static let inset: CGFloat = 16
     /// 20pt — between distinct groups.
     public static let loose: CGFloat = 20
     /// 32pt — between sections of a screen.

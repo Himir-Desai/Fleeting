@@ -72,6 +72,61 @@ struct PaletteContrastTests {
         check(white, on: Palette.accentValues, atLeast: 4.5, "white on accent")
     }
 
+    @Test("text in the capture well clears AA, because that is where the app is used")
+    func sunkenSurfaceIsReadable() {
+        check(Palette.inkValues, on: Palette.surfaceSunkenValues, atLeast: 4.5, "ink on sunken")
+        check(
+            Palette.inkMutedValues, on: Palette.surfaceSunkenValues, atLeast: 4.5,
+            "muted on sunken"
+        )
+    }
+
+    @Test("a tinted chip is still a background: the glyph on it clears AA")
+    func accentSoftIsABackground() {
+        check(
+            Palette.accentTextValues, on: Palette.accentSoftValues, atLeast: 4.5,
+            "accent text on accent soft"
+        )
+        check(Palette.inkValues, on: Palette.accentSoftValues, atLeast: 4.5, "ink on accent soft")
+    }
+
+    @Test("the meter's middle stop is a visible mark on both surfaces")
+    func warmingStopIsVisible() {
+        // 3:1 rather than 4.5:1 — the warming colour is only ever drawn as the meter's fill, and
+        // WCAG asks 3:1 of a meaningful non-text mark.
+        check(FreshnessStyle.warmingValues, on: Palette.surfaceValues, atLeast: 3, "warming on surface")
+        check(FreshnessStyle.warmingValues, on: Palette.raisedValues, atLeast: 3, "warming on raised")
+    }
+
+    @Test("the meter's spent track is visible against the card it sits on")
+    func meterTrackIsVisible() {
+        for appearance in Self.appearances {
+            let track = Palette.separatorValues.value(
+                scheme: appearance.scheme, increasedContrast: appearance.increased
+            )
+            let card = Palette.raisedValues.value(
+                scheme: appearance.scheme, increasedContrast: appearance.increased
+            )
+            #expect(
+                track.contrastRatio(against: card) >= 1.2,
+                "track on raised in \(appearance.name) is invisible"
+            )
+        }
+    }
+
+    @Test("a sunken well reads as below the page, not on it")
+    func sunkenIsBelowTheSurface() {
+        for appearance in Self.appearances where appearance.scheme == .light {
+            let sunken = Palette.surfaceSunkenValues.value(
+                scheme: appearance.scheme, increasedContrast: appearance.increased
+            )
+            let surface = Palette.surfaceValues.value(
+                scheme: appearance.scheme, increasedContrast: appearance.increased
+            )
+            #expect(sunken.relativeLuminance < surface.relativeLuminance)
+        }
+    }
+
     @Test("a raised row is distinguishable from the page behind it")
     func surfacesAreDistinguishable() {
         for appearance in Self.appearances where appearance.scheme == .dark {

@@ -59,6 +59,23 @@ public struct RGB: Equatable, Sendable {
         )
     }
 
+    /// This colour blended with another, without either being drawn.
+    ///
+    /// Used to derive an intermediate palette value from two audited ones, so the midpoint of a
+    /// gradient is a real colour the contrast audit can measure rather than a runtime effect.
+    /// - Parameters:
+    ///   - other: The colour to blend towards.
+    ///   - fraction: How far towards `other` to go, within 0...1.
+    /// - Returns: The blended components.
+    public func mixed(with other: RGB, by fraction: Double) -> RGB {
+        let amount = min(max(fraction, 0), 1)
+        return RGB(
+            red + (other.red - red) * amount,
+            green + (other.green - green) * amount,
+            blue + (other.blue - blue) * amount
+        )
+    }
+
     /// Converts one sRGB component to its linear-light value.
     private static func linear(_ component: Double) -> Double {
         component <= 0.04045 ? component / 12.92 : pow((component + 0.055) / 1.055, 2.4)

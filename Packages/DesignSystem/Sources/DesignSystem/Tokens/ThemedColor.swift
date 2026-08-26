@@ -27,6 +27,20 @@ public struct ThemedColor: Sendable {
         self.darkIncreased = darkIncreased ?? dark
     }
 
+    /// This entry blended with another, in every appearance at once.
+    /// - Parameters:
+    ///   - other: The entry to blend towards.
+    ///   - fraction: How far towards `other` to go, within 0...1.
+    /// - Returns: A new entry whose every appearance is the blend of the two.
+    public func mixed(with other: ThemedColor, by fraction: Double) -> ThemedColor {
+        ThemedColor(
+            light: light.mixed(with: other.light, by: fraction),
+            dark: dark.mixed(with: other.dark, by: fraction),
+            lightIncreased: lightIncreased.mixed(with: other.lightIncreased, by: fraction),
+            darkIncreased: darkIncreased.mixed(with: other.darkIncreased, by: fraction)
+        )
+    }
+
     /// The value used in a given appearance.
     /// - Parameters:
     ///   - scheme: Light or dark.

@@ -4,7 +4,8 @@
 > forbidden in it, and where to put a new thing. It is kept current as the app is built — if you are
 > a future session picking this repo up, read this before opening any Swift file.
 >
-> **Last updated:** Phase 0 (Foundations) — structure defined, implementation in progress.
+> **Last updated:** the design pass — `DesignSystem` grew a component vocabulary and all six
+> screens moved onto it (ADR-0022, ADR-0023).
 
 ---
 
@@ -178,15 +179,27 @@ Fleeting/
 │   │   │   ├── Tokens/
 │   │   │   │   ├── RGB.swift            ← sRGB components + WCAG luminance, so contrast is testable
 │   │   │   │   ├── ThemedColor.swift    ← one entry in light/dark × standard/increased contrast
-│   │   │   │   ├── Palette.swift        ← the colour vocabulary; accent (fill) vs accentText
-│   │   │   │   ├── Typography.swift     ← every style built on a Dynamic Type text style
+│   │   │   │   ├── Palette.swift        ← the colour vocabulary; paper and ink (ADR-0022).
+│   │   │   │   │                          three surfaces (page · well · card), accent (fill) vs
+│   │   │   │   │                          accentText, and one separator instead of three literals
+│   │   │   │   ├── Typography.swift     ← eight styles, every one on a Dynamic Type text style;
+│   │   │   │   │                          display is the only serif (ADR-0022)
 │   │   │   │   ├── Spacing.swift        ← the layout steps; features never use raw numbers
+│   │   │   │   ├── Radius.swift         ← control · card · well; the app's roundness, once
+│   │   │   │   ├── Elevation.swift      ← a level, not a shadow: dark mode gets a hairline instead
 │   │   │   │   ├── Motion.swift         ← timings by intent; applied only via .motion (ADR-0020)
-│   │   │   │   └── FreshnessStyle.swift ← takes a Double, never a Thought (ADR-0012)
+│   │   │   │   └── FreshnessStyle.swift ← takes a Double, never a Thought (ADR-0012). the fade,
+│   │   │   │                              the meter's three stops, and the rail (ADR-0023)
 │   │   │   ├── Components/          ← domain-AGNOSTIC only (ADR-0012): parameterised by
-│   │   │   │   └── FreshnessBar.swift   primitives, never by a Thought
+│   │   │   │   ├── FreshnessMeter.swift  primitives, never by a Thought
+│   │   │   │   ├── CardSurface.swift    ← a card's ground + its freshness rail; also a listRowBackground
+│   │   │   │   ├── Card.swift           ← content on a card, for cards outside a List
+│   │   │   │   ├── StatusBlock.swift    ← an answer and its explanation; every Settings row
+│   │   │   │   ├── SectionLabel.swift   ← a section's name, small and wide
+│   │   │   │   └── EmptyState.swift     ← what a screen says when it has nothing to show
 │   │   │   └── Modifiers/
-│   │   │       └── MotionModifier.swift ← the one place animation is applied; honours Reduce Motion
+│   │   │       ├── MotionModifier.swift ← the one place animation is applied; honours Reduce Motion
+│   │   │       └── ElevationModifier.swift ← the one place elevation is drawn; shadow or hairline
 │   │   └── Tests/DesignSystemTests/
 │   │       └── PaletteContrastTests.swift ← the contrast audit; fails the build, not an opinion
 │   │
@@ -257,7 +270,8 @@ Fleeting/
 | A new kind of thought | `Core/Model/ThoughtKind.swift` | give it a decay profile in `FreshnessPolicy`, a row treatment, a classifier case |
 | A new screen | a new target under `Packages/Features/` | declare it in `Package.swift`; route it from `App/Navigation/RootView.swift` |
 | A new AI capability | a method on `Core/Protocols/IntelligenceService.swift` | implement in **all three** of FoundationModels, Heuristic, Stub — no exceptions |
-| A new colour or spacing value | `DesignSystem/Tokens/` | never a literal in a feature |
+| A new colour or spacing value | `DesignSystem/Tokens/` | never a literal in a feature; a new colour needs a pairing in `PaletteContrastTests` |
+| A view two screens both need | `DesignSystem/Components/` | only if it can be parameterised by primitives (ADR-0012); if it needs a `Thought`, it belongs to the feature |
 | A rule about when things expire | `Core/Decay/FreshnessPolicy.swift` | it's pure — cover it in `CoreTests` |
 | A change to what the weekly review shows | `Core/Review/ReviewSelector.swift` | it's pure — cover it in `CoreTests` |
 | Anything that touches the database | `Persistence/Repositories/` | expose it through the protocol in `Core`, never leak SwiftData types upward |
