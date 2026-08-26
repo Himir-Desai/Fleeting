@@ -40,14 +40,18 @@ public struct SharpenView: View {
 
     /// The captured text, always on screen and never altered.
     private var originalNote: some View {
-        VStack(alignment: .leading, spacing: Spacing.tight) {
-            Text("What you wrote")
-                .font(Typography.caption)
-                .foregroundStyle(Palette.inkMuted)
+        VStack(alignment: .leading, spacing: Spacing.snug) {
+            SectionLabel("What you wrote")
             Text(model.thought.body)
-                .font(Typography.body)
+                .font(Typography.emphasis)
                 .foregroundStyle(Palette.ink)
                 .accessibilityIdentifier("sharpen.original")
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(Spacing.inset)
+        .background {
+            RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+                .fill(Palette.surfaceSunken)
         }
     }
 
@@ -72,15 +76,13 @@ public struct SharpenView: View {
     private var interview: some View {
         if let question = model.currentQuestion {
             VStack(alignment: .leading, spacing: Spacing.regular) {
-                Text("Question \(model.progress.answered + 1) of \(model.progress.total)")
-                    .font(Typography.caption)
-                    .foregroundStyle(Palette.inkMuted)
+                SectionLabel("Question \(model.progress.answered + 1) of \(model.progress.total)")
                     .accessibilityLabel(
                         "Question \(model.progress.answered + 1) of \(model.progress.total)"
                     )
 
                 Text(question.prompt)
-                    .font(Typography.title)
+                    .font(Typography.capture)
                     .foregroundStyle(Palette.ink)
                     .accessibilityIdentifier("sharpen.question")
 
@@ -89,12 +91,20 @@ public struct SharpenView: View {
                     .foregroundStyle(Palette.ink)
                     .tint(Palette.accentText)
                     .focused($isAnswerFocused)
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+                    .padding(Spacing.inset)
+                    .background {
+                        RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+                            .fill(Palette.surfaceSunken)
+                    }
                     .accessibilityIdentifier("sharpen.answer")
 
                 Button("Next") {
                     Task { await model.submitAnswer() }
                 }
                 .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.capsule)
+                .controlSize(.large)
                 .tint(Palette.accent)
                 .disabled(!model.canSubmit)
                 .accessibilityIdentifier("sharpen.next")
@@ -114,16 +124,20 @@ public struct SharpenView: View {
     private var result: some View {
         if let writeUp = model.writeUp {
             VStack(alignment: .leading, spacing: Spacing.loose) {
-                VStack(alignment: .leading, spacing: Spacing.snug) {
-                    Text(writeUp.title)
-                        .font(Typography.title)
-                        .foregroundStyle(Palette.ink)
-                        .accessibilityIdentifier("sharpen.title")
+                Card {
+                    VStack(alignment: .leading, spacing: Spacing.regular) {
+                        SectionLabel("Sharpened")
 
-                    Text(writeUp.detail)
-                        .font(Typography.body)
-                        .foregroundStyle(Palette.ink)
-                        .accessibilityIdentifier("sharpen.detail")
+                        Text(writeUp.title)
+                            .font(Typography.title)
+                            .foregroundStyle(Palette.ink)
+                            .accessibilityIdentifier("sharpen.title")
+
+                        Text(writeUp.detail)
+                            .font(Typography.body)
+                            .foregroundStyle(Palette.ink)
+                            .accessibilityIdentifier("sharpen.detail")
+                    }
                 }
 
                 HStack(spacing: Spacing.loose) {
@@ -200,6 +214,7 @@ public struct SharpenView: View {
                 Task { await model.askForQuestions() }
             }
             .buttonStyle(.bordered)
+            .buttonBorderShape(.capsule)
             .tint(Palette.accentText)
             .accessibilityIdentifier("sharpen.retry")
         }

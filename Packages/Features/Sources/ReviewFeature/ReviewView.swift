@@ -45,15 +45,11 @@ public struct ReviewView: View {
 
     /// Shown when nothing is fading or repeatedly deferred.
     private var emptyState: some View {
-        VStack(spacing: Spacing.snug) {
-            Text("Nothing needs a decision")
-                .font(Typography.title)
-                .foregroundStyle(Palette.ink)
-            Text("Everything is either fresh or already dealt with.")
-                .font(Typography.caption)
-                .foregroundStyle(Palette.inkMuted)
-        }
-        .accessibilityElement(children: .combine)
+        EmptyState(
+            symbol: "checkmark.seal",
+            title: "Nothing needs a decision",
+            message: "Everything is either fresh or already dealt with."
+        )
         .accessibilityIdentifier("review.empty")
     }
 
@@ -62,34 +58,62 @@ public struct ReviewView: View {
     private var session: some View {
         if let thought = model.current {
             VStack(alignment: .leading, spacing: Spacing.loose) {
-                Text("\(model.progress.position) of \(model.progress.total)")
-                    .font(Typography.caption)
-                    .foregroundStyle(Palette.inkMuted)
-                    .accessibilityIdentifier("review.progress")
-                    .accessibilityLabel(
-                        "Thought \(model.progress.position) of \(model.progress.total)"
-                    )
+                progress
 
-                Text(thought.body)
-                    .font(Typography.capture)
-                    .foregroundStyle(Palette.ink)
-                    .accessibilityIdentifier("review.card")
+                // The card sits between the progress and the decisions rather than at the top:
+                // one card alone against a screen of empty page reads as a loading state.
+                Spacer(minLength: Spacing.loose)
 
-                if let expiry = model.currentExpiry {
-                    Text("archives \(expiry, format: .relative(presentation: .named))")
-                        .font(Typography.caption)
-                        .foregroundStyle(Palette.fading)
-                        .accessibilityIdentifier("review.expiry")
+                Card(elevation: .floating) {
+                    VStack(alignment: .leading, spacing: Spacing.regular) {
+                        Text(thought.body)
+                            .font(Typography.capture)
+                            .foregroundStyle(Palette.ink)
+                            .accessibilityIdentifier("review.card")
+
+                        if let expiry = model.currentExpiry {
+                            Label {
+                                Text("archives \(expiry, format: .relative(presentation: .named))")
+                            } icon: {
+                                Image(systemName: "clock")
+                            }
+                            .font(Typography.caption)
+                            .foregroundStyle(Palette.fading)
+                            .accessibilityIdentifier("review.expiry")
+                        }
+
+                        if let question = model.ambientQuestion {
+                            Divider().overlay(Palette.separator)
+                            ambientPrompt(question)
+                        }
+                    }
                 }
 
-                if let question = model.ambientQuestion {
-                    ambientPrompt(question)
-                }
-
-                Spacer()
+                Spacer(minLength: Spacing.loose)
                 decisions
             }
             .padding(Spacing.loose)
+        }
+    }
+
+    /// How far through the session the user is, said in words and drawn as a bar.
+    ///
+    /// The bar is what makes the session feel finite from the first card, which is the whole
+    /// argument for capping it at seven (ADR-0007).
+    private var progress: some View {
+        VStack(alignment: .leading, spacing: Spacing.snug) {
+            SectionLabel("\(model.progress.position) of \(model.progress.total)")
+                .accessibilityIdentifier("review.progress")
+                .accessibilityLabel(
+                    "Thought \(model.progress.position) of \(model.progress.total)"
+                )
+
+            ProgressView(
+                value: Double(model.progress.position),
+                total: Double(max(model.progress.total, 1))
+            )
+            .tint(Palette.accentText)
+            .accessibilityHidden(true)
         }
     }
 
@@ -99,7 +123,7 @@ public struct ReviewView: View {
     private func ambientPrompt(_ question: String) -> some View {
         VStack(alignment: .leading, spacing: Spacing.snug) {
             Text(question)
-                .font(Typography.caption)
+                .font(Typography.subtitle)
                 .foregroundStyle(Palette.accentText)
                 .accessibilityIdentifier("review.question")
 
@@ -115,6 +139,7 @@ public struct ReviewView: View {
             }
             .font(Typography.caption)
             .buttonStyle(.bordered)
+            .buttonBorderShape(.capsule)
             .tint(Palette.accentText)
             .disabled(model.ambientAnswer.trimmingCharacters(in: .whitespaces).isEmpty)
             .accessibilityIdentifier("review.answerSubmit")
@@ -147,7 +172,9 @@ public struct ReviewView: View {
     private var letGoButton: some View {
         Button("Let go") { Task { await model.drop() } }
             .buttonStyle(.bordered)
-            .tint(Palette.ink)
+            .buttonBorderShape(.capsule)
+            .controlSize(.large)
+            .tint(Palette.inkMuted)
             .accessibilityIdentifier("review.drop")
             .accessibilityHint("Moves this to the archive. Nothing is deleted.")
     }
@@ -156,7 +183,9 @@ public struct ReviewView: View {
     private var snoozeButton: some View {
         Button("Snooze") { Task { await model.snooze() } }
             .buttonStyle(.bordered)
-            .tint(Palette.ink)
+            .buttonBorderShape(.capsule)
+            .controlSize(.large)
+            .tint(Palette.inkMuted)
             .accessibilityIdentifier("review.snooze")
             .accessibilityHint("Holds this at full freshness for a week")
     }
@@ -165,6 +194,8 @@ public struct ReviewView: View {
     private var keepButton: some View {
         Button("Keep") { Task { await model.act() } }
             .buttonStyle(.borderedProminent)
+            .buttonBorderShape(.capsule)
+            .controlSize(.large)
             .tint(Palette.accent)
             .accessibilityIdentifier("review.act")
             .accessibilityHint("Resets how fresh this thought is")
@@ -172,19 +203,28 @@ public struct ReviewView: View {
 
     /// What the session decided, and a way out.
     private var summary: some View {
-        VStack(spacing: Spacing.regular) {
-            Text("Done")
-                .font(Typography.title)
-                .foregroundStyle(Palette.ink)
+        VStack(spacing: Spacing.loose) {
+            VStack(spacing: Spacing.regular) {
+                Image(systemName: "checkmark.seal.fill")
+                    .font(Typography.symbol)
+                    .foregroundStyle(Palette.accentText)
+                    .accessibilityHidden(true)
 
-            Text(summaryLine)
-                .font(Typography.body)
-                .foregroundStyle(Palette.inkMuted)
-                .multilineTextAlignment(.center)
-                .accessibilityIdentifier("review.summary")
+                Text("That's the lot")
+                    .font(Typography.display)
+                    .foregroundStyle(Palette.ink)
+
+                Text(summaryLine)
+                    .font(Typography.body)
+                    .foregroundStyle(Palette.inkMuted)
+                    .multilineTextAlignment(.center)
+                    .accessibilityIdentifier("review.summary")
+            }
 
             Button("Back to capture") { dismiss() }
                 .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.capsule)
+                .controlSize(.large)
                 .tint(Palette.accent)
                 .accessibilityIdentifier("review.finish")
         }

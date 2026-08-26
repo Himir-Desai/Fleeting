@@ -15,7 +15,20 @@ public struct CaptureView: View {
 
     @State private var model: CaptureModel
     @FocusState private var isFieldFocused: Bool
+    @Environment(\.dynamicTypeSize) private var typeSize
     private let onBrowse: () -> Void
+
+    /// How tall the writing recess is before any text is in it.
+    ///
+    /// Deliberately *not* scaled with the type size, and dropped entirely at accessibility sizes:
+    /// the field inside is already screen-filling there, and a minimum on top of it pushes the
+    /// save control off the bottom once the keyboard is up. `AccessibilityTests` asserts it.
+    private var wellHeight: CGFloat {
+        typeSize.isAccessibilitySize ? 0 : 132
+    }
+
+    /// The browse control's tap target, which has to clear 44pt at every type size.
+    @ScaledMetric(relativeTo: .body) private var controlSize: CGFloat = 44
 
     /// Creates the capture screen.
     /// - Parameters:
@@ -33,13 +46,7 @@ public struct CaptureView: View {
             Palette.surface.ignoresSafeArea()
 
             VStack(alignment: .leading, spacing: Spacing.regular) {
-                TextField("What's on your mind?", text: $model.text, axis: .vertical)
-                    .font(Typography.capture)
-                    .foregroundStyle(Palette.ink)
-                    .tint(Palette.accentText)
-                    .focused($isFieldFocused)
-                    .accessibilityIdentifier("capture.field")
-                    .accessibilityLabel("Capture a thought")
+                well
 
                 if model.lastError != nil {
                     Text("Couldn't save that. Your text is still here — try again.")
@@ -56,31 +63,9 @@ public struct CaptureView: View {
             }
             .motion(Motion.commit, value: showsHint)
             .padding(.horizontal, Spacing.loose)
-            .padding(.top, Spacing.section)
+            .padding(.top, Spacing.loose)
         }
-        .safeAreaInset(edge: .bottom) {
-            HStack {
-                Button(action: onBrowse) {
-                    Image(systemName: "list.bullet")
-                }
-                .font(Typography.title)
-                .tint(Palette.inkMuted)
-                .accessibilityIdentifier("capture.browse")
-                .accessibilityLabel("Browse captured thoughts")
-
-                Spacer()
-                Button("Save") {
-                    Task { await model.save() }
-                }
-                .font(Typography.title)
-                .buttonStyle(.borderedProminent)
-                .tint(Palette.accent)
-                .disabled(!model.canSave)
-                .accessibilityIdentifier("capture.save")
-            }
-            .padding(.horizontal, Spacing.loose)
-            .padding(.vertical, Spacing.snug)
-        }
+        .safeAreaInset(edge: .bottom) { actions }
         .task { isFieldFocused = true }
         // The save is the one moment worth confirming, and a haptic does it without taking the
         // focus a banner would.
@@ -91,6 +76,83 @@ public struct CaptureView: View {
         .onChange(of: model.savedCount) { _, _ in
             AccessibilityNotification.Announcement("Saved").post()
         }
+    }
+
+    /// The field, in a recess that reads as somewhere to write rather than a control to fill in.
+    ///
+    /// At ordinary type sizes it holds a minimum height, so a cold launch lands on something that
+    /// is visibly waiting for a thought rather than on a single empty line.
+    private var well: some View {
+        TextField("What's on your mind?", text: $model.text, axis: .vertical)
+            .font(Typography.capture)
+            .foregroundStyle(Palette.ink)
+            .tint(Palette.accentText)
+            .focused($isFieldFocused)
+            .accessibilityIdentifier("capture.field")
+            .accessibilityLabel("Capture a thought")
+            .padding(Spacing.inset)
+            .frame(maxWidth: .infinity, minHeight: wellHeight, alignment: .topLeading)
+            // A background rather than a sibling in a ZStack: a shape has no size of its own, so
+            // as a sibling it takes every point offered and the well swallows the screen.
+            .background {
+                RoundedRectangle(cornerRadius: Radius.well, style: .continuous)
+                    .fill(Palette.surfaceSunken)
+            }
+            // The whole recess is the tap target, not just the line of text in it.
+            .contentShape(.rect(cornerRadius: Radius.well, style: .continuous))
+            .onTapGesture { isFieldFocused = true }
+    }
+
+    /// Browse and save, the only two controls on the screen.
+    ///
+    /// Save is the prominent one and browse is a quiet chip, because leaving is never the reason
+    /// this screen was opened. Two controls side by side stop fitting well before the largest type
+    /// size, so the row becomes a column when it has to — the save control staying reachable at
+    /// 60pt type is what `AccessibilityTests` asserts.
+    private var actions: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: Spacing.regular) {
+                browseButton
+                Spacer()
+                saveButton
+            }
+            VStack(spacing: Spacing.regular) {
+                saveButton
+                browseButton
+            }
+        }
+        .padding(.horizontal, Spacing.loose)
+        .padding(.vertical, Spacing.regular)
+        .background(Palette.surface)
+    }
+
+    /// The way to what has already been captured, drawn as a quiet chip.
+    private var browseButton: some View {
+        Button(action: onBrowse) {
+            Image(systemName: "list.bullet")
+                .font(Typography.body)
+                .foregroundStyle(Palette.inkMuted)
+                .frame(width: controlSize, height: controlSize)
+                .background {
+                    Circle().fill(Palette.surfaceSunken)
+                }
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("capture.browse")
+        .accessibilityLabel("Browse captured thoughts")
+    }
+
+    /// Commits the thought and clears the field, without taking focus.
+    private var saveButton: some View {
+        Button("Save") {
+            Task { await model.save() }
+        }
+        .font(Typography.title)
+        .buttonStyle(.borderedProminent)
+        .buttonBorderShape(.capsule)
+        .tint(Palette.accent)
+        .disabled(!model.canSave)
+        .accessibilityIdentifier("capture.save")
     }
 
     /// Whether the one-time explanation should be on screen.

@@ -122,36 +122,29 @@ public struct InboxView: View {
 
     /// Shown when nothing is live, which is a success rather than a void.
     private var emptyState: some View {
-        VStack(spacing: Spacing.snug) {
-            Text("Nothing live right now")
-                .font(Typography.title)
-                .foregroundStyle(Palette.ink)
-            Text(
-                """
-                Everything you captured has been dealt with or filed away. The archive still \
-                has it all.
-                """
-            )
-            .font(Typography.caption)
-            .foregroundStyle(Palette.inkMuted)
-            .multilineTextAlignment(.center)
-        }
-        .padding(Spacing.loose)
-        .accessibilityElement(children: .combine)
+        EmptyState(
+            symbol: "wind",
+            title: "Nothing live right now",
+            message: """
+            Everything you captured has been dealt with or filed away. The archive still has \
+            it all.
+            """
+        )
         .accessibilityIdentifier("inbox.empty")
     }
 
     /// A quiet line saying thoughts are not reaching disk.
     private var storageWarning: some View {
-        HStack(spacing: Spacing.snug) {
-            Image(systemName: "exclamationmark.triangle")
+        HStack(spacing: Spacing.regular) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(Palette.fading)
             Text("Thoughts aren't being saved to disk. They'll be gone when you close the app.")
+                .font(Typography.caption)
+                .foregroundStyle(Palette.ink)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .font(Typography.caption)
-        .foregroundStyle(Palette.fading)
-        .padding(.vertical, Spacing.tight)
-        .listRowBackground(Palette.raised)
+        .padding(.vertical, Spacing.regular)
+        .modifier(NoticeRow())
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("inbox.storageWarning")
     }
@@ -164,21 +157,60 @@ public struct InboxView: View {
         Button(action: onReview) {
             HStack(spacing: Spacing.regular) {
                 Image(systemName: "checklist")
-                    .foregroundStyle(Palette.accentText)
-                Text("\(model.reviewCount) need a decision")
                     .font(Typography.body)
-                    .foregroundStyle(Palette.ink)
+                    .foregroundStyle(Palette.accentText)
+                VStack(alignment: .leading, spacing: Spacing.hairline) {
+                    Text("\(model.reviewCount) need a decision")
+                        .font(Typography.subtitle)
+                        .foregroundStyle(Palette.ink)
+                    Text("A short session, then it ends")
+                        .font(Typography.caption)
+                        .foregroundStyle(Palette.inkMuted)
+                }
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(Typography.caption)
                     .foregroundStyle(Palette.inkMuted)
             }
+            .padding(.vertical, Spacing.regular)
         }
         .buttonStyle(.plain)
-        .padding(.vertical, Spacing.tight)
-        .listRowBackground(Palette.raised)
+        .modifier(NoticeRow(tinted: true))
         .accessibilityIdentifier("inbox.review")
         .accessibilityElement(children: .combine)
         .accessibilityHint("Opens a short session to decide what to keep")
+    }
+}
+
+/// The card treatment shared by the two things that are not thoughts: the storage warning and
+/// the review invitation.
+///
+/// They sit in the same list as the rows, so they have to be inset the same way; a modifier keeps
+/// the two of them from drifting apart from each other or from ``InboxListRow``.
+private struct NoticeRow: ViewModifier {
+    /// Whether the card is drawn on the accent ground rather than the plain raised one.
+    var tinted = false
+
+    func body(content: Content) -> some View {
+        content
+            .listRowInsets(
+                EdgeInsets(
+                    top: 0, leading: Spacing.loose,
+                    bottom: 0, trailing: Spacing.loose
+                )
+            )
+            .listRowSeparator(.hidden)
+            .listRowBackground(
+                Group {
+                    if tinted {
+                        RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+                            .fill(Palette.accentSoft)
+                    } else {
+                        CardSurface()
+                    }
+                }
+                .padding(.horizontal, Spacing.snug)
+                .padding(.vertical, Spacing.tight)
+            )
     }
 }

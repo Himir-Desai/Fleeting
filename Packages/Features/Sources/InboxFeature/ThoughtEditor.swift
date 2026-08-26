@@ -26,12 +26,21 @@ struct ThoughtEditor: View {
     var body: some View {
         ZStack {
             Palette.surface.ignoresSafeArea()
-            TextField("", text: $draft, axis: .vertical)
-                .font(Typography.body)
-                .foregroundStyle(Palette.ink)
-                .tint(Palette.accentText)
-                .accessibilityIdentifier("editor.field")
-                .padding(Spacing.loose)
+            VStack(alignment: .leading, spacing: 0) {
+                TextField("", text: $draft, axis: .vertical)
+                    .font(Typography.capture)
+                    .foregroundStyle(Palette.ink)
+                    .tint(Palette.accentText)
+                    .accessibilityIdentifier("editor.field")
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+                    .padding(Spacing.inset)
+                    .background {
+                        RoundedRectangle(cornerRadius: Radius.well, style: .continuous)
+                            .fill(Palette.surfaceSunken)
+                    }
+                Spacer(minLength: 0)
+            }
+            .padding(Spacing.loose)
         }
         .navigationTitle("Edit")
         #if os(iOS)

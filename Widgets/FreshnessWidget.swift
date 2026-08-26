@@ -51,7 +51,7 @@ struct FreshnessWidgetView: View {
     var body: some View {
         if !entry.isReadable {
             Text("Open Fleeting once to get started.")
-                .font(.caption)
+                .font(Typography.caption)
                 .foregroundStyle(Palette.inkMuted)
         } else if family == .accessoryRectangular {
             lockScreen
@@ -64,18 +64,16 @@ struct FreshnessWidgetView: View {
     private var home: some View {
         VStack(alignment: .leading, spacing: Spacing.snug) {
             Text("\(entry.liveCount)")
-                .font(.system(size: 34, weight: .semibold))
+                .font(Typography.numeral)
                 .foregroundStyle(Palette.ink)
-            Text(entry.liveCount == 1 ? "thought" : "thoughts")
-                .font(.caption)
-                .foregroundStyle(Palette.inkMuted)
+            SectionLabel(entry.liveCount == 1 ? "thought" : "thoughts")
 
             Spacer(minLength: 0)
 
             if let fading = entry.fading {
-                FreshnessBar(freshness: entry.fadingFreshness)
+                FreshnessMeter(freshness: entry.fadingFreshness, thickness: 4)
                 Text(fading)
-                    .font(.caption2)
+                    .font(Typography.caption)
                     .foregroundStyle(Palette.inkMuted)
                     .lineLimit(2)
             }
@@ -87,10 +85,10 @@ struct FreshnessWidgetView: View {
     private var lockScreen: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text("\(entry.liveCount) live")
-                .font(.headline)
+                .font(Typography.title)
             if let fading = entry.fading {
                 Text(fading)
-                    .font(.caption2)
+                    .font(Typography.caption)
                     .lineLimit(2)
             }
         }

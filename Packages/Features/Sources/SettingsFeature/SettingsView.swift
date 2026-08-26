@@ -16,6 +16,7 @@ public struct SettingsView: View {
     @ViewBuilder
     private var nudgeToggles: some View {
         Toggle("Daily nudge", isOn: binding(\.dailyEnabled))
+            .modifier(SettingsRow())
             .accessibilityIdentifier("settings.nudge.daily")
 
         if model.preferences.dailyEnabled {
@@ -24,13 +25,16 @@ public struct SettingsView: View {
                     Text(Self.hourLabel(hour)).tag(hour)
                 }
             }
+            .modifier(SettingsRow())
             .accessibilityIdentifier("settings.nudge.dailyHour")
         }
 
         Toggle("Weekly review invitation", isOn: binding(\.weeklyEnabled))
+            .modifier(SettingsRow())
             .accessibilityIdentifier("settings.nudge.weekly")
 
         Toggle("Warn before archiving", isOn: binding(\.expiryWarningsEnabled))
+            .modifier(SettingsRow())
             .accessibilityIdentifier("settings.nudge.expiry")
     }
 
@@ -60,31 +64,20 @@ public struct SettingsView: View {
 
     public var body: some View {
         List {
-            Section("Sorting") {
-                VStack(alignment: .leading, spacing: Spacing.tight) {
-                    Text(model.status.headline)
-                        .font(Typography.title)
-                        .foregroundStyle(Palette.ink)
-                    Text(model.status.detail)
-                        .font(Typography.caption)
-                        .foregroundStyle(Palette.inkMuted)
-                }
-                .padding(.vertical, Spacing.tight)
-                .listRowBackground(Palette.raised)
-                .accessibilityIdentifier("settings.intelligence")
+            Section {
+                StatusBlock(headline: model.status.headline, detail: model.status.detail)
+                    .modifier(SettingsRow())
+                    .accessibilityIdentifier("settings.intelligence")
+            } header: {
+                SectionLabel("Sorting")
             }
 
-            Section("Notifications") {
-                VStack(alignment: .leading, spacing: Spacing.tight) {
-                    Text(model.notificationStatus.headline)
-                        .font(Typography.title)
-                        .foregroundStyle(Palette.ink)
-                    Text(model.notificationStatus.detail)
-                        .font(Typography.caption)
-                        .foregroundStyle(Palette.inkMuted)
-                }
-                .padding(.vertical, Spacing.tight)
-                .listRowBackground(Palette.raised)
+            Section {
+                StatusBlock(
+                    headline: model.notificationStatus.headline,
+                    detail: model.notificationStatus.detail
+                )
+                .modifier(SettingsRow())
                 .accessibilityIdentifier("settings.notifications")
 
                 if model.authorization == .notAsked {
@@ -93,58 +86,54 @@ public struct SettingsView: View {
                     }
                     .font(Typography.body)
                     .tint(Palette.accentText)
-                    .listRowBackground(Palette.raised)
+                    .modifier(SettingsRow())
                     .accessibilityIdentifier("settings.notifications.enable")
                 }
 
                 if model.canConfigureNudges {
                     nudgeToggles
                 }
+            } header: {
+                SectionLabel("Notifications")
             }
 
-            Section("Storage") {
-                VStack(alignment: .leading, spacing: Spacing.tight) {
-                    Text(model.storageDescription.headline)
-                        .font(Typography.title)
-                        .foregroundStyle(model.storageIsDegraded ? Palette.fading : Palette.ink)
-                    Text(model.storageDescription.detail)
-                        .font(Typography.caption)
-                        .foregroundStyle(Palette.inkMuted)
-                }
-                .padding(.vertical, Spacing.tight)
-                .listRowBackground(Palette.raised)
+            Section {
+                StatusBlock(
+                    headline: model.storageDescription.headline,
+                    detail: model.storageDescription.detail,
+                    tone: model.storageIsDegraded ? .warning : .normal
+                )
+                .modifier(SettingsRow())
                 .accessibilityIdentifier("settings.storage")
+            } header: {
+                SectionLabel("Storage")
             }
 
-            Section("Syncing") {
-                VStack(alignment: .leading, spacing: Spacing.tight) {
-                    Text(model.syncDescription.headline)
-                        .font(Typography.title)
-                        .foregroundStyle(model.syncStatus.isSyncing ? Palette.ink : Palette.fading)
-                    Text(model.syncDescription.detail)
-                        .font(Typography.caption)
-                        .foregroundStyle(Palette.inkMuted)
-                }
-                .padding(.vertical, Spacing.tight)
-                .listRowBackground(Palette.raised)
+            Section {
+                StatusBlock(
+                    headline: model.syncDescription.headline,
+                    detail: model.syncDescription.detail,
+                    tone: model.syncStatus.isSyncing ? .normal : .warning
+                )
+                .modifier(SettingsRow())
                 .accessibilityIdentifier("settings.sync")
+            } header: {
+                SectionLabel("Syncing")
             }
 
-            Section("Widgets") {
-                VStack(alignment: .leading, spacing: Spacing.tight) {
-                    Text(model.widgetStatus.headline)
-                        .font(Typography.title)
-                        .foregroundStyle(model.storageIsShared ? Palette.ink : Palette.fading)
-                    Text(model.widgetStatus.detail)
-                        .font(Typography.caption)
-                        .foregroundStyle(Palette.inkMuted)
-                }
-                .padding(.vertical, Spacing.tight)
-                .listRowBackground(Palette.raised)
+            Section {
+                StatusBlock(
+                    headline: model.widgetStatus.headline,
+                    detail: model.widgetStatus.detail,
+                    tone: model.storageIsShared ? .normal : .warning
+                )
+                .modifier(SettingsRow())
                 .accessibilityIdentifier("settings.widgets")
+            } header: {
+                SectionLabel("Widgets")
             }
 
-            Section("How long things last") {
+            Section {
                 ForEach(model.lifetimes, id: \.kind) { entry in
                     HStack {
                         Text(entry.kind.rawValue.capitalized)
@@ -154,17 +143,43 @@ public struct SettingsView: View {
                             .foregroundStyle(Palette.inkMuted)
                     }
                     .font(Typography.body)
-                    .listRowBackground(Palette.raised)
+                    .modifier(SettingsRow())
                 }
+            } header: {
+                SectionLabel("How long things last")
             }
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .background(Palette.surface)
+        .tint(Palette.accentText)
         .navigationTitle("Settings")
         #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
         #endif
             .task { await model.load() }
+    }
+}
+
+/// The card treatment every settings row shares.
+///
+/// Settings is a stack of statements about how the app is behaving, and each one is a card. The
+/// modifier is what keeps six of them identical without six copies of the same four lines.
+private struct SettingsRow: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .padding(.vertical, Spacing.regular)
+            .listRowInsets(
+                EdgeInsets(
+                    top: 0, leading: Spacing.loose,
+                    bottom: 0, trailing: Spacing.loose
+                )
+            )
+            .listRowSeparator(.hidden)
+            .listRowBackground(
+                CardSurface()
+                    .padding(.horizontal, Spacing.snug)
+                    .padding(.vertical, Spacing.tight)
+            )
     }
 }

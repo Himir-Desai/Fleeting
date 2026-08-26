@@ -24,8 +24,11 @@ struct InboxListRow: View {
     /// with the type size rather than staying a fixed square.
     @ScaledMetric(relativeTo: .body) private var controlSize: CGFloat = 44
 
+    /// The tinted chip drawn inside that tap target.
+    @ScaledMetric(relativeTo: .body) private var chipSize: CGFloat = 34
+
     var body: some View {
-        HStack(spacing: Spacing.regular) {
+        HStack(spacing: Spacing.snug) {
             kindControl
 
             NavigationLink {
@@ -34,8 +37,23 @@ struct InboxListRow: View {
                 ThoughtRow(thought: thought, freshness: freshness, expiresAt: expiresAt)
             }
         }
-        .listRowBackground(Palette.raised)
-        .listRowSeparatorTint(Palette.ink.opacity(0.12))
+        .listRowInsets(
+            EdgeInsets(
+                top: 0, leading: Spacing.loose,
+                bottom: 0, trailing: Spacing.loose
+            )
+        )
+        .listRowSeparator(.hidden)
+        // A card rather than a striped row, and the rail is the freshness read a second time:
+        // a column of rails is scannable in a way a column of meters is not.
+        .listRowBackground(
+            CardSurface(
+                rail: FreshnessStyle.tint(for: freshness.value),
+                railOpacity: FreshnessStyle.railOpacity(for: freshness.value)
+            )
+            .padding(.horizontal, Spacing.snug)
+            .padding(.vertical, Spacing.tight)
+        )
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
             typeAction
             Button(action: onSnooze) {
@@ -67,10 +85,15 @@ struct InboxListRow: View {
             }
         } label: {
             Image(systemName: KindGlyph.name(for: thought.kind))
-                .font(Typography.body)
+                .font(Typography.caption)
                 .foregroundStyle(
                     thought.kind == .unsorted ? Palette.inkMuted : Palette.accentText
                 )
+                .frame(width: chipSize, height: chipSize)
+                .background {
+                    RoundedRectangle(cornerRadius: Radius.control, style: .continuous)
+                        .fill(thought.kind == .unsorted ? Palette.surfaceSunken : Palette.accentSoft)
+                }
                 .frame(width: controlSize, height: controlSize)
                 .contentShape(.rect)
         }

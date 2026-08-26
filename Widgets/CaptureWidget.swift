@@ -1,3 +1,4 @@
+import DesignSystem
 import SwiftUI
 import WidgetKit
 
@@ -46,10 +47,10 @@ struct CaptureWidgetView: View {
     var body: some View {
         if family == .accessoryCircular {
             Image(systemName: "square.and.pencil")
-                .font(.title2)
+                .font(Typography.capture)
         } else {
             Label("Capture a thought", systemImage: "square.and.pencil")
-                .font(.headline)
+                .font(Typography.title)
         }
     }
 }

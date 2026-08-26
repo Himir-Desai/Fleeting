@@ -15,18 +15,29 @@ public struct ArchiveView: View {
     public var body: some View {
         List {
             ForEach(model.results) { thought in
-                VStack(alignment: .leading, spacing: Spacing.tight) {
+                VStack(alignment: .leading, spacing: Spacing.snug) {
                     Text(thought.body)
-                        .font(Typography.body)
+                        .font(Typography.emphasis)
                         .foregroundStyle(Palette.ink)
                         .lineLimit(3)
-                    Text(thought.capturedAt, format: .relative(presentation: .named))
+                    Text("captured \(thought.capturedAt, format: .relative(presentation: .named))")
                         .font(Typography.caption)
                         .foregroundStyle(Palette.inkMuted)
                 }
-                .padding(.vertical, Spacing.tight)
-                .listRowBackground(Palette.raised)
-                .listRowSeparatorTint(Palette.ink.opacity(0.12))
+                .padding(.vertical, Spacing.regular)
+                .listRowInsets(
+                    EdgeInsets(
+                        top: 0, leading: Spacing.loose,
+                        bottom: 0, trailing: Spacing.loose
+                    )
+                )
+                .listRowSeparator(.hidden)
+                // The archive is flat: nothing here is decaying, so nothing here carries a rail.
+                .listRowBackground(
+                    CardSurface(elevation: .flat)
+                        .padding(.horizontal, Spacing.snug)
+                        .padding(.vertical, Spacing.tight)
+                )
                 .swipeActions(edge: .leading, allowsFullSwipe: true) {
                     Button {
                         Task { await model.restore(thought) }
@@ -64,27 +75,19 @@ public struct ArchiveView: View {
 
     /// Shown when the archive has nothing to show, which means two different things.
     private var emptyState: some View {
-        VStack(spacing: Spacing.snug) {
-            Text(model.query.isEmpty ? "Nothing archived yet" : "No matches")
-                .font(Typography.title)
-                .foregroundStyle(Palette.ink)
-            Text(
-                model.query.isEmpty
-                    ? """
-                    Thoughts arrive here when they run out of freshness, or when you set them \
-                    aside. They stay for good.
-                    """
-                    : """
-                    Nothing here contains that. The archive keeps the words you wrote, so try \
-                    one of them.
-                    """
-            )
-            .font(Typography.caption)
-            .foregroundStyle(Palette.inkMuted)
-            .multilineTextAlignment(.center)
-        }
-        .padding(Spacing.loose)
-        .accessibilityElement(children: .combine)
+        EmptyState(
+            symbol: model.query.isEmpty ? "archivebox" : "magnifyingglass",
+            title: model.query.isEmpty ? "Nothing archived yet" : "No matches",
+            message: model.query.isEmpty
+                ? """
+                Thoughts arrive here when they run out of freshness, or when you set them \
+                aside. They stay for good.
+                """
+                : """
+                Nothing here contains that. The archive keeps the words you wrote, so try \
+                one of them.
+                """
+        )
         .accessibilityIdentifier("archive.empty")
     }
 }

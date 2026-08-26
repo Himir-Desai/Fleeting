@@ -13,12 +13,12 @@ struct ThoughtRow: View {
 
     /// The meter's width, so it grows with the text beside it rather than staying a hairline
     /// against 60pt type.
-    @ScaledMetric(relativeTo: .caption) private var meterWidth: CGFloat = 56
+    @ScaledMetric(relativeTo: .caption) private var meterWidth: CGFloat = 72
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.snug) {
             Text(thought.body)
-                .font(Typography.body)
+                .font(Typography.emphasis)
                 .foregroundStyle(Palette.ink)
                 .lineLimit(typeSize.isAccessibilitySize ? 6 : 3)
 
@@ -26,7 +26,7 @@ struct ThoughtRow: View {
         }
         .opacity(FreshnessStyle.opacity(for: freshness.value, increasedContrast: isHighContrast))
         .motion(Motion.decay, value: freshness.value)
-        .padding(.vertical, Spacing.tight)
+        .padding(.vertical, Spacing.snug)
         .accessibilityElement(children: .combine)
         .accessibilityValue(spokenFreshness)
     }
@@ -38,11 +38,11 @@ struct ThoughtRow: View {
     @ViewBuilder
     private var metadata: some View {
         let layout = typeSize.isAccessibilitySize
-            ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.tight))
-            : AnyLayout(HStackLayout(alignment: .center, spacing: Spacing.snug))
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.snug))
+            : AnyLayout(HStackLayout(alignment: .center, spacing: Spacing.regular))
 
         layout {
-            FreshnessBar(freshness: freshness.value)
+            FreshnessMeter(freshness: freshness.value)
                 .frame(width: meterWidth)
 
             if let streak = thought.streak, streak.hasStarted {
