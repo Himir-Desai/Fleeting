@@ -104,12 +104,14 @@ is ever deleted; the archive is fully searchable, it's just out of the way.
 
 ### ✦ Sharpen — half-baked in, fully-baked out
 
-<img src="docs/screenshots/sharpen.png" width="260" align="right" alt="The Sharpen screen: the raw captured note at the top under 'What you wrote', then the generated write-up in four labelled sections — the pitch, who it's for, first step, biggest risk — and an understated 'Take this further elsewhere' link at the bottom." />
+<img src="docs/screenshots/sharpen.png" width="260" align="right" alt="The Sharpen screen: the raw captured note at the top under 'What you wrote', then a generated title and a paragraph developing the idea, with an understated 'Take this further elsewhere' link and a Revert control beneath." />
 
 The differentiator. Tap Sharpen on a fragment and the on-device model asks **two or three short,
 specific questions** — *fair by what, income or room size? who has this problem badly enough to pay?*
-You answer in a line each. It then writes up a structured version: the pitch, who it's for, the first
-concrete step, and the biggest risk. The output is grounded in your answers, so it's still your idea.
+You answer in a line each. It then develops the fragment into a titled paragraph, built from your
+answers rather than from the model's imagination — so it is still your idea, written out properly.
+Changed your mind? **Revert** removes the write-up and the answers and leaves the note exactly as you
+captured it.
 
 When a thought outgrows what an on-device model can do, a deliberately understated **escalate**
 affordance has the local model compose a rich, context-loaded prompt and hand it to a full assistant

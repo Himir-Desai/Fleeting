@@ -35,7 +35,7 @@ final class ScreenshotTests: XCTestCase {
         idea.swipeRight()
         app.buttons["Sharpen"].tap()
 
-        _ = app.staticTexts["sharpen.pitch"].waitForExistence(timeout: 30)
+        _ = app.staticTexts["sharpen.title"].waitForExistence(timeout: 30)
         Thread.sleep(forTimeInterval: 1)
 
         let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())

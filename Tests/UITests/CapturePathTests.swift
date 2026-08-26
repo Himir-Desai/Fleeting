@@ -453,7 +453,7 @@ final class SharpenTests: XCTestCase {
 
         // The model decides how many questions to ask, so answer until the write-up appears.
         for _ in 0 ..< 4 {
-            if app.staticTexts["sharpen.pitch"].exists {
+            if app.staticTexts["sharpen.title"].exists {
                 break
             }
             guard app.staticTexts["sharpen.question"].waitForExistence(timeout: modelTimeout) else {
@@ -463,12 +463,13 @@ final class SharpenTests: XCTestCase {
         }
 
         XCTAssertTrue(
-            app.staticTexts["sharpen.pitch"].waitForExistence(timeout: modelTimeout),
+            app.staticTexts["sharpen.title"].waitForExistence(timeout: modelTimeout),
             "answering every question must produce a write-up"
         )
-        XCTAssertTrue(app.staticTexts["sharpen.audience"].exists)
-        XCTAssertTrue(app.staticTexts["sharpen.firstStep"].exists)
-        XCTAssertTrue(app.staticTexts["sharpen.risk"].exists)
+        XCTAssertTrue(
+            app.staticTexts["sharpen.detail"].exists,
+            "the write-up must be a paragraph, not just a title"
+        )
         XCTAssertTrue(
             app.buttons["sharpen.escalate"].exists,
             "a finished write-up must offer the way to take it further"
@@ -495,9 +496,82 @@ final class SharpenTests: XCTestCase {
             )
         } else {
             XCTAssertTrue(
-                app.staticTexts["sharpen.pitch"].waitForExistence(timeout: modelTimeout),
+                app.staticTexts["sharpen.title"].waitForExistence(timeout: modelTimeout),
                 "the interview either resumed at a later question or had already finished"
             )
         }
+    }
+}
+
+/// Covers reverting a sharpened idea back to the note as it was captured.
+@MainActor
+final class SharpenRevertTests: XCTestCase {
+    override func setUp() {
+        continueAfterFailure = false
+    }
+
+    /// The demo seed ships this idea already sharpened, so the write-up is on screen at once.
+    private func openTheSharpenedIdea(_ app: XCUIApplication) {
+        let idea = app.staticTexts["newsletter about tools that do one thing"]
+        XCTAssertTrue(idea.waitForExistence(timeout: 10))
+        idea.swipeRight()
+        XCTAssertTrue(app.buttons["Sharpen"].waitForExistence(timeout: 5))
+        app.buttons["Sharpen"].tap()
+    }
+
+    func testRevertingReturnsTheNoteToHowItWasCaptured() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--reset-store", "--seed-demo"]
+        app.launch()
+        _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 5)
+        app.buttons["capture.browse"].tap()
+
+        openTheSharpenedIdea(app)
+        XCTAssertTrue(app.staticTexts["sharpen.title"].waitForExistence(timeout: 20))
+        XCTAssertTrue(app.staticTexts["sharpen.detail"].exists)
+
+        app.buttons["sharpen.revert"].tap()
+        // SwiftUI renders the dialog's button twice, and the screen behind it also has one
+        // labelled Revert, so take the first match on the confirmation's own identifier.
+        let confirm = app.buttons["sharpen.revert.confirm"].firstMatch
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5), "reverting must be confirmed, not instant")
+        confirm.tap()
+
+        // Back in the inbox, with the note itself intact.
+        let idea = app.staticTexts["newsletter about tools that do one thing"]
+        XCTAssertTrue(
+            idea.waitForExistence(timeout: 10),
+            "the note must survive the write-up being removed"
+        )
+
+        // Reopening starts over rather than showing the old write-up.
+        idea.swipeRight()
+        app.buttons["Sharpen"].tap()
+        XCTAssertFalse(
+            app.staticTexts["sharpen.title"].waitForExistence(timeout: 4),
+            "a reverted idea must no longer carry its old write-up"
+        )
+    }
+
+    func testRevertAsksBeforeDestroyingAnything() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--reset-store", "--seed-demo"]
+        app.launch()
+        _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 5)
+        app.buttons["capture.browse"].tap()
+
+        openTheSharpenedIdea(app)
+        XCTAssertTrue(app.staticTexts["sharpen.title"].waitForExistence(timeout: 20))
+
+        app.buttons["sharpen.revert"].tap()
+
+        XCTAssertTrue(
+            app.sheets.firstMatch.waitForExistence(timeout: 5),
+            "reverting must ask first — it removes work the user did"
+        )
+        XCTAssertTrue(
+            app.staticTexts["sharpen.title"].exists,
+            "nothing may be removed before the confirmation is accepted"
+        )
     }
 }

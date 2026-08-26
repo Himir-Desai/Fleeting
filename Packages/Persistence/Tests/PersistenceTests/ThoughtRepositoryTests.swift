@@ -257,8 +257,9 @@ struct SharpeningStorageTests {
         original.answerSharpening("agreeing what fair means", to: questions[1].id, at: epoch)
         original.attachWriteUp(
             WriteUp(
-                pitch: "A fair rent calculator", audience: "student houses",
-                firstStep: "write the formula", biggestRisk: "Splitwise", generatedAt: epoch
+                title: "A fair rent calculator",
+                detail: "It is for student houses. Write the formula first.",
+                generatedAt: epoch
             ),
             at: epoch
         )
@@ -266,7 +267,7 @@ struct SharpeningStorageTests {
         try await repository.add(original)
         let stored = try #require(try await repository.all().first)
 
-        #expect(stored.sharpening?.writeUp?.pitch == "A fair rent calculator")
+        #expect(stored.sharpening?.writeUp?.title == "A fair rent calculator")
         #expect(stored.sharpening?.writeUp?.generatedAt == epoch)
     }
 

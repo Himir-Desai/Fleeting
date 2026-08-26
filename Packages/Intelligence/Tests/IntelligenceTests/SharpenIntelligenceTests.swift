@@ -32,10 +32,14 @@ struct HeuristicSharpeningTests {
             await subject.writeUp(for: "app for splitting rent fairly", answers: answers, at: epoch)
         )
 
-        #expect(result.pitch == "app for splitting rent fairly")
-        #expect(result.audience == "4–6 person student houses")
-        #expect(result.biggestRisk == "agreeing what fair means")
-        #expect(result.firstStep == "write the split formula")
+        #expect(result.title == "App for splitting rent fairly")
+        #expect(result.detail.contains("4–6 person student houses"))
+        #expect(result.detail.contains("agreeing what fair means"))
+        #expect(result.detail.contains("The first thing to try: write the split formula."))
+        #expect(
+            result.detail.hasPrefix("App for splitting rent fairly."),
+            "the paragraph must open with the note itself"
+        )
     }
 
     @Test("no answers means no write-up, rather than an invented one")
@@ -47,8 +51,9 @@ struct HeuristicSharpeningTests {
     func escalationPromptCarriesEverything() async {
         let answers = [AnsweredQuestion(question: "Who?", answer: "student houses")]
         let writeUp = WriteUp(
-            pitch: "A fair rent calculator", audience: "student houses",
-            firstStep: "write the formula", biggestRisk: "Splitwise", generatedAt: epoch
+            title: "A fair rent calculator",
+            detail: "It is for student houses. Write the formula first.",
+            generatedAt: epoch
         )
 
         let prompt = await subject.escalationPrompt(
@@ -114,7 +119,7 @@ struct ResilientSharpeningTests {
 
         let result = await subject.writeUp(for: "an idea", answers: answers, at: epoch)
 
-        #expect(result?.audience == "student houses")
+        #expect(result?.detail.contains("student houses") == true)
     }
 
     @Test("a working model's interview is used as given")

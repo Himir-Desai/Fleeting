@@ -376,3 +376,37 @@ sharpening resumes rather than restarting — proven by a UI test that leaves th
 Storage holds it as JSON through a `StoredSharpening` DTO rather than making the domain `Codable`,
 keeping storage shape and domain shape free to diverge. Unreadable interview data degrades to no
 interview, never to a lost thought.
+
+---
+
+## ADR-0016 · The write-up is a titled paragraph, and sharpening is reversible
+
+**Status:** Accepted · Phase 4 · Amends [ADR-0006](#adr-0006--sharpen-is-an-interview-with-a-hidden-escalation-path)
+
+**Context.** ADR-0006 specified a four-field write-up: pitch, who it's for, first concrete step,
+biggest risk. Built and used, it read like a form rather than like the idea. Four labelled
+fragments are easy to generate and harder to think with, and the labels imposed a shape on ideas
+that do not all have an audience or a risk worth naming.
+
+**Decision.** The write-up is a **short title and one detailed paragraph** that develops the idea.
+The interview is unchanged — the questions still supply the substance — but their answers are
+expanded into continuous prose instead of being filed into slots. Sharpening is also **reversible**:
+a confirmed *Revert* removes the title, the paragraph and the answers, leaving the note exactly as
+captured.
+
+**Alternatives.**
+- *Keep the four fields* — more scannable, and each field is trivially traceable to one answer.
+  Rejected: it produced a summary you read past rather than an idea you could act on, and it forced
+  every idea into the same shape.
+- *Paragraph with no title* — simpler still. Rejected: a title is what makes a developed idea
+  findable later, and it is the natural thing to show in a list.
+- *Make revert undo only the write-up, keeping the answers* — cheaper to re-run. Rejected: the
+  answers are part of what was generated *from*, so leaving them behind means a "reverted" note
+  still carries invisible state. Revert means back to the note as written, or it means nothing.
+
+**Consequences.** The grounding rule from ADR-0015 is now harder to enforce mechanically: prose has
+no per-field mapping, so the heuristic implementation builds its paragraph by framing each answer
+with the question that produced it, and a test pins the exact sentence. Revert is destructive and
+therefore confirmed, consistent with deletion elsewhere in the app. `StoredWriteUp` changed shape;
+existing stored write-ups fail to decode and degrade to no sharpening, which is acceptable
+pre-release and is exactly what the corrupt-data path was built for.

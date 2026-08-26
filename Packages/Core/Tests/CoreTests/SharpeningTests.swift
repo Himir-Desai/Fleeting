@@ -79,10 +79,7 @@ struct SharpeningTests {
         let question = try #require(thought.sharpening?.questions.first)
         thought.answerSharpening("students", to: question.id, at: epoch)
         thought.attachWriteUp(
-            WriteUp(
-                pitch: "p", audience: "students", firstStep: "f",
-                biggestRisk: "r", generatedAt: epoch
-            ),
+            WriteUp(title: "Rent splitting", detail: "For students.", generatedAt: epoch),
             at: epoch
         )
         #expect(thought.sharpening?.writeUp != nil)
@@ -102,10 +99,7 @@ struct SharpeningTests {
         let question = try #require(thought.sharpening?.questions.first)
         thought.answerSharpening("students", to: question.id, at: epoch)
         thought.attachWriteUp(
-            WriteUp(
-                pitch: "p", audience: "students", firstStep: "f",
-                biggestRisk: "r", generatedAt: epoch
-            ),
+            WriteUp(title: "Rent splitting", detail: "For students.", generatedAt: epoch),
             at: epoch
         )
 
@@ -122,8 +116,9 @@ struct SharpeningTests {
         thought.answerSharpening("students", to: question.id, at: epoch)
         thought.attachWriteUp(
             WriteUp(
-                pitch: "A fair rent calculator", audience: "students",
-                firstStep: "sketch the formula", biggestRisk: "Splitwise", generatedAt: epoch
+                title: "A fair rent calculator",
+                detail: "For student houses. Sketch the formula first.",
+                generatedAt: epoch
             ),
             at: epoch
         )
@@ -143,12 +138,12 @@ struct SharpeningTests {
         #expect(thought.sharpening?.answers.first?.question == "Who?")
     }
 
-    @Test("discarding an interview leaves the thought itself intact")
+    @Test("reverting leaves the thought itself intact")
     func discardingKeepsTheThought() {
         var thought = idea()
         thought.beginSharpening(prompts: ["Who?"], at: epoch)
 
-        thought.discardSharpening()
+        thought.revertSharpening()
 
         #expect(thought.sharpening == nil)
         #expect(thought.body == "app for splitting rent fairly")

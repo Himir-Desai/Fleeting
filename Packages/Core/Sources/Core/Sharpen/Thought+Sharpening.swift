@@ -43,8 +43,16 @@ public extension Thought {
         markActed(at: date)
     }
 
-    /// Discards the sharpening entirely, leaving the captured text untouched.
-    mutating func discardSharpening() {
+    /// Whether there is a sharpening to revert.
+    var hasBeenSharpened: Bool {
+        sharpening != nil
+    }
+
+    /// Reverts the thought to how it was before it was ever sharpened.
+    ///
+    /// Removes the interview and the write-up together. The raw captured text was never altered,
+    /// so what remains is exactly the note as it was written.
+    mutating func revertSharpening() {
         sharpening = nil
     }
 }

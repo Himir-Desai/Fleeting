@@ -92,10 +92,10 @@
         /// Standing instructions for the write-up session.
         private static var writeUpInstructions: String {
             """
-            You organise someone's own words into a short structured summary of their idea. Use \
-            only the note and their answers. Never invent a market, a number, a name, or a \
-            feature they did not mention. If something is unknown, say plainly that it is not \
-            yet decided.
+            You develop someone's half-formed idea into one properly written paragraph, and give \
+            it a short title. Use only their note and their answers, expanding and connecting what \
+            they said rather than adding to it. Never invent a market, a number, a name, or a \
+            feature they did not mention. Where something is unresolved, say so plainly.
             """
         }
 
@@ -155,17 +155,16 @@
     @available(iOS 26, macOS 26, *)
     @Generable
     struct GeneratedWriteUp {
-        @Guide(description: "What the idea is, in one or two sentences, in the writer's own terms")
-        var pitch: String
+        @Guide(description: "A short title of at most six words, in the writer's own terms")
+        var title: String
 
-        @Guide(description: "Who it is for, taken only from what the writer said")
-        var audience: String
-
-        @Guide(description: "The first concrete thing to do, taken only from what the writer said")
-        var firstStep: String
-
-        @Guide(description: "The most likely reason it fails, taken only from what the writer said")
-        var biggestRisk: String
+        @Guide(
+            description: """
+            One detailed paragraph developing the idea, built only from the note and the writer's \
+            answers. Do not add facts they did not give.
+            """
+        )
+        var detail: String
     }
 
     @available(iOS 26, macOS 26, *)
@@ -175,10 +174,8 @@
         /// - Returns: The write-up.
         func asDomain(generatedAt: Date) -> WriteUp {
             WriteUp(
-                pitch: pitch.trimmingCharacters(in: .whitespacesAndNewlines),
-                audience: audience.trimmingCharacters(in: .whitespacesAndNewlines),
-                firstStep: firstStep.trimmingCharacters(in: .whitespacesAndNewlines),
-                biggestRisk: biggestRisk.trimmingCharacters(in: .whitespacesAndNewlines),
+                title: title.trimmingCharacters(in: .whitespacesAndNewlines),
+                detail: detail.trimmingCharacters(in: .whitespacesAndNewlines),
                 generatedAt: generatedAt
             )
         }

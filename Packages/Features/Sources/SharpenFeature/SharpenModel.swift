@@ -156,6 +156,24 @@ public final class SharpenModel {
         phase = .finished
     }
 
+    /// Whether there is a sharpening to undo.
+    public var canRevert: Bool {
+        thought.hasBeenSharpened
+    }
+
+    /// Returns the thought to how it was before it was ever sharpened.
+    ///
+    /// Removes the interview and the write-up together. The captured text was never altered, so
+    /// what remains is the note exactly as written.
+    /// - Returns: `true` when the change was stored, so the caller can leave the screen.
+    public func revert() async -> Bool {
+        thought.revertSharpening()
+        guard await persist() else { return false }
+        escalationPrompt = nil
+        phase = .idle
+        return true
+    }
+
     /// Abandons the current in-flight request without losing anything already answered.
     public func cancel() {
         work?.cancel()

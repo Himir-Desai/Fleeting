@@ -118,10 +118,13 @@ final class AppEnvironment {
             }
             thought.attachWriteUp(
                 WriteUp(
-                    pitch: "A weekly letter about tools that do exactly one thing well.",
-                    audience: "Developers sick of every tool becoming a suite.",
-                    firstStep: "Write three issues and send them to ten people.",
-                    biggestRisk: "Finding one genuinely good tool a week, forever.",
+                    title: "A letter about tools that do one thing",
+                    detail: """
+                    A weekly letter about tools that do exactly one thing well. It is for \
+                    developers sick of every tool becoming a suite. The hard part is finding one \
+                    genuinely good tool a week, forever. The first thing to try is writing three \
+                    issues and sending them to ten people.
+                    """,
                     generatedAt: date
                 ),
                 at: date

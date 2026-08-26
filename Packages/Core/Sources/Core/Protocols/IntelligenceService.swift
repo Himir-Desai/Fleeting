@@ -87,11 +87,8 @@ public extension IntelligenceService {
 
         if let writeUp {
             lines.append(contentsOf: [
-                "A summary I put together:",
-                "- Pitch: \(writeUp.pitch)",
-                "- Who it is for: \(writeUp.audience)",
-                "- First step: \(writeUp.firstStep)",
-                "- Biggest risk: \(writeUp.biggestRisk)",
+                "Where I got to, titled \"\(writeUp.title)\":",
+                writeUp.detail,
                 ""
             ])
         }

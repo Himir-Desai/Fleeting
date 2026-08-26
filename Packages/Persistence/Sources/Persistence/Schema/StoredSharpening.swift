@@ -13,10 +13,8 @@ struct StoredSharpening: Codable {
     }
 
     struct StoredWriteUp: Codable {
-        var pitch: String
-        var audience: String
-        var firstStep: String
-        var biggestRisk: String
+        var title: String
+        var detail: String
         var generatedAt: Date
     }
 
@@ -31,13 +29,7 @@ struct StoredSharpening: Codable {
             StoredQuestion(id: $0.id, prompt: $0.prompt, answer: $0.answer)
         }
         writeUp = sharpening.writeUp.map {
-            StoredWriteUp(
-                pitch: $0.pitch,
-                audience: $0.audience,
-                firstStep: $0.firstStep,
-                biggestRisk: $0.biggestRisk,
-                generatedAt: $0.generatedAt
-            )
+            StoredWriteUp(title: $0.title, detail: $0.detail, generatedAt: $0.generatedAt)
         }
         startedAt = sharpening.startedAt
     }
@@ -50,13 +42,7 @@ struct StoredSharpening: Codable {
             },
             startedAt: startedAt,
             writeUp: writeUp.map {
-                WriteUp(
-                    pitch: $0.pitch,
-                    audience: $0.audience,
-                    firstStep: $0.firstStep,
-                    biggestRisk: $0.biggestRisk,
-                    generatedAt: $0.generatedAt
-                )
+                WriteUp(title: $0.title, detail: $0.detail, generatedAt: $0.generatedAt)
             }
         )
     }

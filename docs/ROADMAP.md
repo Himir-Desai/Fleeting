@@ -132,7 +132,7 @@ The differentiator: half-baked in, fully-baked out.
 **Scope**
 - Interview flow — model reads the fragment, asks 2–3 short specific questions, one at a time.
 - Answers persist as they're typed; the flow is resumable after backgrounding or force-quit.
-- Structured write-up via `@Generable`: pitch, who it's for, first concrete step, biggest risk.
+- Write-up via `@Generable`: a short title and one paragraph developing the idea (ADR-0016).
 - Streaming presentation, cancellation, retry, and a clear degraded state when no model is available.
 - Raw captured text remains untouched and visible alongside the write-up.
 - **Escalation:** an understated affordance that has the local model compose a context-loaded prompt
@@ -145,8 +145,10 @@ interrupting mid-interview loses nothing; the feature fails gracefully and legib
 
 **Outcome.** Met. 147 unit tests and 22 UI tests.
 
-- The heuristic write-up is assembled literally from the user's own answers, and a test asserts each
-  field equals what they typed. It is the floor the on-device model has to beat.
+- The heuristic write-up frames each answer with the question that produced it and joins them into a
+  paragraph, inventing nothing. A test pins the exact sentences. It is the floor the on-device model
+  has to beat.
+- Sharpening is reversible: a confirmed *Revert* returns the note to exactly how it was captured.
 - Every answer is written to storage as it is given. A UI test answers one question, leaves the
   screen entirely, returns, and finds the interview resumed rather than restarted.
 - Changing an answer discards a write-up built on the old one ([ADR-0015](DECISIONS.md)).

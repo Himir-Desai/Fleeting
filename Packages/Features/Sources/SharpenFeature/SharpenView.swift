@@ -8,7 +8,9 @@ import SwiftUI
 /// actually written rather than replacing it.
 public struct SharpenView: View {
     @State private var model: SharpenModel
+    @State private var isConfirmingRevert = false
     @FocusState private var isAnswerFocused: Bool
+    @Environment(\.dismiss) private var dismiss
 
     /// Creates the sharpening screen.
     /// - Parameter model: State for the screen, built by the composition root.
@@ -103,44 +105,59 @@ public struct SharpenView: View {
         }
     }
 
-    /// The finished write-up, plus the quiet way to take it further.
+    /// The developed idea, plus the quiet ways to take it further or undo it.
     @ViewBuilder
     private var result: some View {
         if let writeUp = model.writeUp {
             VStack(alignment: .leading, spacing: Spacing.loose) {
-                section("The pitch", writeUp.pitch, id: "sharpen.pitch")
-                section("Who it's for", writeUp.audience, id: "sharpen.audience")
-                section("First step", writeUp.firstStep, id: "sharpen.firstStep")
-                section("Biggest risk", writeUp.biggestRisk, id: "sharpen.risk")
+                VStack(alignment: .leading, spacing: Spacing.snug) {
+                    Text(writeUp.title)
+                        .font(Typography.title)
+                        .foregroundStyle(Palette.ink)
+                        .accessibilityIdentifier("sharpen.title")
 
-                if let prompt = model.escalationPrompt {
-                    ShareLink(item: prompt) {
-                        Text("Take this further elsewhere")
-                            .font(Typography.caption)
-                            .foregroundStyle(Palette.inkMuted)
-                            .underline()
+                    Text(writeUp.detail)
+                        .font(Typography.body)
+                        .foregroundStyle(Palette.ink)
+                        .accessibilityIdentifier("sharpen.detail")
+                }
+
+                HStack(spacing: Spacing.loose) {
+                    if let prompt = model.escalationPrompt {
+                        ShareLink(item: prompt) {
+                            Text("Take this further elsewhere")
+                                .font(Typography.caption)
+                                .foregroundStyle(Palette.inkMuted)
+                                .underline()
+                        }
+                        .accessibilityIdentifier("sharpen.escalate")
                     }
-                    .accessibilityIdentifier("sharpen.escalate")
+
+                    Spacer()
+
+                    Button("Revert") { isConfirmingRevert = true }
+                        .font(Typography.caption)
+                        .tint(Palette.inkMuted)
+                        .accessibilityIdentifier("sharpen.revert")
                 }
             }
-        }
-    }
-
-    /// One labelled part of the write-up.
-    /// - Parameters:
-    ///   - title: The heading.
-    ///   - body: The content.
-    ///   - id: An accessibility identifier.
-    /// - Returns: The section.
-    private func section(_ title: String, _ body: String, id: String) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.tight) {
-            Text(title)
-                .font(Typography.caption)
-                .foregroundStyle(Palette.accent)
-            Text(body)
-                .font(Typography.body)
-                .foregroundStyle(Palette.ink)
-                .accessibilityIdentifier(id)
+            .confirmationDialog(
+                "Revert to your original note?",
+                isPresented: $isConfirmingRevert,
+                titleVisibility: .visible
+            ) {
+                Button("Revert", role: .destructive) {
+                    Task {
+                        if await model.revert() {
+                            dismiss()
+                        }
+                    }
+                }
+                .accessibilityIdentifier("sharpen.revert.confirm")
+                Button("Keep it", role: .cancel) {}
+            } message: {
+                Text("The title, the paragraph and your answers are removed. Your note itself is untouched.")
+            }
         }
     }
 

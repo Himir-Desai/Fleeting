@@ -98,8 +98,8 @@ Fleeting/
 │   │       ├── Sharpen/
 │   │       │   ├── Sharpening.swift         ← the interview: questions, answers, write-up
 │   │       │   ├── SharpenQuestion.swift    ← one question + its answer; AnsweredQuestion
-│   │       │   ├── WriteUp.swift            ← pitch · audience · first step · biggest risk
-│   │       │   └── Thought+Sharpening.swift ← begin, answer, attach, discard
+│   │       │   ├── WriteUp.swift            ← a title and a paragraph (ADR-0016)
+│   │       │   └── Thought+Sharpening.swift ← begin, answer, attach, revert
 │   │       ├── Review/
 │   │       │   └── ReviewSelector.swift     ← pure: [Thought] → at most 7 that need a decision
 │   │       ├── Protocols/

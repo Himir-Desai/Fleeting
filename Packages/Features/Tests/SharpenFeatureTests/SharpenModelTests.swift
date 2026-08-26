@@ -3,70 +3,6 @@ import Foundation
 @testable import SharpenFeature
 import Testing
 
-private actor SpyRepository: ThoughtRepository {
-    private(set) var stored: [Thought]
-    private(set) var updateCount = 0
-    private let failsUpdate: Bool
-
-    init(_ stored: [Thought] = [], failsUpdate: Bool = false) {
-        self.stored = stored
-        self.failsUpdate = failsUpdate
-    }
-
-    func add(_ thought: Thought) async throws {
-        stored.append(thought)
-    }
-
-    func thoughts(in scope: ThoughtScope) async throws -> [Thought] {
-        stored.filter { scope.contains($0.state) }
-    }
-
-    func update(_ thought: Thought) async throws {
-        if failsUpdate {
-            throw StubError()
-        }
-        updateCount += 1
-        if let index = stored.firstIndex(where: { $0.id == thought.id }) {
-            stored[index] = thought
-        } else {
-            stored.append(thought)
-        }
-    }
-
-    func delete(id: Thought.ID) async throws {
-        stored.removeAll { $0.id == id }
-    }
-}
-
-private struct StubError: Error {}
-
-private struct StubClock: WallClock {
-    let now: Date
-}
-
-/// A classifier whose sharpening answers are fixed by the test.
-private struct StubIntelligence: IntelligenceService {
-    var questions: [String] = []
-    var generated: WriteUp?
-    var reported: IntelligenceAvailability = .onDevice
-
-    var availability: IntelligenceAvailability {
-        reported
-    }
-
-    func classify(_: String) async -> Classification {
-        .unknown
-    }
-
-    func interviewQuestions(for _: String) async -> [String] {
-        questions
-    }
-
-    func writeUp(for _: String, answers _: [AnsweredQuestion], at _: Date) async -> WriteUp? {
-        generated
-    }
-}
-
 @MainActor
 @Suite("SharpenModel")
 struct SharpenModelTests {
@@ -80,10 +16,8 @@ struct SharpenModelTests {
 
     private func writeUp() -> WriteUp {
         WriteUp(
-            pitch: "A fair rent calculator",
-            audience: "student houses",
-            firstStep: "sketch the formula",
-            biggestRisk: "Splitwise already exists",
+            title: "A fair rent calculator",
+            detail: "It is for student houses. Sketch the formula first.",
             generatedAt: epoch
         )
     }
@@ -175,7 +109,7 @@ struct SharpenModelTests {
         await model.start()
 
         #expect(model.phase == .finished)
-        #expect(model.writeUp?.pitch == "A fair rent calculator")
+        #expect(model.writeUp?.title == "A fair rent calculator")
     }
 
     @Test("answering the last question produces the write-up automatically")
@@ -190,7 +124,7 @@ struct SharpenModelTests {
         await model.submitAnswer()
 
         #expect(model.phase == .finished)
-        #expect(model.writeUp?.audience == "student houses")
+        #expect(model.writeUp?.detail.contains("student houses") == true)
         #expect(await repository.stored.first?.sharpening?.writeUp != nil)
     }
 
