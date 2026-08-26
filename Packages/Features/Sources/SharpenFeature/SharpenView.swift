@@ -30,6 +30,7 @@ public struct SharpenView: View {
                 .padding(Spacing.loose)
             }
         }
+        .motion(Motion.commit, value: model.progress.answered)
         .navigationTitle("Sharpen")
         #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
@@ -74,6 +75,9 @@ public struct SharpenView: View {
                 Text("Question \(model.progress.answered + 1) of \(model.progress.total)")
                     .font(Typography.caption)
                     .foregroundStyle(Palette.inkMuted)
+                    .accessibilityLabel(
+                        "Question \(model.progress.answered + 1) of \(model.progress.total)"
+                    )
 
                 Text(question.prompt)
                     .font(Typography.title)
@@ -83,7 +87,7 @@ public struct SharpenView: View {
                 TextField("Your answer", text: $model.draftAnswer, axis: .vertical)
                     .font(Typography.body)
                     .foregroundStyle(Palette.ink)
-                    .tint(Palette.accent)
+                    .tint(Palette.accentText)
                     .focused($isAnswerFocused)
                     .accessibilityIdentifier("sharpen.answer")
 
@@ -131,6 +135,8 @@ public struct SharpenView: View {
                                 .underline()
                         }
                         .accessibilityIdentifier("sharpen.escalate")
+                        .accessibilityLabel("Take this further elsewhere")
+                        .accessibilityHint("Shares a prompt about this idea with another app")
                     }
 
                     Spacer()
@@ -176,7 +182,9 @@ public struct SharpenView: View {
                 .font(Typography.caption)
                 .tint(Palette.inkMuted)
                 .accessibilityIdentifier("sharpen.cancel")
+                .accessibilityHint("Stops without losing any answers you have given")
         }
+        .accessibilityElement(children: .contain)
     }
 
     /// A legible failure with a way out.
@@ -192,7 +200,7 @@ public struct SharpenView: View {
                 Task { await model.askForQuestions() }
             }
             .buttonStyle(.bordered)
-            .tint(Palette.accent)
+            .tint(Palette.accentText)
             .accessibilityIdentifier("sharpen.retry")
         }
     }

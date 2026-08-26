@@ -92,7 +92,7 @@ public struct SettingsView: View {
                         Task { await model.requestPermission() }
                     }
                     .font(Typography.body)
-                    .tint(Palette.accent)
+                    .tint(Palette.accentText)
                     .listRowBackground(Palette.raised)
                     .accessibilityIdentifier("settings.notifications.enable")
                 }
@@ -100,6 +100,20 @@ public struct SettingsView: View {
                 if model.canConfigureNudges {
                     nudgeToggles
                 }
+            }
+
+            Section("Storage") {
+                VStack(alignment: .leading, spacing: Spacing.tight) {
+                    Text(model.storageDescription.headline)
+                        .font(Typography.title)
+                        .foregroundStyle(model.storageIsDegraded ? Palette.fading : Palette.ink)
+                    Text(model.storageDescription.detail)
+                        .font(Typography.caption)
+                        .foregroundStyle(Palette.inkMuted)
+                }
+                .padding(.vertical, Spacing.tight)
+                .listRowBackground(Palette.raised)
+                .accessibilityIdentifier("settings.storage")
             }
 
             Section("Syncing") {

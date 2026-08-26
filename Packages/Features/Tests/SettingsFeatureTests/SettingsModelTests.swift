@@ -219,3 +219,32 @@ struct SettingsSyncTests {
         }
     }
 }
+
+@MainActor
+@Suite("What settings says about storage")
+struct SettingsStorageTests {
+    private func makeModel(degraded: Bool) -> SettingsModel {
+        SettingsModel(
+            intelligence: StubIntelligence(),
+            profiles: .standard,
+            storageIsDegraded: degraded,
+            store: MemoryPreferences(),
+            permissions: SpyPermissions(),
+            onNudgesChanged: {}
+        )
+    }
+
+    @Test("a working store is described without alarming anyone")
+    func healthyStorageReads() {
+        let model = makeModel(degraded: false)
+        #expect(model.storageDescription.headline == "On this device")
+        #expect(model.storageDescription.detail.contains("written to disk"))
+    }
+
+    @Test("a store that never opened says so, and says what it costs")
+    func degradedStorageReads() {
+        let model = makeModel(degraded: true)
+        #expect(model.storageDescription.headline == "Holding thoughts in memory")
+        #expect(model.storageDescription.detail.contains("lost when the app closes"))
+    }
+}

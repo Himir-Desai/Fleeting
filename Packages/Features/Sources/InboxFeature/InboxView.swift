@@ -9,6 +9,8 @@ import SwiftUI
 public struct InboxView: View {
     @State private var model: InboxModel
     @Environment(\.dismiss) private var dismiss
+
+    private let storageIsDegraded: Bool
     private let changes: any ThoughtChangeObserving
     private let onOpenArchive: () -> Void
     private let onOpenSettings: () -> Void
@@ -23,10 +25,14 @@ public struct InboxView: View {
     ///   - onOpenSettings: Called when the user asks for settings.
     ///   - onSharpen: Called when the user wants to develop an idea further.
     ///   - onReview: Called when the user chooses to run a review session.
+    ///   - storageIsDegraded: Whether the on-disk store failed to open. Shown as a quiet line
+    ///     rather than an alert, because thoughts are about to be lost and silence would be
+    ///     worse than the fault.
     ///   - changes: Watched so a classification landing while the list is open is reflected.
     public init(
         model: InboxModel,
         changes: any ThoughtChangeObserving,
+        storageIsDegraded: Bool = false,
         onOpenArchive: @escaping () -> Void,
         onOpenSettings: @escaping () -> Void,
         onSharpen: @escaping (Thought) -> Void,
@@ -34,6 +40,7 @@ public struct InboxView: View {
     ) {
         _model = State(initialValue: model)
         self.changes = changes
+        self.storageIsDegraded = storageIsDegraded
         self.onOpenArchive = onOpenArchive
         self.onOpenSettings = onOpenSettings
         self.onSharpen = onSharpen
@@ -42,61 +49,37 @@ public struct InboxView: View {
 
     public var body: some View {
         List {
+            if storageIsDegraded {
+                storageWarning
+            }
+
             if model.reviewCount >= 1 {
                 reviewInvitation
             }
 
             ForEach(model.thoughts) { thought in
-                HStack(spacing: Spacing.regular) {
-                    kindControl(for: thought)
-
-                    NavigationLink {
-                        ThoughtEditor(thought: thought) { revised in
-                            Task { await model.revise(thought, to: revised) }
-                        }
-                    } label: {
-                        ThoughtRow(
-                            thought: thought,
-                            freshness: model.freshness(of: thought),
-                            expiresAt: model.expiryDate(of: thought)
-                        )
-                    }
-                }
-                .listRowBackground(Palette.raised)
-                .listRowSeparatorTint(Palette.ink.opacity(0.12))
-                .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                    typeAction(for: thought)
-                    Button {
-                        Task { await model.snooze(thought, forDays: 7) }
-                    } label: {
-                        Label("Snooze", systemImage: "moon.zzz")
-                    }
-                    .tint(Palette.inkMuted)
-                }
-                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                    Button(role: .destructive) {
-                        Task { await model.delete(thought) }
-                    } label: {
-                        Label("Delete", systemImage: "trash")
-                    }
-                    Button {
-                        Task { await model.archive(thought) }
-                    } label: {
-                        Label("Archive", systemImage: "archivebox")
-                    }
-                    .tint(Palette.inkMuted)
-                }
+                InboxListRow(
+                    thought: thought,
+                    freshness: model.freshness(of: thought),
+                    expiresAt: model.expiryDate(of: thought),
+                    onEdit: { revised in Task { await model.revise(thought, to: revised) } },
+                    onCorrectKind: { kind in Task { await model.confirmKind(kind, for: thought) } },
+                    onSnooze: { Task { await model.snooze(thought, forDays: 7) } },
+                    onArchive: { Task { await model.archive(thought) } },
+                    onDelete: { Task { await model.delete(thought) } },
+                    onComplete: { Task { await model.complete(thought) } },
+                    onMarkHabitKept: { Task { await model.markHabitKept(thought) } },
+                    onSharpen: { onSharpen(thought) }
+                )
             }
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .background(Palette.surface)
+        .motion(Motion.decay, value: model.thoughts.map(\.id))
         .overlay {
             if model.hasLoaded, model.thoughts.isEmpty {
-                Text("Nothing live right now.")
-                    .font(Typography.caption)
-                    .foregroundStyle(Palette.inkMuted)
-                    .accessibilityIdentifier("inbox.empty")
+                emptyState
             }
         }
         .navigationTitle("Thoughts")
@@ -137,6 +120,42 @@ public struct InboxView: View {
             }
     }
 
+    /// Shown when nothing is live, which is a success rather than a void.
+    private var emptyState: some View {
+        VStack(spacing: Spacing.snug) {
+            Text("Nothing live right now")
+                .font(Typography.title)
+                .foregroundStyle(Palette.ink)
+            Text(
+                """
+                Everything you captured has been dealt with or filed away. The archive still \
+                has it all.
+                """
+            )
+            .font(Typography.caption)
+            .foregroundStyle(Palette.inkMuted)
+            .multilineTextAlignment(.center)
+        }
+        .padding(Spacing.loose)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("inbox.empty")
+    }
+
+    /// A quiet line saying thoughts are not reaching disk.
+    private var storageWarning: some View {
+        HStack(spacing: Spacing.snug) {
+            Image(systemName: "exclamationmark.triangle")
+            Text("Thoughts aren't being saved to disk. They'll be gone when you close the app.")
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .font(Typography.caption)
+        .foregroundStyle(Palette.fading)
+        .padding(.vertical, Spacing.tight)
+        .listRowBackground(Palette.raised)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("inbox.storageWarning")
+    }
+
     /// A quiet, contextual way into the review.
     ///
     /// An invitation sitting in the list rather than a prompt that interrupts: the review is never
@@ -145,7 +164,7 @@ public struct InboxView: View {
         Button(action: onReview) {
             HStack(spacing: Spacing.regular) {
                 Image(systemName: "checklist")
-                    .foregroundStyle(Palette.accent)
+                    .foregroundStyle(Palette.accentText)
                 Text("\(model.reviewCount) need a decision")
                     .font(Typography.body)
                     .foregroundStyle(Palette.ink)
@@ -159,76 +178,7 @@ public struct InboxView: View {
         .padding(.vertical, Spacing.tight)
         .listRowBackground(Palette.raised)
         .accessibilityIdentifier("inbox.review")
-    }
-
-    /// The kind control for a row: one tap opens it, one more corrects the kind.
-    ///
-    /// A visible control rather than a long-press, so the correction is discoverable.
-    /// - Parameter thought: The thought whose kind may be changed.
-    /// - Returns: A menu showing the current kind.
-    private func kindControl(for thought: Thought) -> some View {
-        Menu {
-            Picker("Kind", selection: kindBinding(for: thought)) {
-                ForEach(ThoughtKind.allCases, id: \.self) { kind in
-                    Label(KindGlyph.label(for: kind), systemImage: KindGlyph.name(for: kind))
-                        .tag(kind)
-                }
-            }
-        } label: {
-            Image(systemName: KindGlyph.name(for: thought.kind))
-                .font(Typography.body)
-                .foregroundStyle(
-                    thought.kind == .unsorted ? Palette.inkMuted : Palette.accent
-                )
-                .frame(width: 32, height: 32)
-                .contentShape(.rect)
-        }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier("row.kind")
-        .accessibilityLabel("Kind: \(KindGlyph.label(for: thought.kind))")
-    }
-
-    /// A binding that writes a kind correction straight through to the model.
-    /// - Parameter thought: The thought being corrected.
-    /// - Returns: A binding over the thought's kind.
-    private func kindBinding(for thought: Thought) -> Binding<ThoughtKind> {
-        Binding(
-            get: { thought.kind },
-            set: { kind in Task { await model.confirmKind(kind, for: thought) } }
-        )
-    }
-
-    /// The action that makes sense for a thought's kind, if any.
-    ///
-    /// A todo can be completed and a habit can be kept. Ideas get their Sharpen action in Phase 4.
-    /// - Parameter thought: The thought the action applies to.
-    /// - Returns: A swipe action button, or nothing.
-    @ViewBuilder
-    private func typeAction(for thought: Thought) -> some View {
-        switch thought.kind {
-        case .todo:
-            Button {
-                Task { await model.complete(thought) }
-            } label: {
-                Label("Done", systemImage: "checkmark")
-            }
-            .tint(Palette.accent)
-        case .habit:
-            Button {
-                Task { await model.markHabitKept(thought) }
-            } label: {
-                Label("Kept", systemImage: "flame")
-            }
-            .tint(Palette.accent)
-        case .idea:
-            Button {
-                onSharpen(thought)
-            } label: {
-                Label("Sharpen", systemImage: "sparkles")
-            }
-            .tint(Palette.accent)
-        case .unsorted:
-            EmptyView()
-        }
+        .accessibilityElement(children: .combine)
+        .accessibilityHint("Opens a short session to decide what to keep")
     }
 }

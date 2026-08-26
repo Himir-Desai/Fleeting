@@ -21,6 +21,9 @@ public final class SettingsModel {
     /// Whether the store is shared with the widgets.
     public let storageIsShared: Bool
 
+    /// Whether the on-disk store failed to open and thoughts are being held in memory only.
+    public let storageIsDegraded: Bool
+
     /// Whether thoughts are reaching iCloud, or `.checking` until asked.
     public private(set) var syncStatus: SyncStatus = .checking
 
@@ -35,6 +38,7 @@ public final class SettingsModel {
     ///   - intelligence: Asked what is currently answering.
     ///   - profiles: The decay rates to display.
     ///   - storageIsShared: Whether widgets can read the store.
+    ///   - storageIsDegraded: Whether the on-disk store failed to open.
     ///   - sync: Asked whether thoughts are reaching iCloud.
     ///   - store: Where notification preferences are kept.
     ///   - permissions: Asks for, and reports, notification permission.
@@ -43,6 +47,7 @@ public final class SettingsModel {
         intelligence: any IntelligenceService,
         profiles: DecayProfiles,
         storageIsShared: Bool = true,
+        storageIsDegraded: Bool = false,
         sync: any SyncReporting = LocalOnlySync(),
         store: any NudgePreferencesStoring,
         permissions: any NudgePermissions,
@@ -51,6 +56,7 @@ public final class SettingsModel {
         self.intelligence = intelligence
         self.profiles = profiles
         self.storageIsShared = storageIsShared
+        self.storageIsDegraded = storageIsDegraded
         self.sync = sync
         self.store = store
         self.permissions = permissions
@@ -114,6 +120,24 @@ public final class SettingsModel {
         case .denied:
             ("Off", "Notifications are turned off for Fleeting in the Settings app.")
         }
+    }
+
+    /// How storage itself should be described.
+    ///
+    /// Reported here rather than at launch, where an alert would be the one thing ADR-0008
+    /// forbids — but reported, because a store that never opened will lose thoughts when the
+    /// app closes, and silence about that would be worse than the fault.
+    /// - Returns: A headline and a supporting sentence.
+    public var storageDescription: (headline: String, detail: String) {
+        storageIsDegraded
+            ? (
+                "Holding thoughts in memory",
+                """
+                Fleeting could not open its database, so anything captured now is lost when the \
+                app closes. Restarting usually fixes it.
+                """
+            )
+            : ("On this device", "Thoughts are written to disk as soon as you save them.")
     }
 
     /// How syncing should be described.

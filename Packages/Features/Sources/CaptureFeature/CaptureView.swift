@@ -9,6 +9,10 @@ import SwiftUI
 /// a save can take focus away — the field is never disabled, so the next thought can be typed
 /// while the previous one is still being written.
 public struct CaptureView: View {
+    /// Whether the one-time explanation has been dismissed. Cleared by `--reset-store` so the
+    /// UI tests can see a genuine first launch.
+    @AppStorage("capture.hintDismissed") private var hintDismissed = false
+
     @State private var model: CaptureModel
     @FocusState private var isFieldFocused: Bool
     private let onBrowse: () -> Void
@@ -32,7 +36,7 @@ public struct CaptureView: View {
                 TextField("What's on your mind?", text: $model.text, axis: .vertical)
                     .font(Typography.capture)
                     .foregroundStyle(Palette.ink)
-                    .tint(Palette.accent)
+                    .tint(Palette.accentText)
                     .focused($isFieldFocused)
                     .accessibilityIdentifier("capture.field")
                     .accessibilityLabel("Capture a thought")
@@ -44,8 +48,13 @@ public struct CaptureView: View {
                         .accessibilityIdentifier("capture.error")
                 }
 
+                if showsHint {
+                    FirstRunHint { hintDismissed = true }
+                }
+
                 Spacer(minLength: 0)
             }
+            .motion(Motion.commit, value: showsHint)
             .padding(.horizontal, Spacing.loose)
             .padding(.top, Spacing.section)
         }
@@ -73,6 +82,23 @@ public struct CaptureView: View {
             .padding(.vertical, Spacing.snug)
         }
         .task { isFieldFocused = true }
+        // The save is the one moment worth confirming, and a haptic does it without taking the
+        // focus a banner would.
+        .sensoryFeedback(.success, trigger: model.savedCount)
+        .sensoryFeedback(.error, trigger: model.failedCount)
+        // A thought that reached storage should be said out loud for anyone not watching the
+        // field empty itself.
+        .onChange(of: model.savedCount) { _, _ in
+            AccessibilityNotification.Announcement("Saved").post()
+        }
+    }
+
+    /// Whether the one-time explanation should be on screen.
+    ///
+    /// It goes as soon as it is dismissed or as soon as the first thought lands, whichever comes
+    /// first: having captured something is proof it was not needed.
+    private var showsHint: Bool {
+        !hintDismissed && model.savedCount == 0
     }
 }
 

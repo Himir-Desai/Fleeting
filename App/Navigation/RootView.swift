@@ -41,6 +41,7 @@ struct RootView: View {
                         clock: environment.clock
                     ),
                     changes: environment.changes,
+                    storageIsDegraded: environment.storageIsDegraded,
                     onOpenArchive: { isShowingArchive = true },
                     onOpenSettings: { isShowingSettings = true },
                     onSharpen: { sharpening = $0 },
@@ -83,6 +84,7 @@ struct RootView: View {
                             intelligence: environment.intelligence,
                             profiles: environment.engine.profiles,
                             storageIsShared: environment.storageIsShared,
+                            storageIsDegraded: environment.storageIsDegraded,
                             sync: environment.sync,
                             store: environment.nudgePreferences,
                             permissions: environment.nudgePermissions,

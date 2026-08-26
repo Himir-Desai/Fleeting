@@ -29,7 +29,7 @@ struct ThoughtEditor: View {
             TextField("", text: $draft, axis: .vertical)
                 .font(Typography.body)
                 .foregroundStyle(Palette.ink)
-                .tint(Palette.accent)
+                .tint(Palette.accentText)
                 .accessibilityIdentifier("editor.field")
                 .padding(Spacing.loose)
         }

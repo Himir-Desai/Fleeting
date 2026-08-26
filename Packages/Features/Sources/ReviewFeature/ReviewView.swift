@@ -31,6 +31,10 @@ public struct ReviewView: View {
                 session
             }
         }
+        // The stack advancing is the one thing that should feel like movement, and a decision is
+        // worth confirming without a banner.
+        .motion(Motion.card, value: model.position)
+        .sensoryFeedback(.selection, trigger: model.position)
         .navigationTitle("Review")
         #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
@@ -49,6 +53,7 @@ public struct ReviewView: View {
                 .font(Typography.caption)
                 .foregroundStyle(Palette.inkMuted)
         }
+        .accessibilityElement(children: .combine)
         .accessibilityIdentifier("review.empty")
     }
 
@@ -61,6 +66,9 @@ public struct ReviewView: View {
                     .font(Typography.caption)
                     .foregroundStyle(Palette.inkMuted)
                     .accessibilityIdentifier("review.progress")
+                    .accessibilityLabel(
+                        "Thought \(model.progress.position) of \(model.progress.total)"
+                    )
 
                 Text(thought.body)
                     .font(Typography.capture)
@@ -92,13 +100,13 @@ public struct ReviewView: View {
         VStack(alignment: .leading, spacing: Spacing.snug) {
             Text(question)
                 .font(Typography.caption)
-                .foregroundStyle(Palette.accent)
+                .foregroundStyle(Palette.accentText)
                 .accessibilityIdentifier("review.question")
 
             TextField("One line is enough", text: $model.ambientAnswer, axis: .vertical)
                 .font(Typography.body)
                 .foregroundStyle(Palette.ink)
-                .tint(Palette.accent)
+                .tint(Palette.accentText)
                 .focused($isAnswerFocused)
                 .accessibilityIdentifier("review.answer")
 
@@ -107,35 +115,59 @@ public struct ReviewView: View {
             }
             .font(Typography.caption)
             .buttonStyle(.bordered)
-            .tint(Palette.accent)
+            .tint(Palette.accentText)
             .disabled(model.ambientAnswer.trimmingCharacters(in: .whitespaces).isEmpty)
             .accessibilityIdentifier("review.answerSubmit")
         }
     }
 
     /// Act, snooze, or let go.
+    ///
+    /// Three buttons side by side stop fitting well before the largest type size, so the row
+    /// becomes a column when it has to.
     private var decisions: some View {
-        HStack(spacing: Spacing.regular) {
-            // All three are real decisions, so all three have to read as buttons. Only the
-            // emphasis differs: keeping is the one that costs nothing.
-            Button("Let go") { Task { await model.drop() } }
-                .buttonStyle(.bordered)
-                .tint(Palette.ink)
-                .accessibilityIdentifier("review.drop")
-
-            Button("Snooze") { Task { await model.snooze() } }
-                .buttonStyle(.bordered)
-                .tint(Palette.ink)
-                .accessibilityIdentifier("review.snooze")
-
-            Spacer()
-
-            Button("Keep") { Task { await model.act() } }
-                .buttonStyle(.borderedProminent)
-                .tint(Palette.accent)
-                .accessibilityIdentifier("review.act")
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: Spacing.regular) {
+                letGoButton
+                snoozeButton
+                Spacer()
+                keepButton
+            }
+            VStack(alignment: .leading, spacing: Spacing.snug) {
+                keepButton
+                snoozeButton
+                letGoButton
+            }
         }
         .font(Typography.body)
+    }
+
+    /// Archives the thought. All three are real decisions, so all three read as buttons; only the
+    /// emphasis differs, because keeping is the one that costs nothing.
+    private var letGoButton: some View {
+        Button("Let go") { Task { await model.drop() } }
+            .buttonStyle(.bordered)
+            .tint(Palette.ink)
+            .accessibilityIdentifier("review.drop")
+            .accessibilityHint("Moves this to the archive. Nothing is deleted.")
+    }
+
+    /// Holds the thought at full freshness for a week.
+    private var snoozeButton: some View {
+        Button("Snooze") { Task { await model.snooze() } }
+            .buttonStyle(.bordered)
+            .tint(Palette.ink)
+            .accessibilityIdentifier("review.snooze")
+            .accessibilityHint("Holds this at full freshness for a week")
+    }
+
+    /// Resets the thought's freshness.
+    private var keepButton: some View {
+        Button("Keep") { Task { await model.act() } }
+            .buttonStyle(.borderedProminent)
+            .tint(Palette.accent)
+            .accessibilityIdentifier("review.act")
+            .accessibilityHint("Resets how fresh this thought is")
     }
 
     /// What the session decided, and a way out.
@@ -157,6 +189,7 @@ public struct ReviewView: View {
                 .accessibilityIdentifier("review.finish")
         }
         .padding(Spacing.loose)
+        .accessibilityElement(children: .contain)
     }
 
     /// A sentence describing what was decided.

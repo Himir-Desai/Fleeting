@@ -49,12 +49,10 @@ public struct ArchiveView: View {
         .background(Palette.surface)
         .overlay {
             if model.hasLoaded, model.results.isEmpty {
-                Text(model.query.isEmpty ? "Nothing archived yet." : "No matches.")
-                    .font(Typography.caption)
-                    .foregroundStyle(Palette.inkMuted)
-                    .accessibilityIdentifier("archive.empty")
+                emptyState
             }
         }
+        .motion(Motion.decay, value: model.results.map(\.id))
         .searchable(text: $model.query, prompt: "Search everything you've let go")
         .onChange(of: model.query) { Task { await model.search() } }
         .navigationTitle("Archive")
@@ -62,5 +60,31 @@ public struct ArchiveView: View {
             .navigationBarTitleDisplayMode(.inline)
         #endif
             .task { await model.search() }
+    }
+
+    /// Shown when the archive has nothing to show, which means two different things.
+    private var emptyState: some View {
+        VStack(spacing: Spacing.snug) {
+            Text(model.query.isEmpty ? "Nothing archived yet" : "No matches")
+                .font(Typography.title)
+                .foregroundStyle(Palette.ink)
+            Text(
+                model.query.isEmpty
+                    ? """
+                    Thoughts arrive here when they run out of freshness, or when you set them \
+                    aside. They stay for good.
+                    """
+                    : """
+                    Nothing here contains that. The archive keeps the words you wrote, so try \
+                    one of them.
+                    """
+            )
+            .font(Typography.caption)
+            .foregroundStyle(Palette.inkMuted)
+            .multilineTextAlignment(.center)
+        }
+        .padding(Spacing.loose)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("archive.empty")
     }
 }

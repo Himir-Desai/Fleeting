@@ -19,6 +19,14 @@ public final class CaptureModel {
     /// The most recent save failure, or `nil` if the last attempt succeeded.
     public private(set) var lastError: (any Error)?
 
+    /// How many thoughts this screen has committed. Drives the save haptic.
+    ///
+    /// A count rather than a flag: two saves in a row have to read as two distinct events.
+    public private(set) var savedCount = 0
+
+    /// How many saves have failed. Drives the failure haptic.
+    public private(set) var failedCount = 0
+
     /// The classification started by the most recent save.
     ///
     /// Exposed so tests can await work that is deliberately not awaited in production.
@@ -71,10 +79,12 @@ public final class CaptureModel {
             try await repository.add(thought)
             text = ""
             lastError = nil
+            savedCount += 1
             changes.notify()
             classifyInBackground(thought)
         } catch {
             lastError = error
+            failedCount += 1
         }
     }
 

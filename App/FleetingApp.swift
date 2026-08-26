@@ -10,9 +10,9 @@ struct FleetingApp: App {
 
     var body: some Scene {
         WindowGroup {
+            // No `preferredColorScheme`: the palette adapts, so the app looks the way the user
+            // has asked their phone to look rather than overriding it (ADR-0020).
             RootView(environment: environment)
-                // The palette is dark-only for now; a proper light-mode pass is Phase 8 work.
-                .preferredColorScheme(.dark)
         }
     }
 }
