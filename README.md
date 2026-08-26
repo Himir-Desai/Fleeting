@@ -86,7 +86,7 @@ flowchart LR
 
 ### ✎ Capture — the only screen that matters
 
-<img src="docs/screenshots/capture.png" width="260" align="right" alt="The capture screen on cold launch: an empty field reading What's on your mind? with the cursor already blinking and the keyboard already up, and a single line of first-run text below it saying thoughts fade as they age and file themselves away, nothing is ever deleted, with a Got it control." />
+<img src="docs/screenshots/capture.png" width="260" align="right" alt="The capture screen on cold launch: a large recessed writing area reading What's on your mind? with the cursor already blinking in it, a single line of first-run text below saying thoughts fade as they age and file themselves away, nothing is ever deleted, with a Got it control, and a quiet browse chip and a Save capsule along the bottom." />
 
 Cold launch lands on a cursor. Type, hit save, the field clears and waits for the next one. No
 navigation, no decisions, no confirmation. Also reachable without unlocking, from a lock-screen
@@ -94,7 +94,7 @@ widget, a Control Center control, and an App Intent so Siri can take dictation i
 
 ### 🕯 Decay — the anti-hoarding mechanic
 
-<img src="docs/screenshots/inbox.png" width="260" align="right" alt="The inbox: a review invitation reading 2 need a decision, then five thoughts at different ages, each with a kind glyph, fading in proportion to its remaining freshness, with a meter that shrinks and warms from purple to amber, and labels reading archives in 2 months through archives tomorrow." />
+<img src="docs/screenshots/inbox.png" width="260" align="right" alt="The inbox: a tinted card inviting a review, reading 2 need a decision, then five thoughts as white cards on warm paper. Each card carries a coloured rail down its leading edge, a tinted chip holding its kind glyph, and a freshness meter that shrinks and warms from purple to amber, with labels reading archives in 2 months through archives tomorrow." />
 
 Every thought has a **freshness** value that falls over time, rendered as a quiet visual fade in the
 list. Different kinds of thought rot at different speeds: a todo you ignored for two weeks is dead,
@@ -104,7 +104,7 @@ is ever deleted; the archive is fully searchable, it's just out of the way.
 
 ### ✦ Sharpen — half-baked in, fully-baked out
 
-<img src="docs/screenshots/sharpen.png" width="260" align="right" alt="The Sharpen screen: the raw captured note at the top under 'What you wrote', then a generated title and a paragraph developing the idea, with an understated 'Take this further elsewhere' link and a Revert control beneath." />
+<img src="docs/screenshots/sharpen.png" width="260" align="right" alt="The Sharpen screen: the raw captured note sits in a recess labelled WHAT YOU WROTE, and the generated title and paragraph sit on a raised card labelled SHARPENED beneath it, with an understated 'Take this further elsewhere' link and a Revert control below." />
 
 The differentiator. Tap Sharpen on a fragment and the on-device model asks **two or three short,
 specific questions** — *fair by what, income or room size? who has this problem badly enough to pay?*
@@ -119,7 +119,7 @@ affordance has the local model compose a rich, context-loaded prompt and hand it
 
 ### ↻ Review — a ritual you'll actually finish
 
-<img src="docs/screenshots/review.png" width="260" align="right" alt="The review screen: a progress line reading 1 of 2, the thought's text, an amber note saying it archives tomorrow, and three decisions along the bottom — Let go, Snooze, and an emphasised Keep." />
+<img src="docs/screenshots/review.png" width="260" align="right" alt="The review screen: a progress label reading 1 of 2 above a progress bar, a single raised card holding the thought's text and an amber clock line saying it archives tomorrow, and three capsule decisions along the bottom — Let go, Snooze, and an emphasised Keep." />
 
 Once a week, Fleeting picks **at most seven** thoughts that genuinely need a decision — about to
 expire, or snoozed one too many times — and deals them as a card stack. Act, Snooze, or Drop. A short
@@ -128,7 +128,7 @@ question attached, so the ritual quietly does double duty.
 
 ### 🔔 Nudges — one a day, never in the way
 
-<img src="docs/screenshots/settings.png" width="260" align="right" alt="The settings screen showing five sections: Sorting, reading On-device model; Notifications, reading Off with a Turn on notifications button; Storage, reading On this device; Syncing, reading This iPhone only in amber because this build cannot reach iCloud; and Widgets, reading Not shared." />
+<img src="docs/screenshots/settings.png" width="260" align="right" alt="The settings screen: small wide section labels above white status cards. Sorting reads On-device model; Notifications reads Off with a Turn on notifications button; Storage reads On this device; Syncing reads This iPhone only in amber because this build cannot reach iCloud; and Widgets reads Sharing." />
 
 A daily notification where the on-device model surfaces one genuinely forgotten thought and phrases
 it in a way that might restart it — in your own words, never scolding. Plus a weekly review
@@ -167,6 +167,13 @@ the signal alone. VoiceOver reads a row as *"pay the parking fine, archives tomo
 of *"fading"* — words, not a percentage. Four UI tests drive capture, the inbox and the review at
 the largest accessibility type size, where the review's three decisions stack rather than clip.
 
+The audit keeps earning its place. Warming the palette to paper-and-ink later pushed that same fade
+floor to **4.496:1** — three thousandths under the line, invisible to any eye and caught by the test
+on the first run; the ink darkened rather than the floor moving. The same pass broke the capture
+screen at 60pt type in a way no unit test could see, and `AccessibilityTests` caught that too: a
+minimum height on the writing well, harmless at every normal size, pushed the save control off the
+bottom of the screen once the keyboard was up.
+
 ## Architecture at a glance
 
 Fleeting is a thin app target over a set of local Swift packages with a strictly enforced dependency
@@ -199,7 +206,7 @@ flowchart TD
 | `Core` | Domain entities, the decay engine, repository & service **protocols**. Pure Swift, no UIKit/SwiftUI/SwiftData. | *nothing* |
 | `Persistence` | SwiftData schema, migrations, CloudKit configuration, repository **implementations**. | `Core` |
 | `Intelligence` | `IntelligenceService` protocol with three implementations: on-device Foundation Models, deterministic heuristics, and a test stub. | `Core` |
-| `DesignSystem` | Colour/type/spacing tokens and shared SwiftUI components. Owns the freshness visual language. | — |
+| `DesignSystem` | Colour/type/spacing/radius/elevation tokens and six shared components. Owns the freshness visual language. | — |
 | `Features` | One target per feature, each with its own `@Observable` state model and views. Features never import each other. | `Core`, `DesignSystem`, `Intelligence` |
 | `Notifications` | Scheduling, background composition of the daily nudge, permission handling. | `Core`, `Intelligence` |
 | `App` | Wiring only. Builds concrete implementations and injects them into features. | everything |
@@ -224,7 +231,12 @@ This is deliberately built the way a shipped app is built, not the way a demo is
   computes WCAG ratios for every palette pairing in light, dark, and both increased-contrast
   appearances, and fails the build below AA. UI tests drive the whole app at the largest
   accessibility type size.
-- **Testing** — 240 unit tests on the pure domain, the selection algorithms, the colour palette,
+- **The design system is a vocabulary, not a list of constants.** Features name a `Radius.card` or a
+  `StatusBlock`, never a number or a hand-built stack, so the app's roundness, its elevation and its
+  status lines are each one decision. Elevation is a *level* rather than a shadow, because a drop
+  shadow on a near-black page is invisible — the same value is drawn as a hairline in dark mode
+  ([ADR-0022](docs/DECISIONS.md)).
+- **Testing** — 245 unit tests on the pure domain, the selection algorithms, the colour palette,
   and an in-memory SwiftData container, plus 46 UI tests on a simulator. Assertions are about
   mechanism, never about what a model happens to say.
 - **CI** on every push: every package's tests, the app's UI tests on a simulator, SwiftLint,

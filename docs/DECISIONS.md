@@ -622,3 +622,99 @@ needed. It never returns.
 **Consequences.** The explanation is short enough to be read at a glance and easy to miss
 entirely, which is the accepted cost of not interrupting. It is dismissed by tapping, by capturing,
 or by ignoring, and `--reset-store` clears it so the UI tests see a genuine first launch.
+
+---
+
+## ADR-0022 · Paper and ink, a card list, and elevation that changes shape by appearance
+
+**Status:** Accepted · Design pass
+
+**Context.** Eight phases produced an app that was correct, accessible and completely anonymous.
+`DesignSystem` held four type styles, six spacing steps, seven colours and one component, which is
+not a vocabulary — it is a list of literals with names. Features paid for the gap: `SettingsView`
+hand-built the same headline-and-detail stack five times, three files hardcoded
+`Palette.ink.opacity(0.12)` as a separator, and every screen wrote its own empty state. The rows
+were also undecided, drawn with a raised fill *and* separators *and* disclosure chevrons — the
+visual language of a plain list and of a card list at once.
+
+**Decision.** Three things, together.
+
+*The palette is warm on both sides.* Light is paper and dark is ink; neither is neutral grey. The
+page, the recess a user types into, and the card a thought sits on are three distinct surfaces
+(`surface`, `surfaceSunken`, `raised`), so a field the user writes in reads as below the page and a
+thought the app filed reads as on it.
+
+*The list is cards, not stripes.* Separators are gone, `CardSurface` is the row background, and the
+row's content is inset within it. This settles the ambiguity in favour of cards and gives the
+freshness rail somewhere to live.
+
+*Elevation is a level, not a shadow.* A drop shadow on a near-black page is invisible, so the same
+`Elevation` value is drawn as a shadow in the light appearance and as a hairline in the dark one,
+and always as a hairline under increased contrast. `View.elevated(_:cornerRadius:)` is the only
+place that decision is made.
+
+The type scale grew from four styles to eight, with one deliberate break: `display` is a serif and
+nothing else is. It appears only where the app speaks rather than labels — an empty state, the end
+of a review — so the voice is distinctive without the interface becoming a magazine.
+
+**Alternatives.**
+- *A neutral grey palette* — safer, and what the app already had. Rejected: it is what every
+  SwiftUI app looks like when nobody chose, and this app's whole subject is paper that yellows.
+- *Per-kind accent colours* — genuinely useful for scanning a mixed list, and the obvious next
+  move once a chip exists to tint. Rejected on two grounds: `DesignSystem` may not know what a kind
+  is ([ADR-0012](DECISIONS.md)), so the hues would have to be named neutrally and mapped in the
+  feature; and with only three real kinds it buys a rainbow in an app whose one accent is already
+  spoken for by freshness. Kinds are distinguished by symbol.
+- *A serif everywhere* — distinctive, and wrong: labels and controls set in a serif read as a
+  document rather than an interface, and the capture field has to be the most ordinary text box
+  on the phone.
+- *Shadows in both appearances, tuned darker for dark mode* — rejected because there is nothing
+  darker than the page to cast onto. A hairline is the honest equivalent.
+
+**Consequences.** Warming the light surface cost contrast: the fade floor, which had been set at
+exactly the AA boundary in [ADR-0020](DECISIONS.md), fell to 4.496:1 against warm paper and the
+audit failed the build. The light ink darkened to compensate rather than the floor moving, because
+the floor is a design value and the ink is not. Nine new pairings joined the audit, including two
+that were not previously testable: the tinted chip is now audited as a background in its own right,
+and the meter's middle stop is derived from two audited colours rather than picked, so the whole
+slope is covered instead of only its ends.
+
+---
+
+## ADR-0023 · Freshness is drawn twice, in two axes
+
+**Status:** Accepted · Design pass
+
+**Context.** Decay is the mechanic the app exists for, and it was the quietest thing on the screen:
+a 3pt meter 56pt wide, plus an opacity fade with a floor at 0.60 that is by design subtle. A user
+scrolling the inbox could not tell at a glance which thoughts were nearly gone — which is precisely
+the question the list is meant to answer.
+
+**Decision.** The same number is drawn twice, in two axes, saying two different things.
+
+*Horizontally, the meter says how much is left.* `FreshnessMeter` is thicker, wider, and has a
+visible spent track behind the fill, so it reads as a proportion rather than a mark. Its tint has
+three stops instead of two — accent while healthy, a derived warming colour through the middle, the
+warning colour at the end — so it reads as a slope a thought is sliding down rather than a light
+that switches from fine to nearly gone.
+
+*Vertically, the rail says which row to look at.* A 3pt capsule down the leading edge of each card,
+tinted by the same three stops but not scaled by the value, drawn at full strength only once a
+thought is expiring. A column of rails is scannable in a way a column of meters is not, because the
+eye compares colour down an edge faster than it compares length across a gap.
+
+**Alternatives.**
+- *Make the meter full-width* — the simplest way to make the proportion louder. Rejected: it turns
+  every row into a progress bar and competes with the thought's own text for the row's width.
+- *Scale the rail's height by freshness too* — a third reading of the same number, and the one
+  that first suggested itself. Rejected: two readings of one value is emphasis, three is
+  decoration, and a rail whose height varies makes the card look broken rather than the thought
+  look old.
+- *Tint the whole card* — legible, and far too loud for a screen whose point is calm. It would also
+  fight the fade, which is already tinting the content.
+
+**Consequences.** The fade, the meter and the rail now all carry the same signal, which means the
+opacity floor is no longer load-bearing on its own — under increased contrast, where the fade stops
+entirely ([ADR-0020](DECISIONS.md)), two of the three still speak. The rail lives on `CardSurface`
+as a plain `Color`, so `DesignSystem` still knows nothing about a `Thought`
+([ADR-0012](DECISIONS.md)); the feature decides what colour to hand it.

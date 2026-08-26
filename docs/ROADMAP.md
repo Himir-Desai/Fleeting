@@ -326,6 +326,49 @@ inbox edit test depended on which keyboard the simulator happened to show.
 
 ---
 
+## Design pass 🟢
+
+Not a phase. Nine phases produced an app that was correct, accessible and anonymous, so this went
+back over the whole surface with the same discipline the rest of the repo is built with.
+
+**Scope**
+- Grow `DesignSystem` from four type styles, six spacing steps and one component into a real
+  vocabulary: `Radius`, `Elevation`, three surfaces, a separator, a tinted fill, eight type styles,
+  and six components.
+- Move all six screens onto it, so no feature hand-builds what a component already says.
+- Give the app a look: paper and ink rather than neutral grey, cards rather than stripes, and decay
+  drawn loudly enough to answer the question the list exists to answer.
+
+**Not in this pass.** Per-kind accent colours (rejected — [ADR-0022](DECISIONS.md)), any change to
+behaviour, and any new screen.
+
+**Done when** — the contrast audit passes with the new pairings in it; every UI test that passed
+before still passes; and `SettingsView` no longer contains five copies of the same stack.
+
+**Outcome.** Met. 245 unit tests and 46 UI tests.
+
+- Two ADRs: [ADR-0022](DECISIONS.md) on the palette, the card list and elevation-as-a-level, and
+  [ADR-0023](DECISIONS.md) on drawing freshness twice — a meter for the proportion, a rail for the
+  scan.
+- The audit found the regression before a human could have. Warm paper pushed the fade floor to
+  4.496:1 against the 4.5:1 line; the light ink darkened rather than the floor moving. Nine
+  pairings were added, two of which had not previously been testable at all.
+- `AccessibilityTests` found the other one. A minimum height on the capture well — harmless at every
+  normal size — pushed the save control off the bottom of the screen at 60pt type once the keyboard
+  was up. The well now has no minimum at accessibility sizes, because the field is already
+  screen-filling there.
+- Also fixed on the way: a tap gesture attached directly to the capture `TextField` replaces the
+  field's own accessibility element, so the well's tap target is a sibling rather than a modifier.
+
+Correcting Phase 0's local note: this Mac now has the iOS platform installed, and the full UI suite
+runs here. The signing gap in Phases 7 and 8 is unchanged — a simulator is not a signed device.
+
+One screenshot caveat: the simulator on this machine has a hardware keyboard attached, so the
+software keyboard is not drawn in `capture.png` even though the field is focused and
+`app.keyboards` exists. `CapturePathTests` still asserts the keyboard, so the invariant is
+covered; only the picture is missing it, and the README's alt text describes what the image
+actually shows.
+
 ## Deferred
 
 Recorded so they aren't rediscovered as new ideas later.
