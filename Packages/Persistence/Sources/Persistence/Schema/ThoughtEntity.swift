@@ -17,6 +17,10 @@ final class ThoughtEntity {
     var stateDate: Date?
     var capturedAt: Date = Date.distantPast
     var lastActedAt: Date = Date.distantPast
+    var kindSourceRaw: String = "unclassified"
+    var dueAt: Date?
+    var streakCount: Int = 0
+    var streakLastMarkedAt: Date?
 
     init(
         id: UUID,
@@ -26,7 +30,11 @@ final class ThoughtEntity {
         stateRaw: String,
         stateDate: Date?,
         capturedAt: Date,
-        lastActedAt: Date
+        lastActedAt: Date,
+        kindSourceRaw: String,
+        dueAt: Date?,
+        streakCount: Int,
+        streakLastMarkedAt: Date?
     ) {
         self.id = id
         self.body = body
@@ -36,5 +44,9 @@ final class ThoughtEntity {
         self.stateDate = stateDate
         self.capturedAt = capturedAt
         self.lastActedAt = lastActedAt
+        self.kindSourceRaw = kindSourceRaw
+        self.dueAt = dueAt
+        self.streakCount = streakCount
+        self.streakLastMarkedAt = streakLastMarkedAt
     }
 }

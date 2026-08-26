@@ -2,6 +2,7 @@ import ArchiveFeature
 import CaptureFeature
 import Core
 import InboxFeature
+import SettingsFeature
 import SwiftUI
 
 /// The app's root view.
@@ -14,11 +15,14 @@ struct RootView: View {
 
     @State private var isBrowsing = false
     @State private var isShowingArchive = false
+    @State private var isShowingSettings = false
 
     var body: some View {
         CaptureView(
             model: CaptureModel(
                 repository: environment.thoughts,
+                intelligence: environment.intelligence,
+                changes: environment.changes,
                 clock: environment.clock
             ),
             onBrowse: { isBrowsing = true }
@@ -32,13 +36,23 @@ struct RootView: View {
                         engine: environment.engine,
                         clock: environment.clock
                     ),
-                    onOpenArchive: { isShowingArchive = true }
+                    changes: environment.changes,
+                    onOpenArchive: { isShowingArchive = true },
+                    onOpenSettings: { isShowingSettings = true }
                 )
                 .navigationDestination(isPresented: $isShowingArchive) {
                     ArchiveView(
                         model: ArchiveModel(
                             repository: environment.thoughts,
                             clock: environment.clock
+                        )
+                    )
+                }
+                .navigationDestination(isPresented: $isShowingSettings) {
+                    SettingsView(
+                        model: SettingsModel(
+                            intelligence: environment.intelligence,
+                            profiles: environment.engine.profiles
                         )
                     )
                 }

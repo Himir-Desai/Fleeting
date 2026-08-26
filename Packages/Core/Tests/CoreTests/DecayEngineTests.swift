@@ -104,7 +104,8 @@ struct DecayEngineTests {
 
     @Test("a policy with no decay window still expires at its lifetime")
     func degeneratePolicyIsSafe() {
-        let cliff = DecayEngine(policy: FreshnessPolicy(grace: 10 * .day, lifetime: 10 * .day))
+        let flat = FreshnessPolicy(grace: 10 * .day, lifetime: 10 * .day)
+        let cliff = DecayEngine(profiles: DecayProfiles(policies: [:], fallback: flat))
         #expect(cliff.freshness(of: thought(), at: day(9)) == .full)
         #expect(cliff.freshness(of: thought(), at: day(10)) == .expired)
     }

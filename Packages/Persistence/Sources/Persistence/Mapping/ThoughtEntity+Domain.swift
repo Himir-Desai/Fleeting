@@ -55,7 +55,11 @@ extension ThoughtEntity {
             stateRaw: state.raw,
             stateDate: state.date,
             capturedAt: thought.capturedAt,
-            lastActedAt: thought.lastActedAt
+            lastActedAt: thought.lastActedAt,
+            kindSourceRaw: thought.kindSource.rawValue,
+            dueAt: thought.dueAt,
+            streakCount: thought.streak?.count ?? 0,
+            streakLastMarkedAt: thought.streak?.lastMarkedAt
         )
     }
 
@@ -68,8 +72,17 @@ extension ThoughtEntity {
             kind: ThoughtKind(rawValue: kindRaw) ?? .unsorted,
             state: StoredState.state(raw: stateRaw, date: stateDate),
             title: title,
-            lastActedAt: lastActedAt
+            lastActedAt: lastActedAt,
+            kindSource: KindSource(rawValue: kindSourceRaw) ?? .unclassified,
+            dueAt: dueAt,
+            streak: storedStreak
         )
+    }
+
+    /// The habit streak this row represents, or `nil` if the habit was never marked.
+    private var storedStreak: Streak? {
+        guard streakLastMarkedAt != nil || streakCount > 0 else { return nil }
+        return Streak(count: streakCount, lastMarkedAt: streakLastMarkedAt)
     }
 
     /// Overwrites this row with the contents of a domain thought, preserving identity.
@@ -82,5 +95,9 @@ extension ThoughtEntity {
         stateRaw = state.raw
         stateDate = state.date
         lastActedAt = thought.lastActedAt
+        kindSourceRaw = thought.kindSource.rawValue
+        dueAt = thought.dueAt
+        streakCount = thought.streak?.count ?? 0
+        streakLastMarkedAt = thought.streak?.lastMarkedAt
     }
 }

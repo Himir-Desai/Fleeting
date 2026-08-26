@@ -5,13 +5,20 @@ import Foundation
 /// Pure and clock-free: every method takes the instant to evaluate against, so decay is tested by
 /// passing dates rather than by waiting.
 public struct DecayEngine: Sendable {
-    /// The rates this engine applies.
-    public let policy: FreshnessPolicy
+    /// The rates this engine applies, one per kind of thought.
+    public let profiles: DecayProfiles
 
     /// Creates an engine.
-    /// - Parameter policy: How fast thoughts decay. Defaults to ``FreshnessPolicy/standard``.
-    public init(policy: FreshnessPolicy = .standard) {
-        self.policy = policy
+    /// - Parameter profiles: How fast each kind decays. Defaults to ``DecayProfiles/standard``.
+    public init(profiles: DecayProfiles = .standard) {
+        self.profiles = profiles
+    }
+
+    /// The policy governing a particular thought.
+    /// - Parameter thought: The thought to look up.
+    /// - Returns: The policy for that thought's kind.
+    public func policy(for thought: Thought) -> FreshnessPolicy {
+        profiles.policy(for: thought.kind)
     }
 
     /// How fresh a thought is at a given moment.
@@ -23,6 +30,7 @@ public struct DecayEngine: Sendable {
     /// - Returns: Freshness within 0...1.
     public func freshness(of thought: Thought, at date: Date) -> Freshness {
         guard thought.state.isLive else { return .expired }
+        let policy = policy(for: thought)
         guard policy.decayWindow > 0 else {
             return date.timeIntervalSince(referenceDate(for: thought)) >= policy.lifetime
                 ? .expired : .full
@@ -39,7 +47,7 @@ public struct DecayEngine: Sendable {
     /// - Returns: The expiry instant, or `nil` for thoughts that no longer decay.
     public func expiryDate(of thought: Thought) -> Date? {
         guard thought.state.isLive else { return nil }
-        return referenceDate(for: thought).addingTimeInterval(policy.lifetime)
+        return referenceDate(for: thought).addingTimeInterval(policy(for: thought).lifetime)
     }
 
     /// Whether a thought has run out of freshness and should be moved to the archive.

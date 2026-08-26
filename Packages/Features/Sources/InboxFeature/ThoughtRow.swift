@@ -19,6 +19,12 @@ struct ThoughtRow: View {
                 FreshnessBar(freshness: freshness.value)
                     .frame(width: 56)
 
+                if let streak = thought.streak, streak.hasStarted {
+                    Text("\(streak.count) day streak")
+                        .font(Typography.caption)
+                        .foregroundStyle(Palette.accent)
+                }
+
                 if let expiresAt {
                     Text("archives \(expiresAt, format: .relative(presentation: .named))")
                         .font(Typography.caption)

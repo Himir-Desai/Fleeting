@@ -23,7 +23,11 @@ private actor SpyRepository: ThoughtRepository {
         stored.filter { scope.contains($0.state) }
     }
 
-    func update(_ thought: Thought) async throws {}
+    func update(_ thought: Thought) async throws {
+        guard let index = stored.firstIndex(where: { $0.id == thought.id }) else { return }
+        stored[index] = thought
+    }
+
     func delete(id: Thought.ID) async throws {}
 }
 
@@ -33,15 +37,38 @@ private struct StubClock: WallClock {
 
 private struct StorageFailure: Error {}
 
+/// A classifier that answers with a fixed result, optionally slowly.
+private struct StubIntelligence: IntelligenceService {
+    var result: Classification = .unknown
+    var delay: Duration?
+
+    var availability: IntelligenceAvailability {
+        .heuristic(reason: .notBuiltIn)
+    }
+
+    func classify(_: String) async -> Classification {
+        if let delay {
+            try? await Task.sleep(for: delay)
+        }
+        return result
+    }
+}
+
 @MainActor
 @Suite("CaptureModel")
 struct CaptureModelTests {
     private let epoch = Date(timeIntervalSince1970: 1_700_000_000)
 
     private func makeModel(
-        repository: SpyRepository = SpyRepository()
+        repository: SpyRepository = SpyRepository(),
+        intelligence: StubIntelligence = StubIntelligence()
     ) -> (CaptureModel, SpyRepository) {
-        (CaptureModel(repository: repository, clock: StubClock(now: epoch)), repository)
+        let model = CaptureModel(
+            repository: repository,
+            intelligence: intelligence,
+            clock: StubClock(now: epoch)
+        )
+        return (model, repository)
     }
 
     @Test("an empty field cannot be saved")
@@ -116,5 +143,71 @@ struct CaptureModelTests {
 
         #expect(await repository.stored.isEmpty)
         #expect(model.lastError == nil)
+    }
+}
+
+@MainActor
+@Suite("Capture and classification")
+struct CaptureClassificationTests {
+    private let epoch = Date(timeIntervalSince1970: 1_700_000_000)
+
+    private func makeModel(
+        _ intelligence: StubIntelligence
+    ) -> (CaptureModel, SpyRepository) {
+        let repository = SpyRepository()
+        let model = CaptureModel(
+            repository: repository,
+            intelligence: intelligence,
+            clock: StubClock(now: epoch)
+        )
+        return (model, repository)
+    }
+
+    @Test("a slow classifier never delays the save or the next thought")
+    func classificationDoesNotBlockSaving() async {
+        let slow = StubIntelligence(
+            result: Classification(kind: .todo, title: "Slow", confidence: 0.9),
+            delay: .seconds(30)
+        )
+        let (model, repository) = makeModel(slow)
+        model.text = "call the dentist"
+
+        await model.save()
+
+        // save() has returned even though the classifier is still running.
+        #expect(model.text.isEmpty)
+        #expect(await repository.stored.count == 1)
+        #expect(model.classificationTask != nil)
+        model.classificationTask?.cancel()
+    }
+
+    @Test("a classified thought is updated in storage after the save")
+    func classificationIsWrittenBack() async {
+        let (model, repository) = makeModel(
+            StubIntelligence(result: Classification(kind: .todo, title: "Dentist", confidence: 0.8))
+        )
+        model.text = "call the dentist"
+
+        await model.save()
+        await model.classificationTask?.value
+
+        let stored = await repository.stored.first
+        #expect(stored?.kind == .todo)
+        #expect(stored?.kindSource == .inferred)
+        #expect(stored?.title == "Dentist")
+        #expect(stored?.body == "call the dentist", "classification must not touch the raw text")
+    }
+
+    @Test("a classifier that decides nothing leaves the thought unsorted rather than guessing")
+    func unknownClassificationLeavesItAlone() async {
+        let (model, repository) = makeModel(StubIntelligence(result: .unknown))
+        model.text = "the light in the kitchen"
+
+        await model.save()
+        await model.classificationTask?.value
+
+        let stored = await repository.stored.first
+        #expect(stored?.kind == .unsorted)
+        #expect(stored?.kindSource == .unclassified)
     }
 }

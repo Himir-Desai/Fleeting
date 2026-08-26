@@ -294,3 +294,97 @@ final class ReturnToCaptureTests: XCTestCase {
         )
     }
 }
+
+/// Covers Phase 3: thoughts get sorted without being asked about, and a wrong guess is
+/// correctable in the list.
+@MainActor
+final class ClassificationTests: XCTestCase {
+    override func setUp() {
+        continueAfterFailure = false
+    }
+
+    private func launchAndCapture(_ text: String) -> XCUIApplication {
+        let app = XCUIApplication()
+        app.launchArguments = ["--reset-store"]
+        app.launch()
+
+        let field = app.descendants(matching: .any)["capture.field"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap()
+        field.typeText(text)
+        app.buttons["capture.save"].tap()
+        return app
+    }
+
+    /// Asserts the mechanism, not the verdict.
+    ///
+    /// Which kind is chosen depends on whichever implementation is answering on this device, and
+    /// an on-device model's judgement is not the app's to promise. The rules themselves are
+    /// pinned in HeuristicIntelligenceTests, where they are deterministic.
+    func testACapturedThoughtIsSortedWithoutBeingAskedAboutIt() {
+        let app = launchAndCapture("call the dentist back")
+
+        app.buttons["capture.browse"].tap()
+        let kind = app.buttons["row.kind"]
+        XCTAssertTrue(kind.waitForExistence(timeout: 5))
+
+        let sorted = NSPredicate(format: "label != %@", "Kind: Unsorted")
+        expectation(for: sorted, evaluatedWith: kind)
+        waitForExpectations(timeout: 20)
+    }
+
+    func testCaptureAsksNothingAboutKind() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--reset-store"]
+        app.launch()
+        _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 5)
+
+        // The capture screen must offer no classification control of any sort.
+        XCTAssertFalse(app.buttons["row.kind"].exists)
+        XCTAssertEqual(app.sheets.count, 0)
+    }
+
+    func testAKindCanBeCorrectedFromTheListAndIsRemembered() {
+        let app = launchAndCapture("call mum every sunday")
+
+        app.buttons["capture.browse"].tap()
+        let kind = app.buttons["row.kind"]
+        XCTAssertTrue(kind.waitForExistence(timeout: 5))
+
+        // Correct it to whichever kind it is not, so the test does not depend on the verdict.
+        let target = kind.label == "Kind: Idea" ? "Todo" : "Idea"
+        kind.tap()
+        XCTAssertTrue(app.buttons[target].waitForExistence(timeout: 5))
+        app.buttons[target].tap()
+
+        XCTAssertTrue(app.buttons["row.kind"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.buttons["row.kind"].label, "Kind: \(target)", "the correction must apply")
+
+        // Leave and come back: a human decision must outlive the screen that made it.
+        app.buttons["inbox.done"].tap()
+        app.buttons["capture.browse"].tap()
+        XCTAssertTrue(app.buttons["row.kind"].waitForExistence(timeout: 5))
+        XCTAssertEqual(
+            app.buttons["row.kind"].label, "Kind: \(target)",
+            "a corrected kind must be remembered, and never overwritten by the classifier"
+        )
+    }
+
+    func testSettingsSaysHonestlyWhatIsSortingThoughts() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--reset-store"]
+        app.launch()
+        _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 5)
+
+        app.buttons["capture.browse"].tap()
+        XCTAssertTrue(app.buttons["inbox.settings"].waitForExistence(timeout: 5))
+        app.buttons["inbox.settings"].tap()
+
+        XCTAssertTrue(
+            app.otherElements["settings.intelligence"].waitForExistence(timeout: 5)
+                || app.staticTexts["On-device model"].exists
+                || app.staticTexts["Rules"].exists,
+            "Settings must state which implementation is answering."
+        )
+    }
+}

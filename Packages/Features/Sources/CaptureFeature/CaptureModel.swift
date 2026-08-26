@@ -19,15 +19,31 @@ public final class CaptureModel {
     /// The most recent save failure, or `nil` if the last attempt succeeded.
     public private(set) var lastError: (any Error)?
 
+    /// The classification started by the most recent save.
+    ///
+    /// Exposed so tests can await work that is deliberately not awaited in production.
+    public private(set) var classificationTask: Task<Void, Never>?
+
     private let repository: any ThoughtRepository
+    private let intelligence: any IntelligenceService
+    private let changes: ThoughtChangeNotifier
     private let clock: any WallClock
 
     /// Creates the capture screen's state.
     /// - Parameters:
     ///   - repository: Where committed thoughts are stored.
+    ///   - intelligence: Sorts a thought after it has been stored, never before.
+    ///   - changes: Told when a thought is stored or sorted, so open screens can refresh.
     ///   - clock: Time source used to stamp the capture.
-    public init(repository: any ThoughtRepository, clock: any WallClock) {
+    public init(
+        repository: any ThoughtRepository,
+        intelligence: any IntelligenceService,
+        changes: ThoughtChangeNotifier = ThoughtChangeNotifier(),
+        clock: any WallClock
+    ) {
         self.repository = repository
+        self.intelligence = intelligence
+        self.changes = changes
         self.clock = clock
     }
 
@@ -55,8 +71,31 @@ public final class CaptureModel {
             try await repository.add(thought)
             text = ""
             lastError = nil
+            changes.notify()
+            classifyInBackground(thought)
         } catch {
             lastError = error
+        }
+    }
+
+    /// Sorts a stored thought without making anyone wait for it.
+    ///
+    /// Deliberately not awaited: classification must never sit between the user and their next
+    /// thought, and a thought that is never classified is merely unsorted, which is a valid state.
+    /// - Parameter thought: The thought that was just stored.
+    private func classifyInBackground(_ thought: Thought) {
+        let repository = repository
+        let intelligence = intelligence
+        let changes = changes
+
+        classificationTask = Task {
+            let result = await intelligence.classify(thought.body)
+            guard result != .unknown else { return }
+
+            var classified = thought
+            classified.applyClassification(kind: result.kind, title: result.title)
+            try? await repository.update(classified)
+            changes.notify()
         }
     }
 

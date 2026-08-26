@@ -16,7 +16,16 @@ public struct Thought: Identifiable, Equatable, Sendable {
     public var title: String?
 
     /// What the thought turned out to be.
-    public var kind: ThoughtKind
+    public private(set) var kind: ThoughtKind
+
+    /// Where ``kind`` came from. A confirmed kind is never overwritten by classification.
+    public private(set) var kindSource: KindSource
+
+    /// When a todo is due, if a date has been set. Meaningless for other kinds.
+    public var dueAt: Date?
+
+    /// The run of consecutive days a habit has been kept. `nil` until first marked.
+    public private(set) var streak: Streak?
 
     /// Where the thought sits in its lifecycle.
     public var state: ThoughtState
@@ -37,6 +46,9 @@ public struct Thought: Identifiable, Equatable, Sendable {
     ///   - title: A generated title, if one already exists.
     ///   - lastActedAt: When the thought was last acted on. Defaults to `capturedAt`, which is
     ///     correct for a new capture; storage passes the stored value to reconstitute a thought.
+    ///   - kindSource: Where the kind came from. Defaults to unclassified.
+    ///   - dueAt: When a todo is due, if set.
+    ///   - streak: A habit's run of consecutive days, if any.
     public init(
         id: UUID = UUID(),
         body: String,
@@ -44,8 +56,14 @@ public struct Thought: Identifiable, Equatable, Sendable {
         kind: ThoughtKind = .unsorted,
         state: ThoughtState = .inbox,
         title: String? = nil,
-        lastActedAt: Date? = nil
+        lastActedAt: Date? = nil,
+        kindSource: KindSource = .unclassified,
+        dueAt: Date? = nil,
+        streak: Streak? = nil
     ) {
+        self.kindSource = kindSource
+        self.dueAt = dueAt
+        self.streak = streak
         self.id = id
         self.body = body
         self.capturedAt = capturedAt
@@ -68,6 +86,50 @@ public struct Thought: Identifiable, Equatable, Sendable {
     /// - Parameter date: When the action happened.
     public mutating func markActed(at date: Date) {
         lastActedAt = date
+    }
+
+    /// Applies a classifier's guess at what the thought is.
+    ///
+    /// Ignored once a person has confirmed the kind, so re-running classification can never undo a
+    /// correction. Does not count as deliberate action: the app noticing something is not the user
+    /// attending to it, and it must not reset decay.
+    /// - Parameters:
+    ///   - kind: The inferred kind.
+    ///   - title: A generated short title, if one was produced. Never replaces ``body``.
+    public mutating func applyClassification(kind: ThoughtKind, title: String?) {
+        guard kindSource != .confirmed else { return }
+        self.kind = kind
+        kindSource = .inferred
+        if let title, !title.isEmpty {
+            self.title = title
+        }
+    }
+
+    /// Records a person's decision about what the thought is.
+    ///
+    /// Counts as deliberate action, and permanently protects the kind from classification.
+    /// - Parameters:
+    ///   - kind: The kind the user chose.
+    ///   - date: When they chose it.
+    public mutating func confirmKind(_ kind: ThoughtKind, at date: Date) {
+        self.kind = kind
+        kindSource = .confirmed
+        markActed(at: date)
+    }
+
+    /// Marks a todo complete.
+    /// - Parameter date: When it was completed.
+    public mutating func complete(at date: Date) {
+        state = .done(at: date)
+    }
+
+    /// Records a habit as kept today, extending or restarting its streak.
+    /// - Parameter date: When the habit was marked done.
+    public mutating func markHabitKept(at date: Date) {
+        var updated = streak ?? Streak()
+        updated.mark(at: date)
+        streak = updated
+        markActed(at: date)
     }
 
     /// Sets the thought aside until a chosen date, which counts as deliberate action.

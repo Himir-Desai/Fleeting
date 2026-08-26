@@ -311,3 +311,33 @@ A snoozed thought is held at full freshness until its snooze ends, so decay is m
 `expiryDate(of:)` is exact rather than an estimate. Per-kind rates in Phase 3 become two numbers per
 kind instead of one. A degenerate policy where grace equals lifetime is clamped to a hard cliff at
 expiry rather than dividing by zero.
+
+---
+
+## ADR-0014 · Classification runs after the save and announces itself
+
+**Status:** Accepted · Phase 3
+
+**Context.** Sorting a thought needs a model call that can take seconds on device. The capture path
+must never wait for it, but the result still has to reach a list that may already be on screen.
+
+**Decision.** `save()` stores the thought and returns. Classification runs in an unstructured task
+afterwards, writes the result back, and calls `ThoughtChangeNotifier.notify()`. Screens listen to
+`ThoughtChangeObserving.changes` and reload. A thought that is never classified stays `unsorted`,
+which is a valid state with its own decay profile rather than an error.
+
+**Alternatives.**
+- *Classify before storing* — the result would be complete on first render. Rejected outright: it
+  puts a model call between the user and their next thought, which ADR-0008 forbids.
+- *Reload the list only when it appears* — no new machinery, and what shipped first. Rejected after
+  testing on device: the on-device model took several seconds, so capturing and then immediately
+  opening the inbox showed "Unsorted" and left it there until the screen was closed and reopened.
+  That is precisely the common flow.
+- *Poll the store on a timer* — simpler than a notifier, but it burns work forever to catch an
+  event that happens seconds after a capture.
+
+**Consequences.** `ThoughtChangeNotifier` is `@unchecked Sendable` with an `NSLock`, because
+`changes` must be reachable synchronously from a SwiftUI view body and an actor cannot be. The
+inbox also gained pull-to-refresh, so there is a manual path when a notification is missed. UI tests
+must not assert *which* kind the model picks — only that something classified it — since the model's
+judgement is not the app's promise; the rules themselves are pinned in `HeuristicIntelligenceTests`.

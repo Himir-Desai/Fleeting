@@ -78,7 +78,11 @@ public struct CaptureView: View {
 
 #Preview {
     CaptureView(
-        model: CaptureModel(repository: PreviewRepository(), clock: PreviewClock()),
+        model: CaptureModel(
+            repository: PreviewRepository(),
+            intelligence: PreviewIntelligence(),
+            clock: PreviewClock()
+        ),
         onBrowse: {}
     )
 }
@@ -92,6 +96,17 @@ private actor PreviewRepository: ThoughtRepository {
 
     func update(_ thought: Thought) async throws {}
     func delete(id: Thought.ID) async throws {}
+}
+
+/// A classifier that decides nothing, so previews need no model.
+private struct PreviewIntelligence: IntelligenceService {
+    var availability: IntelligenceAvailability {
+        .heuristic(reason: .notBuiltIn)
+    }
+
+    func classify(_: String) async -> Classification {
+        .unknown
+    }
 }
 
 /// A clock frozen at a fixed instant, so previews never depend on the system time.

@@ -82,6 +82,35 @@ public final class InboxModel {
         await persist(archived, removingFromList: true)
     }
 
+    /// Records a person's decision about what a thought is.
+    ///
+    /// The correction is remembered: classification will not overwrite it later.
+    /// - Parameters:
+    ///   - kind: The kind the user chose.
+    ///   - thought: The thought being corrected.
+    public func confirmKind(_ kind: ThoughtKind, for thought: Thought) async {
+        guard kind != thought.kind else { return }
+        var corrected = thought
+        corrected.confirmKind(kind, at: clock.now)
+        await persist(corrected, removingFromList: false)
+    }
+
+    /// Marks a todo complete, taking it out of the live list without destroying it.
+    /// - Parameter thought: The todo to complete.
+    public func complete(_ thought: Thought) async {
+        var completed = thought
+        completed.complete(at: clock.now)
+        await persist(completed, removingFromList: true)
+    }
+
+    /// Records a habit as kept, extending its streak and restoring its freshness.
+    /// - Parameter thought: The habit to mark.
+    public func markHabitKept(_ thought: Thought) async {
+        var kept = thought
+        kept.markHabitKept(at: clock.now)
+        await persist(kept, removingFromList: false)
+    }
+
     /// Permanently removes a thought. The only path in the app that destroys anything.
     /// - Parameter thought: The thought to delete.
     public func delete(_ thought: Thought) async {

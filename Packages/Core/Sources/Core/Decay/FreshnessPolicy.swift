@@ -21,10 +21,6 @@ public struct FreshnessPolicy: Equatable, Sendable {
         self.grace = min(max(grace, 0), self.lifetime)
     }
 
-    /// The policy every thought uses until Phase 3 introduces per-kind rates:
-    /// two days of grace, then a linear slide to expiry at thirty days.
-    public static let standard = FreshnessPolicy(grace: 2 * .day, lifetime: 30 * .day)
-
     /// The span over which freshness actually falls from 1 to 0.
     var decayWindow: TimeInterval {
         lifetime - grace

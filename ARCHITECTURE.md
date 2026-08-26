@@ -88,16 +88,21 @@ Fleeting/
 │   │       │   ├── ThoughtKind.swift        ← idea · todo · habit · unsorted
 │   │       │   ├── ThoughtState.swift       ← inbox · active · snoozed · archived · done
 │   │       │   ├── Sharpening.swift         ← interview questions, answers, write-up
+│   │       │   ├── KindSource.swift          ← unclassified · inferred · confirmed
+│   │       │   ├── ThoughtScope.swift        ← live · archived · all
 │   │       │   └── Streak.swift             ← habit-specific payload
 │   │       ├── Decay/
 │   │       │   ├── Freshness.swift          ← 0…1 value type + presentation bands
 │   │       │   ├── FreshnessPolicy.swift    ← grace + lifetime, linear decay (ADR-0013)
+│   │       │   ├── DecayProfiles.swift      ← per-kind rates: todo 14d · habit 7d · idea 90d
 │   │       │   └── DecayEngine.swift        ← pure: (Thought, Date) → Freshness
 │   │       ├── Review/
 │   │       │   └── ReviewSelector.swift     ← pure: [Thought] → at most 7 that need a decision
 │   │       ├── Protocols/
 │   │       │   ├── ThoughtRepository.swift  ← implemented by Persistence; scoped + searchable
 │   │       │   ├── ArchiveSweeping.swift    ← lets features trigger a sweep without Persistence
+│   │       │   ├── IntelligenceService.swift← the AI contract, Classification, availability
+│   │       │   ├── ThoughtChanges.swift     ← change signal so open screens see late work
 │   │       │   ├── IntelligenceService.swift← implemented by Intelligence
 │   │       │   └── NudgeScheduling.swift    ← implemented by Notifications
 │   │       └── Support/
@@ -165,7 +170,7 @@ Fleeting/
 │   │       ├── ArchiveFeature/      ← search the dead
 │   │       │   ├── ArchiveModel.swift   ← scoped search, restore, permanent delete
 │   │       │   └── ArchiveView.swift    ← .searchable over raw captured text
-│   │       └── SettingsFeature/     ← decay tuning, notification times, intelligence status
+│   │       └── SettingsFeature/     ← honest intelligence status; the decay rates in force
 │   │
 │   └── Notifications/               ← Scheduling and background composition of nudges.
 │       └── Sources/Notifications/

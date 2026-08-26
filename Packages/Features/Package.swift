@@ -10,7 +10,8 @@ let package = Package(
     products: [
         .library(name: "CaptureFeature", targets: ["CaptureFeature"]),
         .library(name: "InboxFeature", targets: ["InboxFeature"]),
-        .library(name: "ArchiveFeature", targets: ["ArchiveFeature"])
+        .library(name: "ArchiveFeature", targets: ["ArchiveFeature"]),
+        .library(name: "SettingsFeature", targets: ["SettingsFeature"])
     ],
     dependencies: [
         .package(path: "../Core"),
@@ -22,6 +23,7 @@ let package = Package(
         .testTarget(name: "CaptureFeatureTests", dependencies: ["CaptureFeature", "Core"]),
         .target(name: "ArchiveFeature", dependencies: ["Core", "DesignSystem"]),
         .testTarget(name: "InboxFeatureTests", dependencies: ["InboxFeature", "Core"]),
+        .target(name: "SettingsFeature", dependencies: ["Core", "DesignSystem"]),
         .testTarget(name: "ArchiveFeatureTests", dependencies: ["ArchiveFeature", "Core"])
     ]
 )

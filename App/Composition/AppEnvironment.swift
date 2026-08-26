@@ -23,6 +23,12 @@ final class AppEnvironment {
     /// Moves expired thoughts into the archive.
     let sweeper: any ArchiveSweeping
 
+    /// Sorts captured thoughts, on-device when possible and by rules otherwise.
+    let intelligence: any IntelligenceService
+
+    /// Announces stored-thought changes so open screens refresh themselves.
+    let changes = ThoughtChangeNotifier()
+
     /// Whether the on-disk store failed to open and captures are being held in memory only.
     ///
     /// Surfaced quietly inside the app rather than at launch: a storage problem must never
@@ -46,6 +52,7 @@ final class AppEnvironment {
         }
         engine = DecayEngine()
         sweeper = ArchiveSweeper(repository: self.thoughts, engine: engine, clock: clock)
+        intelligence = IntelligenceFactory.make()
     }
 
     /// Prepares the store after launch: seeds demo data when asked, then archives anything that
@@ -64,6 +71,21 @@ final class AppEnvironment {
         /// screenshots and for exercising decay by hand. Debug builds only.
         static let seedDemoArgument = "--seed-demo"
 
+        /// One seeded thought, described by age and kind.
+        private struct DemoThought {
+            let body: String
+            let age: Double
+            let kind: ThoughtKind
+            let streak: Int
+
+            init(_ body: String, age: Double, kind: ThoughtKind, streak: Int = 0) {
+                self.body = body
+                self.age = age
+                self.kind = kind
+                self.streak = streak
+            }
+        }
+
         /// Inserts demo thoughts if asked and the store is empty.
         private func seedDemoDataIfRequested() async {
             guard ProcessInfo.processInfo.arguments.contains(Self.seedDemoArgument),
@@ -71,16 +93,34 @@ final class AppEnvironment {
             else { return }
 
             let now = clock.now
-            let demo: [(String, Double)] = [
-                ("ship the decay engine before it decays", 0.2),
-                ("call the dentist back", 12),
-                ("newsletter about tools that do one thing", 22),
-                ("learn to sail? or is that a boat-shaped midlife crisis", 29)
+            let demo = [
+                DemoThought("ship the decay engine before it decays", age: 0.2, kind: .todo),
+                DemoThought(
+                    "stretch every morning before coffee",
+                    age: 1.5,
+                    kind: .habit,
+                    streak: 6
+                ),
+                DemoThought("newsletter about tools that do one thing", age: 40, kind: .idea),
+                DemoThought("pay the parking fine", age: 13, kind: .todo),
+                DemoThought(
+                    "learn to sail? or a boat-shaped midlife crisis",
+                    age: 80,
+                    kind: .idea
+                )
             ]
 
-            for (body, ageInDays) in demo {
-                let captured = now.addingTimeInterval(-ageInDays * .day)
-                try? await thoughts.add(Thought(body: body, capturedAt: captured))
+            for entry in demo {
+                let captured = now.addingTimeInterval(-entry.age * .day)
+                var thought = Thought(
+                    body: entry.body,
+                    capturedAt: captured,
+                    streak: entry.streak > 0
+                        ? Streak(count: entry.streak, lastMarkedAt: captured)
+                        : nil
+                )
+                thought.applyClassification(kind: entry.kind, title: nil)
+                try? await thoughts.add(thought)
             }
         }
     #endif
