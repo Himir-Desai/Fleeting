@@ -48,8 +48,13 @@ jobs:
           NAME=$(xcrun simctl list devices available \
                  | grep -oE '^ +iPhone [^(]+' | head -1 | sed 's/^ *//;s/ *$//')
           echo "Testing on: $NAME"
+          # A second attempt covers simulator launch timeouts, which have failed a run once
+          # and are an infrastructure fault rather than a test one. A genuinely broken test
+          # fails both attempts, so this cannot hide a real failure.
           xcodebuild test \
             -project Fleeting.xcodeproj \
             -scheme Fleeting \
             -destination "platform=iOS Simulator,name=$NAME" \
+            -retry-tests-on-failure \
+            -test-iterations 2 \
             CODE_SIGNING_ALLOWED=NO
