@@ -52,6 +52,18 @@ private struct StubIntelligence: IntelligenceService {
         }
         return result
     }
+
+    func interviewQuestions(for _: String) async -> [String] {
+        []
+    }
+
+    func writeUp(
+        for _: String,
+        answers _: [AnsweredQuestion],
+        at _: Date
+    ) async -> WriteUp? {
+        nil
+    }
 }
 
 @MainActor

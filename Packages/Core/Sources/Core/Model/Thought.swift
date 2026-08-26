@@ -5,7 +5,7 @@ import Foundation
 /// The raw text in ``body`` is never altered by the intelligence layer; generated material
 /// lives in separate properties such as ``title``. Freshness is derived from ``lastActedAt``,
 /// which advances only on deliberate action and never on mere viewing.
-public struct Thought: Identifiable, Equatable, Sendable {
+public struct Thought: Identifiable, Equatable, Hashable, Sendable {
     /// Stable identity, assigned at capture and never reused.
     public let id: UUID
 
@@ -26,6 +26,9 @@ public struct Thought: Identifiable, Equatable, Sendable {
 
     /// The run of consecutive days a habit has been kept. `nil` until first marked.
     public private(set) var streak: Streak?
+
+    /// The interview and write-up for an idea, or `nil` if it has never been sharpened.
+    public internal(set) var sharpening: Sharpening?
 
     /// Where the thought sits in its lifecycle.
     public var state: ThoughtState
@@ -49,6 +52,7 @@ public struct Thought: Identifiable, Equatable, Sendable {
     ///   - kindSource: Where the kind came from. Defaults to unclassified.
     ///   - dueAt: When a todo is due, if set.
     ///   - streak: A habit's run of consecutive days, if any.
+    ///   - sharpening: An interview already in progress or finished, if any.
     public init(
         id: UUID = UUID(),
         body: String,
@@ -59,11 +63,13 @@ public struct Thought: Identifiable, Equatable, Sendable {
         lastActedAt: Date? = nil,
         kindSource: KindSource = .unclassified,
         dueAt: Date? = nil,
-        streak: Streak? = nil
+        streak: Streak? = nil,
+        sharpening: Sharpening? = nil
     ) {
         self.kindSource = kindSource
         self.dueAt = dueAt
         self.streak = streak
+        self.sharpening = sharpening
         self.id = id
         self.body = body
         self.capturedAt = capturedAt
@@ -158,6 +164,15 @@ public struct Thought: Identifiable, Equatable, Sendable {
     public mutating func restore(at date: Date) {
         state = .inbox
         markActed(at: date)
+    }
+
+    /// Hashes on identity alone.
+    ///
+    /// Two thoughts are equal only when every field matches, but a thought's identity never
+    /// changes, so hashing on it keeps navigation stable while a thought is being edited.
+    /// - Parameter hasher: The hasher to feed.
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
     }
 
     /// How long the thought has gone without deliberate action.

@@ -341,3 +341,38 @@ which is a valid state with its own decay profile rather than an error.
 inbox also gained pull-to-refresh, so there is a manual path when a notification is missed. UI tests
 must not assert *which* kind the model picks — only that something classified it — since the model's
 judgement is not the app's promise; the rules themselves are pinned in `HeuristicIntelligenceTests`.
+
+---
+
+## ADR-0015 · A write-up is grounded in answers, and escalation is a share sheet
+
+**Status:** Accepted · Phase 4
+
+**Context.** Sharpen exists because a one-shot expansion invents the specifics the user did not
+give (ADR-0006). Holding to that in the implementation forced three choices.
+
+**Decision.**
+
+1. **Answers are the source of truth.** Every model instruction forbids inventing a market, a
+   number, a name, or a feature the note and answers do not contain. The heuristic implementation
+   assembles the write-up literally from the user's own words, and is the floor the model must beat.
+2. **Changing an answer discards the write-up.** A revised answer clears `Sharpening.writeUp`, so a
+   result can never claim to be grounded in something the user has since changed.
+3. **Escalation is a share sheet carrying a composed prompt,** not a deep link into another app.
+
+**Alternatives.**
+- *Keep the write-up when an answer changes, and regenerate on demand* — fewer regenerations, but
+  the screen would display a summary contradicting the answers directly above it.
+- *Deep-link into Claude or ChatGPT by URL scheme* — one tap rather than two. Rejected: it requires
+  guessing which assistants are installed, breaks silently when a scheme changes, hard-codes a
+  preference for particular products into a private note-taking app, and the share sheet already
+  reaches every one of them plus Notes, Mail, and the clipboard.
+- *Have the model compose the escalation prompt* — richer framing. Kept as an override, but the
+  default is deterministic assembly so escalation works with no model at all, which is the whole
+  point of ADR-0004.
+
+**Consequences.** The interview persists on the thought after every answer, so an interrupted
+sharpening resumes rather than restarting — proven by a UI test that leaves the screen and returns.
+Storage holds it as JSON through a `StoredSharpening` DTO rather than making the domain `Codable`,
+keeping storage shape and domain shape free to diverge. Unreadable interview data degrades to no
+interview, never to a lost thought.

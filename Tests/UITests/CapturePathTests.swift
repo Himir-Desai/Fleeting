@@ -388,3 +388,116 @@ final class ClassificationTests: XCTestCase {
         )
     }
 }
+
+/// Covers Phase 4: an idea can be interviewed and written up, and an interrupted interview
+/// resumes rather than restarting.
+///
+/// Timeouts are generous because the on-device model genuinely takes seconds. The assertions are
+/// about the mechanism, never about what the model says.
+@MainActor
+final class SharpenTests: XCTestCase {
+    private let modelTimeout: TimeInterval = 90
+
+    override func setUp() {
+        continueAfterFailure = false
+    }
+
+    /// Opens an idea that has *not* been pre-sharpened by the demo seed, so the interview
+    /// genuinely starts from nothing.
+    private func launchToAnIdea() -> XCUIApplication {
+        let app = XCUIApplication()
+        app.launchArguments = ["--reset-store", "--seed-demo"]
+        app.launch()
+
+        _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 5)
+        app.buttons["capture.browse"].tap()
+
+        let idea = app.staticTexts["learn to sail? or a boat-shaped midlife crisis"]
+        XCTAssertTrue(idea.waitForExistence(timeout: 10))
+        idea.swipeRight()
+
+        let sharpen = app.buttons["Sharpen"]
+        XCTAssertTrue(sharpen.waitForExistence(timeout: 5), "an idea must offer Sharpen")
+        sharpen.tap()
+        return app
+    }
+
+    /// Answers whatever question is on screen, returning its text.
+    @discardableResult
+    private func answerCurrentQuestion(_ app: XCUIApplication, with text: String) -> String {
+        let question = app.staticTexts["sharpen.question"]
+        XCTAssertTrue(question.waitForExistence(timeout: modelTimeout))
+        let asked = question.label
+
+        let field = app.descendants(matching: .any)["sharpen.answer"]
+        XCTAssertTrue(field.waitForExistence(timeout: 10))
+        field.tap()
+        field.typeText(text)
+        app.buttons["sharpen.next"].tap()
+        return asked
+    }
+
+    func testTheOriginalNoteStaysVisibleThroughout() {
+        let app = launchToAnIdea()
+
+        let original = app.staticTexts["sharpen.original"]
+        XCTAssertTrue(original.waitForExistence(timeout: 10))
+        XCTAssertEqual(
+            original.label, "learn to sail? or a boat-shaped midlife crisis",
+            "the raw captured text must stay on screen and unaltered"
+        )
+    }
+
+    func testAnsweringEveryQuestionProducesAWriteUp() {
+        let app = launchToAnIdea()
+
+        // The model decides how many questions to ask, so answer until the write-up appears.
+        for _ in 0 ..< 4 {
+            if app.staticTexts["sharpen.pitch"].exists {
+                break
+            }
+            guard app.staticTexts["sharpen.question"].waitForExistence(timeout: modelTimeout) else {
+                break
+            }
+            answerCurrentQuestion(app, with: "people who hate bloated software")
+        }
+
+        XCTAssertTrue(
+            app.staticTexts["sharpen.pitch"].waitForExistence(timeout: modelTimeout),
+            "answering every question must produce a write-up"
+        )
+        XCTAssertTrue(app.staticTexts["sharpen.audience"].exists)
+        XCTAssertTrue(app.staticTexts["sharpen.firstStep"].exists)
+        XCTAssertTrue(app.staticTexts["sharpen.risk"].exists)
+        XCTAssertTrue(
+            app.buttons["sharpen.escalate"].exists,
+            "a finished write-up must offer the way to take it further"
+        )
+    }
+
+    func testAnInterruptedInterviewResumesRatherThanRestarting() {
+        let app = launchToAnIdea()
+
+        let firstQuestion = answerCurrentQuestion(app, with: "people who hate bloated software")
+
+        // Leave the screen entirely, then come back to it.
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        let idea = app.staticTexts["learn to sail? or a boat-shaped midlife crisis"]
+        XCTAssertTrue(idea.waitForExistence(timeout: 10))
+        idea.swipeRight()
+        app.buttons["Sharpen"].tap()
+
+        let resumed = app.staticTexts["sharpen.question"]
+        if resumed.waitForExistence(timeout: modelTimeout) {
+            XCTAssertNotEqual(
+                resumed.label, firstQuestion,
+                "an interrupted interview must resume, not ask the first question again"
+            )
+        } else {
+            XCTAssertTrue(
+                app.staticTexts["sharpen.pitch"].waitForExistence(timeout: modelTimeout),
+                "the interview either resumed at a later question or had already finished"
+            )
+        }
+    }
+}

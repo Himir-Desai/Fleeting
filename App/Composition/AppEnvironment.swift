@@ -77,13 +77,55 @@ final class AppEnvironment {
             let age: Double
             let kind: ThoughtKind
             let streak: Int
+            let sharpened: Bool
 
-            init(_ body: String, age: Double, kind: ThoughtKind, streak: Int = 0) {
+            init(
+                _ body: String,
+                age: Double,
+                kind: ThoughtKind,
+                streak: Int = 0,
+                sharpened: Bool = false
+            ) {
                 self.body = body
                 self.age = age
                 self.kind = kind
                 self.streak = streak
+                self.sharpened = sharpened
             }
+        }
+
+        /// Fills in a finished interview, so the sharpened state is reachable without waiting
+        /// for a model.
+        /// - Parameters:
+        ///   - thought: The idea to sharpen.
+        ///   - date: When the interview happened.
+        private static func attachDemoSharpening(to thought: inout Thought, at date: Date) {
+            thought.beginSharpening(
+                prompts: [
+                    "Who reads this and actually changes what they use?",
+                    "What is the hardest part of making it real?",
+                    "What is the smallest thing you could do this week?"
+                ],
+                at: date
+            )
+            let answers = [
+                "developers sick of every tool becoming a suite",
+                "finding one genuinely good tool a week, forever",
+                "write three issues and send them to ten people"
+            ]
+            for (question, answer) in zip(thought.sharpening?.questions ?? [], answers) {
+                thought.answerSharpening(answer, to: question.id, at: date)
+            }
+            thought.attachWriteUp(
+                WriteUp(
+                    pitch: "A weekly letter about tools that do exactly one thing well.",
+                    audience: "Developers sick of every tool becoming a suite.",
+                    firstStep: "Write three issues and send them to ten people.",
+                    biggestRisk: "Finding one genuinely good tool a week, forever.",
+                    generatedAt: date
+                ),
+                at: date
+            )
         }
 
         /// Inserts demo thoughts if asked and the store is empty.
@@ -101,7 +143,12 @@ final class AppEnvironment {
                     kind: .habit,
                     streak: 6
                 ),
-                DemoThought("newsletter about tools that do one thing", age: 40, kind: .idea),
+                DemoThought(
+                    "newsletter about tools that do one thing",
+                    age: 40,
+                    kind: .idea,
+                    sharpened: true
+                ),
                 DemoThought("pay the parking fine", age: 13, kind: .todo),
                 DemoThought(
                     "learn to sail? or a boat-shaped midlife crisis",
@@ -120,6 +167,9 @@ final class AppEnvironment {
                         : nil
                 )
                 thought.applyClassification(kind: entry.kind, title: nil)
+                if entry.sharpened {
+                    Self.attachDemoSharpening(to: &thought, at: captured)
+                }
                 try? await thoughts.add(thought)
             }
         }

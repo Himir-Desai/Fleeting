@@ -217,3 +217,70 @@ struct ArchiveSweeperTests {
         #expect(try await sweeper.sweep().isEmpty)
     }
 }
+
+@Suite("Sharpening storage")
+struct SharpeningStorageTests {
+    private let epoch = Date(timeIntervalSince1970: 1_700_000_000)
+
+    private func makeRepository() throws -> SwiftDataThoughtRepository {
+        try SwiftDataThoughtRepository(modelContainer: ModelContainerFactory.inMemory())
+    }
+
+    private func sharpenedIdea() -> Thought {
+        var thought = Thought(body: "app for splitting rent fairly", capturedAt: epoch)
+        thought.applyClassification(kind: .idea, title: nil)
+        thought.beginSharpening(prompts: ["Who?", "What's hard?"], at: epoch)
+        let questions = thought.sharpening?.questions ?? []
+        thought.answerSharpening("student houses", to: questions[0].id, at: epoch)
+        return thought
+    }
+
+    @Test("a half-finished interview survives a round trip, so nothing has to be retyped")
+    func partialInterviewRoundTrips() async throws {
+        let repository = try makeRepository()
+        let original = sharpenedIdea()
+
+        try await repository.add(original)
+        let stored = try #require(try await repository.all().first)
+
+        #expect(stored.sharpening?.questions.count == 2)
+        #expect(stored.sharpening?.answeredCount == 1)
+        #expect(stored.sharpening?.nextUnanswered?.prompt == "What's hard?")
+        #expect(stored == original, "the whole thought must round trip, not merely resemble itself")
+    }
+
+    @Test("a finished write-up survives a round trip")
+    func writeUpRoundTrips() async throws {
+        let repository = try makeRepository()
+        var original = sharpenedIdea()
+        let questions = original.sharpening?.questions ?? []
+        original.answerSharpening("agreeing what fair means", to: questions[1].id, at: epoch)
+        original.attachWriteUp(
+            WriteUp(
+                pitch: "A fair rent calculator", audience: "student houses",
+                firstStep: "write the formula", biggestRisk: "Splitwise", generatedAt: epoch
+            ),
+            at: epoch
+        )
+
+        try await repository.add(original)
+        let stored = try #require(try await repository.all().first)
+
+        #expect(stored.sharpening?.writeUp?.pitch == "A fair rent calculator")
+        #expect(stored.sharpening?.writeUp?.generatedAt == epoch)
+    }
+
+    @Test("a thought that was never sharpened stores nothing for it")
+    func unsharpenedStoresNothing() async throws {
+        let repository = try makeRepository()
+        try await repository.add(Thought(body: "plain", capturedAt: epoch))
+
+        #expect(try await repository.all().first?.sharpening == nil)
+    }
+
+    @Test("unreadable interview data costs the interview, never the thought")
+    func corruptSharpeningDegrades() {
+        #expect(StoredSharpening.decode("{ not json") == nil)
+        #expect(StoredSharpening.decode(nil) == nil)
+    }
+}

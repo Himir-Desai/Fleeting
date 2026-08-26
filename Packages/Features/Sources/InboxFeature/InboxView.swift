@@ -12,6 +12,7 @@ public struct InboxView: View {
     private let changes: any ThoughtChangeObserving
     private let onOpenArchive: () -> Void
     private let onOpenSettings: () -> Void
+    private let onSharpen: (Thought) -> Void
 
     /// Creates the inbox.
     /// - Parameters:
@@ -19,17 +20,20 @@ public struct InboxView: View {
     ///   - onOpenArchive: Called when the user asks to see archived thoughts. The inbox declares
     ///     the intent; the app layer decides what it opens.
     ///   - onOpenSettings: Called when the user asks for settings.
+    ///   - onSharpen: Called when the user wants to develop an idea further.
     ///   - changes: Watched so a classification landing while the list is open is reflected.
     public init(
         model: InboxModel,
         changes: any ThoughtChangeObserving,
         onOpenArchive: @escaping () -> Void,
-        onOpenSettings: @escaping () -> Void
+        onOpenSettings: @escaping () -> Void,
+        onSharpen: @escaping (Thought) -> Void
     ) {
         _model = State(initialValue: model)
         self.changes = changes
         self.onOpenArchive = onOpenArchive
         self.onOpenSettings = onOpenSettings
+        self.onSharpen = onSharpen
     }
 
     public var body: some View {
@@ -184,7 +188,14 @@ public struct InboxView: View {
                 Label("Kept", systemImage: "flame")
             }
             .tint(Palette.accent)
-        case .idea, .unsorted:
+        case .idea:
+            Button {
+                onSharpen(thought)
+            } label: {
+                Label("Sharpen", systemImage: "sparkles")
+            }
+            .tint(Palette.accent)
+        case .unsorted:
             EmptyView()
         }
     }

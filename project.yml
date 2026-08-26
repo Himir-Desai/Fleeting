@@ -51,6 +51,8 @@ targets:
         product: ArchiveFeature
       - package: Features
         product: SettingsFeature
+      - package: Features
+        product: SharpenFeature
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.himirdesai.Fleeting

@@ -21,6 +21,7 @@ final class ThoughtEntity {
     var dueAt: Date?
     var streakCount: Int = 0
     var streakLastMarkedAt: Date?
+    var sharpeningJSON: String?
 
     init(
         id: UUID,
@@ -34,7 +35,8 @@ final class ThoughtEntity {
         kindSourceRaw: String,
         dueAt: Date?,
         streakCount: Int,
-        streakLastMarkedAt: Date?
+        streakLastMarkedAt: Date?,
+        sharpeningJSON: String?
     ) {
         self.id = id
         self.body = body
@@ -48,5 +50,6 @@ final class ThoughtEntity {
         self.dueAt = dueAt
         self.streakCount = streakCount
         self.streakLastMarkedAt = streakLastMarkedAt
+        self.sharpeningJSON = sharpeningJSON
     }
 }

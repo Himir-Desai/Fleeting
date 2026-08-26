@@ -60,6 +60,70 @@ public actor ResilientIntelligence: IntelligenceService {
         return answer
     }
 
+    /// Asks the primary for an interview, falling back when it cannot supply one.
+    public func interviewQuestions(for text: String) async -> [String] {
+        guard let primary, await isPrimaryUsable() else {
+            return await fallback.interviewQuestions(for: text)
+        }
+
+        let questions = await race { await primary.interviewQuestions(for: text) }
+        guard let questions, !questions.isEmpty else {
+            lastFailure = .requestFailed
+            return await fallback.interviewQuestions(for: text)
+        }
+
+        lastFailure = nil
+        return questions
+    }
+
+    /// Asks the primary to organise the answers, falling back when it cannot.
+    public func writeUp(
+        for text: String,
+        answers: [AnsweredQuestion],
+        at date: Date
+    ) async -> WriteUp? {
+        guard let primary, await isPrimaryUsable() else {
+            return await fallback.writeUp(for: text, answers: answers, at: date)
+        }
+
+        let generated = await race { await primary.writeUp(for: text, answers: answers, at: date) }
+        guard let generated, let unwrapped = generated else {
+            lastFailure = .requestFailed
+            return await fallback.writeUp(for: text, answers: answers, at: date)
+        }
+
+        lastFailure = nil
+        return unwrapped
+    }
+
+    /// Whether the primary reports itself as able to answer.
+    /// - Returns: `true` when the primary is on-device and ready.
+    private func isPrimaryUsable() async -> Bool {
+        guard let primary else { return false }
+        if case let .heuristic(reason) = await primary.availability {
+            lastFailure = reason
+            return false
+        }
+        return true
+    }
+
+    /// Runs any operation against the clock.
+    /// - Parameter operation: The work to race.
+    /// - Returns: The result, or `nil` if the timeout won.
+    private func race<T: Sendable>(_ operation: @escaping @Sendable () async -> T) async -> T? {
+        let limit = timeout
+        return await withTaskGroup(of: T?.self) { group in
+            group.addTask { await operation() }
+            group.addTask {
+                try? await Task.sleep(for: limit)
+                return nil
+            }
+            let first = await group.next()
+            group.cancelAll()
+            return first.flatMap(\.self)
+        }
+    }
+
     /// Runs a classification against the clock.
     /// - Parameters:
     ///   - service: The implementation to try.

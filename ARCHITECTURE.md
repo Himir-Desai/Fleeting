@@ -87,7 +87,6 @@ Fleeting/
 │   │       │   ├── Thought.swift            ← the single domain entity
 │   │       │   ├── ThoughtKind.swift        ← idea · todo · habit · unsorted
 │   │       │   ├── ThoughtState.swift       ← inbox · active · snoozed · archived · done
-│   │       │   ├── Sharpening.swift         ← interview questions, answers, write-up
 │   │       │   ├── KindSource.swift          ← unclassified · inferred · confirmed
 │   │       │   ├── ThoughtScope.swift        ← live · archived · all
 │   │       │   └── Streak.swift             ← habit-specific payload
@@ -96,6 +95,11 @@ Fleeting/
 │   │       │   ├── FreshnessPolicy.swift    ← grace + lifetime, linear decay (ADR-0013)
 │   │       │   ├── DecayProfiles.swift      ← per-kind rates: todo 14d · habit 7d · idea 90d
 │   │       │   └── DecayEngine.swift        ← pure: (Thought, Date) → Freshness
+│   │       ├── Sharpen/
+│   │       │   ├── Sharpening.swift         ← the interview: questions, answers, write-up
+│   │       │   ├── SharpenQuestion.swift    ← one question + its answer; AnsweredQuestion
+│   │       │   ├── WriteUp.swift            ← pitch · audience · first step · biggest risk
+│   │       │   └── Thought+Sharpening.swift ← begin, answer, attach, discard
 │   │       ├── Review/
 │   │       │   └── ReviewSelector.swift     ← pure: [Thought] → at most 7 that need a decision
 │   │       ├── Protocols/
@@ -166,6 +170,8 @@ Fleeting/
 │   │       │   ├── ThoughtRow.swift     ← lives here, not DesignSystem (ADR-0012)
 │   │       │   └── ThoughtEditor.swift  ← edits raw text; commits only on save
 │   │       ├── SharpenFeature/      ← interview → write-up → escalate
+│   │       │   ├── SharpenModel.swift   ← phases; every answer persisted as it is given
+│   │       │   └── SharpenView.swift    ← one question at a time; raw note always visible
 │   │       ├── ReviewFeature/       ← the weekly capped card stack
 │   │       ├── ArchiveFeature/      ← search the dead
 │   │       │   ├── ArchiveModel.swift   ← scoped search, restore, permanent delete

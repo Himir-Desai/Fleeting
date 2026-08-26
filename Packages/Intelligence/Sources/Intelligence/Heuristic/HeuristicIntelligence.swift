@@ -37,6 +37,39 @@ public struct HeuristicIntelligence: IntelligenceService {
         return Classification(kind: .unsorted, title: title, confidence: 0.2)
     }
 
+    /// Asks a fixed interview.
+    ///
+    /// The rules cannot read the idea, so they ask the three questions that are worth answering
+    /// about almost any idea rather than pretending to be specific.
+    public func interviewQuestions(for text: String) async -> [String] {
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return [] }
+        return HeuristicInterview.questions
+    }
+
+    /// Assembles the user's own answers into a write-up.
+    ///
+    /// Invents nothing: each field is either the raw text or something the user typed. This is the
+    /// floor the on-device model has to beat.
+    public func writeUp(
+        for text: String,
+        answers: [AnsweredQuestion],
+        at date: Date
+    ) async -> WriteUp? {
+        guard !answers.isEmpty else { return nil }
+
+        let audience = HeuristicInterview.answer(to: HeuristicInterview.audience, in: answers)
+        let difficulty = HeuristicInterview.answer(to: HeuristicInterview.difficulty, in: answers)
+        let firstStep = HeuristicInterview.answer(to: HeuristicInterview.firstStep, in: answers)
+
+        return WriteUp(
+            pitch: text.trimmingCharacters(in: .whitespacesAndNewlines),
+            audience: audience ?? answers.first?.answer ?? "Not yet decided.",
+            firstStep: firstStep ?? answers.last?.answer ?? "Not yet decided.",
+            biggestRisk: difficulty ?? "Not yet decided.",
+            generatedAt: date
+        )
+    }
+
     /// Phrase lists per kind, in the order they are tested.
     private static let orderedMarkers: [(ThoughtKind, [String])] = [
         (.habit, [

@@ -39,6 +39,78 @@
             }
         }
 
+        /// Asks the model what it would need to know to sharpen this idea.
+        public func interviewQuestions(for text: String) async -> [String] {
+            guard case .onDevice = availability else { return [] }
+
+            let session = LanguageModelSession(instructions: Self.interviewInstructions)
+            do {
+                let response = try await session.respond(
+                    to: "Here is the note:\n\(text)",
+                    generating: GeneratedQuestions.self
+                )
+                return response.content.questions
+                    .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                    .filter { !$0.isEmpty }
+                    .prefix(3)
+                    .map(\.self)
+            } catch {
+                return []
+            }
+        }
+
+        /// Asks the model to organise the user's answers, without adding to them.
+        public func writeUp(
+            for text: String,
+            answers: [AnsweredQuestion],
+            at date: Date
+        ) async -> WriteUp? {
+            guard case .onDevice = availability, !answers.isEmpty else { return nil }
+
+            let session = LanguageModelSession(instructions: Self.writeUpInstructions)
+            do {
+                let response = try await session.respond(
+                    to: Self.writeUpPrompt(text: text, answers: answers),
+                    generating: GeneratedWriteUp.self
+                )
+                return response.content.asDomain(generatedAt: date)
+            } catch {
+                return nil
+            }
+        }
+
+        /// Standing instructions for the interview session.
+        private static var interviewInstructions: String {
+            """
+            You help someone sharpen a half-formed idea they jotted down in a hurry. Ask two or \
+            three short, specific questions whose answers would make the idea concrete. Ask about \
+            what is missing, never about what the note already says. Each question must be one \
+            sentence and answerable in a line.
+            """
+        }
+
+        /// Standing instructions for the write-up session.
+        private static var writeUpInstructions: String {
+            """
+            You organise someone's own words into a short structured summary of their idea. Use \
+            only the note and their answers. Never invent a market, a number, a name, or a \
+            feature they did not mention. If something is unknown, say plainly that it is not \
+            yet decided.
+            """
+        }
+
+        /// Builds the write-up prompt from the note and the answers.
+        /// - Parameters:
+        ///   - text: The raw captured text.
+        ///   - answers: What the user said.
+        /// - Returns: The prompt to send.
+        private static func writeUpPrompt(text: String, answers: [AnsweredQuestion]) -> String {
+            let transcript = answers
+                .map { "Q: \($0.question)\nA: \($0.answer)" }
+                .joined(separator: "\n")
+            return "The note:\n\(text)\n\nWhat they told me:\n\(transcript)"
+        }
+
         /// Translates the framework's unavailability reason into the app's vocabulary.
         /// - Parameter reason: Why the system reports the model as unusable.
         /// - Returns: The matching app-level reason.
@@ -68,6 +140,47 @@
         /// - Returns: The prompt to send.
         private static func prompt(for text: String) -> String {
             "Sort this note:\n\(text)"
+        }
+    }
+
+    /// The interview the model is asked to produce.
+    @available(iOS 26, macOS 26, *)
+    @Generable
+    struct GeneratedQuestions {
+        @Guide(description: "Two or three short questions, each answerable in one line")
+        var questions: [String]
+    }
+
+    /// The structured summary the model is asked to produce.
+    @available(iOS 26, macOS 26, *)
+    @Generable
+    struct GeneratedWriteUp {
+        @Guide(description: "What the idea is, in one or two sentences, in the writer's own terms")
+        var pitch: String
+
+        @Guide(description: "Who it is for, taken only from what the writer said")
+        var audience: String
+
+        @Guide(description: "The first concrete thing to do, taken only from what the writer said")
+        var firstStep: String
+
+        @Guide(description: "The most likely reason it fails, taken only from what the writer said")
+        var biggestRisk: String
+    }
+
+    @available(iOS 26, macOS 26, *)
+    extension GeneratedWriteUp {
+        /// The domain write-up this generation represents.
+        /// - Parameter generatedAt: When it was produced.
+        /// - Returns: The write-up.
+        func asDomain(generatedAt: Date) -> WriteUp {
+            WriteUp(
+                pitch: pitch.trimmingCharacters(in: .whitespacesAndNewlines),
+                audience: audience.trimmingCharacters(in: .whitespacesAndNewlines),
+                firstStep: firstStep.trimmingCharacters(in: .whitespacesAndNewlines),
+                biggestRisk: biggestRisk.trimmingCharacters(in: .whitespacesAndNewlines),
+                generatedAt: generatedAt
+            )
         }
     }
 

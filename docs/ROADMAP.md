@@ -143,9 +143,24 @@ The differentiator: half-baked in, fully-baked out.
 **Done when** — a one-line fragment becomes a write-up whose specifics all trace to a user answer;
 interrupting mid-interview loses nothing; the feature fails gracefully and legibly without a model.
 
+**Outcome.** Met. 147 unit tests and 22 UI tests.
+
+- The heuristic write-up is assembled literally from the user's own answers, and a test asserts each
+  field equals what they typed. It is the floor the on-device model has to beat.
+- Every answer is written to storage as it is given. A UI test answers one question, leaves the
+  screen entirely, returns, and finds the interview resumed rather than restarted.
+- Changing an answer discards a write-up built on the old one ([ADR-0015](DECISIONS.md)).
+- Five failure paths are covered: no questions, no write-up, a slow model, a model reporting itself
+  unavailable, and a storage error. Each keeps the answers and says plainly what happened.
+- Escalation composes a self-contained prompt and hands it to the share sheet, working with no model
+  at all.
+
+Also deferred from Phase 3 and delivered here: the Sharpen entry point, which is a swipe action on
+idea rows rather than the inert button the plan originally described.
+
 ---
 
-## Phase 5 · Review ⚪️
+## Phase 5 · Review 🟡
 
 The ritual that closes the loop opened in Phase 2.
 

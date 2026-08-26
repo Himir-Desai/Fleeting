@@ -107,6 +107,18 @@ private struct PreviewIntelligence: IntelligenceService {
     func classify(_: String) async -> Classification {
         .unknown
     }
+
+    func interviewQuestions(for _: String) async -> [String] {
+        []
+    }
+
+    func writeUp(
+        for _: String,
+        answers _: [AnsweredQuestion],
+        at _: Date
+    ) async -> WriteUp? {
+        nil
+    }
 }
 
 /// A clock frozen at a fixed instant, so previews never depend on the system time.

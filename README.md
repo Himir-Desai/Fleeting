@@ -103,6 +103,9 @@ not merely when you look at it. When it reaches zero the thought archives itself
 is ever deleted; the archive is fully searchable, it's just out of the way.
 
 ### ✦ Sharpen — half-baked in, fully-baked out
+
+<img src="docs/screenshots/sharpen.png" width="260" align="right" alt="The Sharpen screen: the raw captured note at the top under 'What you wrote', then the generated write-up in four labelled sections — the pitch, who it's for, first step, biggest risk — and an understated 'Take this further elsewhere' link at the bottom." />
+
 The differentiator. Tap Sharpen on a fragment and the on-device model asks **two or three short,
 specific questions** — *fair by what, income or room size? who has this problem badly enough to pay?*
 You answer in a line each. It then writes up a structured version: the pitch, who it's for, the first
@@ -198,7 +201,7 @@ Detail and acceptance criteria for each phase in **[docs/ROADMAP.md](docs/ROADMA
 | 2 | Decay | Freshness engine, visual fade, auto-archive, search | 🟢 Done |
 | 3 | Classification | Heuristic + on-device titling and typing, per-kind behaviour | 🟡 In progress |
 | 4 | Sharpen | Interview flow, structured write-up, escalation | ⚪️ Planned |
-| 5 | Review | Curated card stack, ambient sharpening | ⚪️ Planned |
+| 5 | Review | Curated card stack, ambient sharpening | 🟡 In progress |
 | 6 | Ambient | Daily nudge, widgets, Control Center, App Intents | ⚪️ Planned |
 | 7 | Sync | CloudKit, conflict handling | ⚪️ Planned |
 | 8 | Ship | Accessibility, motion, onboarding, TestFlight | ⚪️ Planned |

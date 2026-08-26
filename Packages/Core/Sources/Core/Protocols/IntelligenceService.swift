@@ -38,6 +38,71 @@ public protocol IntelligenceService: Sendable {
     /// - Parameter text: The raw captured text. Never modified.
     /// - Returns: The classification, or ``Classification/unknown`` if nothing could be decided.
     func classify(_ text: String) async -> Classification
+
+    /// Proposes a short interview that would sharpen a half-formed idea.
+    /// - Parameter text: The raw captured text.
+    /// - Returns: Two or three questions, or an empty array if none could be produced.
+    func interviewQuestions(for text: String) async -> [String]
+
+    /// Organises the user's answers into a structured write-up.
+    ///
+    /// Implementations must not invent specifics the answers do not contain.
+    /// - Parameters:
+    ///   - text: The raw captured text.
+    ///   - answers: What the user said, in the order asked.
+    /// - Returns: The write-up, or `nil` if one could not be produced.
+    func writeUp(for text: String, answers: [AnsweredQuestion], at date: Date) async -> WriteUp?
+}
+
+public extension IntelligenceService {
+    /// Composes a prompt to hand to a full assistant when an idea outgrows on-device help.
+    ///
+    /// A deterministic default so escalation works with no model at all. Implementations backed by
+    /// a model may override it to write a richer framing.
+    /// - Parameters:
+    ///   - text: The raw captured text.
+    ///   - answers: What the user said.
+    ///   - writeUp: The write-up so far, if one exists.
+    /// - Returns: A self-contained prompt.
+    func escalationPrompt(
+        for text: String,
+        answers: [AnsweredQuestion],
+        writeUp: WriteUp?
+    ) async -> String {
+        var lines = [
+            "I captured this idea and want help developing it.",
+            "",
+            "The original note, exactly as I wrote it:",
+            text,
+            ""
+        ]
+
+        if !answers.isEmpty {
+            lines.append("What I have worked out so far:")
+            for answer in answers {
+                lines.append("- \(answer.question) \(answer.answer)")
+            }
+            lines.append("")
+        }
+
+        if let writeUp {
+            lines.append(contentsOf: [
+                "A summary I put together:",
+                "- Pitch: \(writeUp.pitch)",
+                "- Who it is for: \(writeUp.audience)",
+                "- First step: \(writeUp.firstStep)",
+                "- Biggest risk: \(writeUp.biggestRisk)",
+                ""
+            ])
+        }
+
+        lines.append(contentsOf: [
+            "Push back on the weakest part of this, then help me work out whether the first step",
+            "is the right one. Be concrete and do not invent facts I have not given you."
+        ])
+
+        return lines.joined(separator: "\n")
+    }
 }
 
 /// Which intelligence implementation is serving requests right now.
