@@ -480,3 +480,63 @@ The App Group entitlement is stripped by `CODE_SIGNING_ALLOWED=NO`, which is how
 CI build. `ModelContainerFactory` therefore falls back to the app's private container, and the app
 keeps working while widgets see nothing. That degradation is deliberate but must not be silent, so
 Settings reports whether the store is shared.
+
+---
+
+## ADR-0019 · Sync is per-column last-writer-wins, so the columns had to change
+
+**Status:** Accepted · Phase 7
+
+**Context.** ADR-0003 chose SwiftData with CloudKit and kept the schema CloudKit-safe from the
+start. Turning sync on exposed what "CloudKit-safe" had not covered: CloudKit merges a record
+**column by column**. Two devices editing the same thought do not produce one device's version —
+they produce a row assembled from both.
+
+Version 1 spread a single idea across two columns. `stateRaw` said *snoozed* and `stateDate` said
+*until when*; `streakCount` said *six days* and `streakLastMarkedAt` said *when*. A merge that takes
+`stateRaw` from one phone and `stateDate` from the other yields a thought snoozed until the moment
+the other device archived it — a state neither device was ever in. A test in `CloudMergeTests` pins
+that this really happens.
+
+**Decision.** Values that only mean something together live in **one column**.
+
+- `stateCode` carries the lifecycle position and its date: `snoozed|753000000.0`.
+- `streakCode` carries the run length and when it was last marked.
+- Content columns — `body`, `title`, `dueAt` — stay separate and stay last-writer-wins, which is
+  correct for them: one device's text wins whole, never a blend.
+- `isLive` is derived from `stateCode` on every write, so scopes are still filtered by the store.
+
+Version 2 **keeps version 1's columns and keeps writing them**, though it never reads them. That is
+what makes the rollback real: install a build from before the migration and it reads current data.
+A later version can drop them once no old build is in use.
+
+The migration is a custom stage rather than a lightweight one. A lightweight migration would leave
+every `stateCode` at its default, returning the entire archive to the inbox.
+
+**Alternatives.**
+- *Lightweight migration, accept the loss* — rejected; it silently un-archives everything.
+- *A merge function called on conflict* — SwiftData exposes no such hook, and
+  `NSPersistentCloudKitContainer` has already merged by the time anything is observable. A merge
+  policy that cannot run is a comment, not a design.
+- *Conflict-free counters for `snoozeCount`* — rejected as disproportionate. Two simultaneous
+  snoozes count as one; the number only nudges a thought up the review order.
+- *Keep the columns split and repair on read* — rejected; a repair cannot tell a torn pair from a
+  real one.
+
+**Consequences.** One tear survives by design: `isLive` is derived, so a merge can pair it with the
+other device's `stateCode` and show an archived thought in the inbox until the next write. That is
+recoverable and never changes what the thought *is* — `CloudMergeTests` asserts both halves.
+
+**iCloud is attached only when the App Group container is reachable.** This is a safety guard, not
+an optimisation. `ModelContainer` does not throw when the CloudKit entitlement is missing: it opens,
+and the process is then **trapped** from inside CloudKit. `CKContainer` traps for the same reason,
+so the question cannot be asked at runtime either — an unentitled process is killed rather than
+told. The App Group is written by the same entitlements file and requires the same paid membership,
+so a build that has one has the other. A build that had entitlements stripped — CI, and any unsigned
+build — has neither, opens a device-local store, and works.
+
+**What is not verified.** Two devices converging has not been observed. It needs two signed installs
+under one iCloud account, and this machine has no signing identity, so no build here can carry the
+entitlement at all. Everything that does not require it is covered: the migration runs against a
+store written by the shipped version 1 schema, and the merge rules are tested as pure functions.
+The convergence claim stays open until it has been seen.

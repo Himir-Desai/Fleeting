@@ -105,7 +105,9 @@ Fleeting/
 │   │       │   ├── WriteUp.swift            ← a title and a paragraph (ADR-0016)
 │   │       │   └── Thought+Sharpening.swift ← begin, answer, attach, revert
 │   │       ├── Nudge/
-│   │       │   └── NudgeSelector.swift      ← pure: what is worth surfacing, and what expires soon
+│   │       │   ├── NudgeSelector.swift      ← pure: what is worth surfacing, and what expires soon
+│   │       │   ├── NudgePreferences.swift   ← when the app may speak + its storage contract
+│   │       │   └── NudgeAuthorization.swift ← permission state + the asking contract
 │   │       ├── Review/
 │   │       │   └── ReviewSelector.swift     ← pure: [Thought] → at most 7 needing a decision
 │   │       │                                 eligibility and urgency rules (ADR-0017)
@@ -113,11 +115,7 @@ Fleeting/
 │   │       │   ├── ThoughtRepository.swift  ← implemented by Persistence; scoped + searchable
 │   │       │   ├── ArchiveSweeping.swift    ← lets features trigger a sweep without Persistence
 │   │       │   ├── IntelligenceService.swift← the AI contract, Classification, availability
-│   │       │   ├── ThoughtChanges.swift     ← change signal so open screens see late work
-│   │       │   ├── NudgePreferences.swift   ← when the app may speak + its storage contract
-│   │       │   └── NudgeAuthorization.swift ← permission state + the asking contract
-│   │       │   ├── IntelligenceService.swift← implemented by Intelligence
-│   │       │   └── NudgeScheduling.swift    ← implemented by Notifications
+│   │       │   └── ThoughtChanges.swift     ← change signal so open screens see late work
 │   │       └── Support/
 │   │           └── WallClock.swift          ← injected time; makes decay deterministic in tests
 │   │
@@ -125,10 +123,15 @@ Fleeting/
 │   │   └── Sources/Persistence/
 │   │       ├── PersistenceError.swift    ← failures the store reports to the domain
 │   │       ├── Schema/
-│   │       │   ├── ThoughtEntity.swift      ← @Model; CloudKit-safe (all attrs optional/defaulted)
-│   │       │   └── SchemaV1.swift           ← versioned schema + migration plan
+│   │       │   ├── ThoughtEntity.swift      ← typealias naming the version in use; nothing else does
+│   │       │   ├── ThoughtSchemaV1.swift    ← the store as Phase 6 shipped it; migration source
+│   │       │   ├── ThoughtSchemaV2.swift    ← @Model in use; lifecycle values in single columns
+│   │       │   ├── ThoughtMigrationPlan.swift ← custom v1 → v2 stage (ADR-0019)
+│   │       │   └── StoredSharpening.swift   ← Codable DTO for the interview, stored as JSON
 │   │       ├── Mapping/
-│   │       │   └── ThoughtEntity+Domain.swift ← entity ⇄ Core.Thought + StoredState, both directions
+│   │       │   ├── ThoughtEntity+Domain.swift ← entity ⇄ Core.Thought, both directions
+│   │       │   ├── StoredState.swift        ← lifecycle ⇄ one merge-safe column
+│   │       │   └── StoredStreak.swift       ← streak ⇄ one merge-safe column
 │   │       ├── Repositories/
 │   │       │   ├── SwiftDataThoughtRepository.swift
 │   │       │   └── InMemoryThoughtRepository.swift  ← previews and tests; no store required
@@ -227,6 +230,7 @@ Fleeting/
 | A rule about when things expire | `Core/Decay/FreshnessPolicy.swift` | it's pure — cover it in `CoreTests` |
 | A change to what the weekly review shows | `Core/Review/ReviewSelector.swift` | it's pure — cover it in `CoreTests` |
 | Anything that touches the database | `Persistence/Repositories/` | expose it through the protocol in `Core`, never leak SwiftData types upward |
+| A new stored column | `Persistence/Schema/ThoughtSchemaV*.swift` | add a version + a stage to `ThoughtMigrationPlan`; if it only means something paired with another column, store the pair as one value (ADR-0019) |
 
 ## 5. Conventions
 
@@ -269,3 +273,7 @@ These are the things that, if broken, mean the app has become the thing it was b
 5. **Capture is at most one tap away from any screen.** ADR-0008 protects the cold launch; this
    protects every moment after it. A screen reachable from capture must offer a *visible* control
    back to it — a swipe-down that works but cannot be seen does not count. There is a UI test.
+6. **Values that only mean something together are stored together.** iCloud merges a record column
+   by column, so a lifecycle position and its date in separate columns can arrive from two different
+   devices and describe a state neither was ever in. `CloudMergeTests` demonstrates the tear on the
+   old shape and its absence on the new one (ADR-0019).

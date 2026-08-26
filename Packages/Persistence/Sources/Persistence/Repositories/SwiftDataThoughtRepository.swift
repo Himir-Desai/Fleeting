@@ -63,21 +63,19 @@ public actor SwiftDataThoughtRepository: ThoughtRepository {
     ///   - query: Text the raw captured body must contain, or `nil` for no text filter.
     /// - Returns: The predicate, or `nil` when nothing needs filtering.
     private static func predicate(scope: ThoughtScope, query: String?) -> Predicate<ThoughtEntity>? {
-        let live = StoredState.liveRawValues
-
         switch (scope, query) {
         case (.all, .none):
             return nil
         case let (.all, .some(text)):
             return #Predicate { $0.body.localizedStandardContains(text) }
         case (.live, .none):
-            return #Predicate { live.contains($0.stateRaw) }
+            return #Predicate { $0.isLive }
         case let (.live, .some(text)):
-            return #Predicate { live.contains($0.stateRaw) && $0.body.localizedStandardContains(text) }
+            return #Predicate { $0.isLive && $0.body.localizedStandardContains(text) }
         case (.archived, .none):
-            return #Predicate { !live.contains($0.stateRaw) }
+            return #Predicate { !$0.isLive }
         case let (.archived, .some(text)):
-            return #Predicate { !live.contains($0.stateRaw) && $0.body.localizedStandardContains(text) }
+            return #Predicate { !$0.isLive && $0.body.localizedStandardContains(text) }
         }
     }
 

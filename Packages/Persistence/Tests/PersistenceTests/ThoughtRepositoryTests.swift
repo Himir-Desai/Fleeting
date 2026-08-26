@@ -90,15 +90,16 @@ struct StoredStateTests {
         ]
 
         for state in states {
-            let flattened = StoredState.components(of: state)
-            #expect(StoredState.state(raw: flattened.raw, date: flattened.date) == state)
+            #expect(StoredState.state(code: StoredState.code(for: state)) == state)
         }
     }
 
     @Test("an unreadable row loses its lifecycle position, never the thought")
     func corruptRowDegradesToInbox() {
-        #expect(StoredState.state(raw: "nonsense", date: nil) == .inbox)
-        #expect(StoredState.state(raw: "archived", date: nil) == .inbox)
+        #expect(StoredState.state(code: "nonsense") == .inbox)
+        #expect(StoredState.state(code: "archived") == .inbox)
+        #expect(StoredState.state(code: "archived|not-a-date") == .inbox)
+        #expect(StoredState.state(code: "") == .inbox)
     }
 }
 
@@ -157,9 +158,17 @@ struct ScopedQueryTests {
         #expect(try await repository.search("   ", in: .live).count == 2)
     }
 
-    @Test("the live raw values are derived from the domain, not hardcoded")
-    func liveRawValuesTrackTheDomain() {
-        #expect(Set(StoredState.liveRawValues) == ["inbox", "active", "snoozed"])
+    @Test("whether a state counts as live is derived from the domain, not hardcoded")
+    func livenessTracksTheDomain() {
+        let live: [ThoughtState] = [.inbox, .active, .snoozed(until: epoch)]
+        let gone: [ThoughtState] = [.archived(at: epoch), .done(at: epoch)]
+
+        for state in live {
+            #expect(StoredState.isLive(code: StoredState.code(for: state)))
+        }
+        for state in gone {
+            #expect(!StoredState.isLive(code: StoredState.code(for: state)))
+        }
     }
 }
 
