@@ -97,122 +97,11 @@ final class AppEnvironment {
     func prepare() async {
         #if DEBUG
             await seedDemoDataIfRequested()
+            await seedManyIfRequested()
         #endif
         await sweep()
         await refreshNudges()
     }
-
-    #if DEBUG
-        /// Launch argument that fills an empty store with thoughts at a spread of ages, for
-        /// screenshots and for exercising decay by hand. Debug builds only.
-        static let seedDemoArgument = "--seed-demo"
-
-        /// One seeded thought, described by age and kind.
-        private struct DemoThought {
-            let body: String
-            let age: Double
-            let kind: ThoughtKind
-            let streak: Int
-            let sharpened: Bool
-
-            init(
-                _ body: String,
-                age: Double,
-                kind: ThoughtKind,
-                streak: Int = 0,
-                sharpened: Bool = false
-            ) {
-                self.body = body
-                self.age = age
-                self.kind = kind
-                self.streak = streak
-                self.sharpened = sharpened
-            }
-        }
-
-        /// Fills in a finished interview, so the sharpened state is reachable without waiting
-        /// for a model.
-        /// - Parameters:
-        ///   - thought: The idea to sharpen.
-        ///   - date: When the interview happened.
-        private static func attachDemoSharpening(to thought: inout Thought, at date: Date) {
-            thought.beginSharpening(
-                prompts: [
-                    "Who reads this and actually changes what they use?",
-                    "What is the hardest part of making it real?",
-                    "What is the smallest thing you could do this week?"
-                ],
-                at: date
-            )
-            let answers = [
-                "developers sick of every tool becoming a suite",
-                "finding one genuinely good tool a week, forever",
-                "write three issues and send them to ten people"
-            ]
-            for (question, answer) in zip(thought.sharpening?.questions ?? [], answers) {
-                thought.answerSharpening(answer, to: question.id, at: date)
-            }
-            thought.attachWriteUp(
-                WriteUp(
-                    title: "A letter about tools that do one thing",
-                    detail: """
-                    A weekly letter about tools that do exactly one thing well. It is for \
-                    developers sick of every tool becoming a suite. The hard part is finding one \
-                    genuinely good tool a week, forever. The first thing to try is writing three \
-                    issues and sending them to ten people.
-                    """,
-                    generatedAt: date
-                ),
-                at: date
-            )
-        }
-
-        /// Inserts demo thoughts if asked and the store is empty.
-        private func seedDemoDataIfRequested() async {
-            guard ProcessInfo.processInfo.arguments.contains(Self.seedDemoArgument),
-                  let existing = try? await thoughts.thoughts(in: .all), existing.isEmpty
-            else { return }
-
-            let now = clock.now
-            let demo = [
-                DemoThought("ship the decay engine before it decays", age: 0.2, kind: .todo),
-                DemoThought(
-                    "stretch every morning before coffee",
-                    age: 1.5,
-                    kind: .habit,
-                    streak: 6
-                ),
-                DemoThought(
-                    "newsletter about tools that do one thing",
-                    age: 40,
-                    kind: .idea,
-                    sharpened: true
-                ),
-                DemoThought("pay the parking fine", age: 13, kind: .todo),
-                DemoThought(
-                    "learn to sail? or a boat-shaped midlife crisis",
-                    age: 80,
-                    kind: .idea
-                )
-            ]
-
-            for entry in demo {
-                let captured = now.addingTimeInterval(-entry.age * .day)
-                var thought = Thought(
-                    body: entry.body,
-                    capturedAt: captured,
-                    streak: entry.streak > 0
-                        ? Streak(count: entry.streak, lastMarkedAt: captured)
-                        : nil
-                )
-                thought.applyClassification(kind: entry.kind, title: nil)
-                if entry.sharpened {
-                    Self.attachDemoSharpening(to: &thought, at: captured)
-                }
-                try? await thoughts.add(thought)
-            }
-        }
-    #endif
 
     /// Archives anything that expired while the app was closed.
     ///
@@ -238,11 +127,27 @@ final class AppEnvironment {
         let sync: any SyncReporting
     }
 
+    /// Preferences that describe what the user has already been shown.
+    ///
+    /// Cleared alongside the store so a UI test launching with `--reset-store` sees the app
+    /// exactly as a new user would.
+    private static let firstRunKeys = ["capture.hintDismissed"]
+
+    /// Forgets what the user has been shown, so the next launch is a genuine first launch.
+    private static func clearFirstRunState() {
+        for key in firstRunKeys {
+            UserDefaults.standard.removeObject(forKey: key)
+        }
+    }
+
     /// Opens the on-disk store, degrading to memory rather than failing to launch.
     /// - Returns: The repository to use, whether it is the degraded in-memory one, and what it
     ///   can report about sharing and syncing.
     private static func openStore() -> Store {
         let reset = ProcessInfo.processInfo.arguments.contains(resetStoreArgument)
+        if reset {
+            clearFirstRunState()
+        }
         do {
             let opened = try ModelContainerFactory.store(resettingFirst: reset)
             return Store(
