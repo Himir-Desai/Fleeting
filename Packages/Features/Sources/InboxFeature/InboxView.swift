@@ -13,6 +13,7 @@ public struct InboxView: View {
     private let onOpenArchive: () -> Void
     private let onOpenSettings: () -> Void
     private let onSharpen: (Thought) -> Void
+    private let onReview: () -> Void
 
     /// Creates the inbox.
     /// - Parameters:
@@ -21,23 +22,30 @@ public struct InboxView: View {
     ///     the intent; the app layer decides what it opens.
     ///   - onOpenSettings: Called when the user asks for settings.
     ///   - onSharpen: Called when the user wants to develop an idea further.
+    ///   - onReview: Called when the user chooses to run a review session.
     ///   - changes: Watched so a classification landing while the list is open is reflected.
     public init(
         model: InboxModel,
         changes: any ThoughtChangeObserving,
         onOpenArchive: @escaping () -> Void,
         onOpenSettings: @escaping () -> Void,
-        onSharpen: @escaping (Thought) -> Void
+        onSharpen: @escaping (Thought) -> Void,
+        onReview: @escaping () -> Void
     ) {
         _model = State(initialValue: model)
         self.changes = changes
         self.onOpenArchive = onOpenArchive
         self.onOpenSettings = onOpenSettings
         self.onSharpen = onSharpen
+        self.onReview = onReview
     }
 
     public var body: some View {
         List {
+            if model.reviewCount >= 1 {
+                reviewInvitation
+            }
+
             ForEach(model.thoughts) { thought in
                 HStack(spacing: Spacing.regular) {
                     kindControl(for: thought)
@@ -127,6 +135,30 @@ public struct InboxView: View {
                     await model.load()
                 }
             }
+    }
+
+    /// A quiet, contextual way into the review.
+    ///
+    /// An invitation sitting in the list rather than a prompt that interrupts: the review is never
+    /// imposed, and skipping it costs nothing (ADR-0008).
+    private var reviewInvitation: some View {
+        Button(action: onReview) {
+            HStack(spacing: Spacing.regular) {
+                Image(systemName: "checklist")
+                    .foregroundStyle(Palette.accent)
+                Text("\(model.reviewCount) need a decision")
+                    .font(Typography.body)
+                    .foregroundStyle(Palette.ink)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(Typography.caption)
+                    .foregroundStyle(Palette.inkMuted)
+            }
+        }
+        .buttonStyle(.plain)
+        .padding(.vertical, Spacing.tight)
+        .listRowBackground(Palette.raised)
+        .accessibilityIdentifier("inbox.review")
     }
 
     /// The kind control for a row: one tap opens it, one more corrects the kind.

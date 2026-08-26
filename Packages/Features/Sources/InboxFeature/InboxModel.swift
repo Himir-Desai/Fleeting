@@ -15,9 +15,13 @@ public final class InboxModel {
     /// The most recent failure, or `nil` if the last operation succeeded.
     public internal(set) var lastError: (any Error)?
 
+    /// How many thoughts a review session would contain right now.
+    public private(set) var reviewCount = 0
+
     private let repository: any ThoughtRepository
     private let sweeper: any ArchiveSweeping
     private let engine: DecayEngine
+    private let selector: ReviewSelector
     private let clock: any WallClock
 
     /// Creates the inbox's state.
@@ -25,16 +29,19 @@ public final class InboxModel {
     ///   - repository: Where thoughts are read from and written back to.
     ///   - sweeper: Archives expired thoughts before each load.
     ///   - engine: Computes freshness for display.
+    ///   - selector: Counts how many thoughts need a decision.
     ///   - clock: Time source used for freshness and for deliberate actions.
     public init(
         repository: any ThoughtRepository,
         sweeper: any ArchiveSweeping,
         engine: DecayEngine = DecayEngine(),
+        selector: ReviewSelector = ReviewSelector(),
         clock: any WallClock
     ) {
         self.repository = repository
         self.sweeper = sweeper
         self.engine = engine
+        self.selector = selector
         self.clock = clock
     }
 
@@ -43,6 +50,7 @@ public final class InboxModel {
         do {
             try await sweeper.sweep()
             thoughts = try await repository.thoughts(in: .live)
+            reviewCount = selector.count(from: thoughts, at: clock.now)
             lastError = nil
         } catch {
             lastError = error

@@ -1,0 +1,178 @@
+import Core
+import DesignSystem
+import SwiftUI
+
+/// The weekly review: a small, finite stack of thoughts that need a decision.
+///
+/// Never presented on launch and never required. Skipping it costs nothing except that decay keeps
+/// running, which is the point.
+public struct ReviewView: View {
+    @State private var model: ReviewModel
+    @FocusState private var isAnswerFocused: Bool
+    @Environment(\.dismiss) private var dismiss
+
+    /// Creates the review.
+    /// - Parameter model: State for the session, built by the composition root.
+    public init(model: ReviewModel) {
+        _model = State(initialValue: model)
+    }
+
+    public var body: some View {
+        ZStack {
+            Palette.surface.ignoresSafeArea()
+
+            if !model.hasLoaded {
+                ProgressView()
+            } else if model.cards.isEmpty {
+                emptyState
+            } else if model.isFinished {
+                summary
+            } else {
+                session
+            }
+        }
+        .navigationTitle("Review")
+        #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+        #endif
+            .task { await model.load() }
+            .task(id: model.current?.id) { await model.loadAmbientQuestion() }
+    }
+
+    /// Shown when nothing is fading or repeatedly deferred.
+    private var emptyState: some View {
+        VStack(spacing: Spacing.snug) {
+            Text("Nothing needs a decision")
+                .font(Typography.title)
+                .foregroundStyle(Palette.ink)
+            Text("Everything is either fresh or already dealt with.")
+                .font(Typography.caption)
+                .foregroundStyle(Palette.inkMuted)
+        }
+        .accessibilityIdentifier("review.empty")
+    }
+
+    /// One card, with the decisions available for it.
+    @ViewBuilder
+    private var session: some View {
+        if let thought = model.current {
+            VStack(alignment: .leading, spacing: Spacing.loose) {
+                Text("\(model.progress.position) of \(model.progress.total)")
+                    .font(Typography.caption)
+                    .foregroundStyle(Palette.inkMuted)
+                    .accessibilityIdentifier("review.progress")
+
+                Text(thought.body)
+                    .font(Typography.capture)
+                    .foregroundStyle(Palette.ink)
+                    .accessibilityIdentifier("review.card")
+
+                if let expiry = model.currentExpiry {
+                    Text("archives \(expiry, format: .relative(presentation: .named))")
+                        .font(Typography.caption)
+                        .foregroundStyle(Palette.fading)
+                        .accessibilityIdentifier("review.expiry")
+                }
+
+                if let question = model.ambientQuestion {
+                    ambientPrompt(question)
+                }
+
+                Spacer()
+                decisions
+            }
+            .padding(Spacing.loose)
+        }
+    }
+
+    /// The one question an idea card carries, so sharpening happens as a side effect of reviewing.
+    /// - Parameter question: What to ask.
+    /// - Returns: The prompt and its field.
+    private func ambientPrompt(_ question: String) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.snug) {
+            Text(question)
+                .font(Typography.caption)
+                .foregroundStyle(Palette.accent)
+                .accessibilityIdentifier("review.question")
+
+            TextField("One line is enough", text: $model.ambientAnswer, axis: .vertical)
+                .font(Typography.body)
+                .foregroundStyle(Palette.ink)
+                .tint(Palette.accent)
+                .focused($isAnswerFocused)
+                .accessibilityIdentifier("review.answer")
+
+            Button("Answer and keep") {
+                Task { await model.answerAmbientQuestion() }
+            }
+            .font(Typography.caption)
+            .buttonStyle(.bordered)
+            .tint(Palette.accent)
+            .disabled(model.ambientAnswer.trimmingCharacters(in: .whitespaces).isEmpty)
+            .accessibilityIdentifier("review.answerSubmit")
+        }
+    }
+
+    /// Act, snooze, or let go.
+    private var decisions: some View {
+        HStack(spacing: Spacing.regular) {
+            // All three are real decisions, so all three have to read as buttons. Only the
+            // emphasis differs: keeping is the one that costs nothing.
+            Button("Let go") { Task { await model.drop() } }
+                .buttonStyle(.bordered)
+                .tint(Palette.ink)
+                .accessibilityIdentifier("review.drop")
+
+            Button("Snooze") { Task { await model.snooze() } }
+                .buttonStyle(.bordered)
+                .tint(Palette.ink)
+                .accessibilityIdentifier("review.snooze")
+
+            Spacer()
+
+            Button("Keep") { Task { await model.act() } }
+                .buttonStyle(.borderedProminent)
+                .tint(Palette.accent)
+                .accessibilityIdentifier("review.act")
+        }
+        .font(Typography.body)
+    }
+
+    /// What the session decided, and a way out.
+    private var summary: some View {
+        VStack(spacing: Spacing.regular) {
+            Text("Done")
+                .font(Typography.title)
+                .foregroundStyle(Palette.ink)
+
+            Text(summaryLine)
+                .font(Typography.body)
+                .foregroundStyle(Palette.inkMuted)
+                .multilineTextAlignment(.center)
+                .accessibilityIdentifier("review.summary")
+
+            Button("Back to capture") { dismiss() }
+                .buttonStyle(.borderedProminent)
+                .tint(Palette.accent)
+                .accessibilityIdentifier("review.finish")
+        }
+        .padding(Spacing.loose)
+    }
+
+    /// A sentence describing what was decided.
+    private var summaryLine: String {
+        let tally = model.tally
+        var parts: [String] = []
+        if tally.acted > 0 {
+            parts.append("kept \(tally.acted)")
+        }
+        if tally.snoozed > 0 {
+            parts.append("snoozed \(tally.snoozed)")
+        }
+        if tally.dropped > 0 {
+            parts.append("let go of \(tally.dropped)")
+        }
+        guard !parts.isEmpty else { return "Nothing decided." }
+        return "You " + parts.joined(separator: ", ") + "."
+    }
+}

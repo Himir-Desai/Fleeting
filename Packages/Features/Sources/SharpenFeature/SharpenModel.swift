@@ -93,9 +93,15 @@ public final class SharpenModel {
         availability = await intelligence.availability
 
         if let sharpening = thought.sharpening, !sharpening.questions.isEmpty {
-            phase = sharpening.writeUp == nil ? .interviewing : .finished
-            if phase == .finished {
+            if sharpening.writeUp != nil {
+                phase = .finished
                 await prepareEscalation()
+            } else if sharpening.isReadyForWriteUp {
+                // Every question is answered but no write-up exists: either a previous
+                // attempt failed, or the review answered the only question that was asked.
+                await writeUpAnswers()
+            } else {
+                phase = .interviewing
             }
             return
         }

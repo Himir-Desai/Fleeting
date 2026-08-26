@@ -30,6 +30,12 @@ public struct Thought: Identifiable, Equatable, Hashable, Sendable {
     /// The interview and write-up for an idea, or `nil` if it has never been sharpened.
     public internal(set) var sharpening: Sharpening?
 
+    /// How many times the thought has been set aside.
+    ///
+    /// Repeatedly snoozing something is itself a signal: it is the shape of a decision being
+    /// avoided, which is exactly what the weekly review exists to surface.
+    public private(set) var snoozeCount: Int
+
     /// Where the thought sits in its lifecycle.
     public var state: ThoughtState
 
@@ -53,6 +59,7 @@ public struct Thought: Identifiable, Equatable, Hashable, Sendable {
     ///   - dueAt: When a todo is due, if set.
     ///   - streak: A habit's run of consecutive days, if any.
     ///   - sharpening: An interview already in progress or finished, if any.
+    ///   - snoozeCount: How many times it has already been set aside.
     public init(
         id: UUID = UUID(),
         body: String,
@@ -64,12 +71,14 @@ public struct Thought: Identifiable, Equatable, Hashable, Sendable {
         kindSource: KindSource = .unclassified,
         dueAt: Date? = nil,
         streak: Streak? = nil,
-        sharpening: Sharpening? = nil
+        sharpening: Sharpening? = nil,
+        snoozeCount: Int = 0
     ) {
         self.kindSource = kindSource
         self.dueAt = dueAt
         self.streak = streak
         self.sharpening = sharpening
+        self.snoozeCount = max(snoozeCount, 0)
         self.id = id
         self.body = body
         self.capturedAt = capturedAt
@@ -147,6 +156,7 @@ public struct Thought: Identifiable, Equatable, Hashable, Sendable {
     ///   - now: When the snooze was requested.
     public mutating func snooze(until date: Date, at now: Date) {
         state = .snoozed(until: date)
+        snoozeCount += 1
         markActed(at: now)
     }
 

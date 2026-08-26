@@ -2,6 +2,7 @@ import ArchiveFeature
 import CaptureFeature
 import Core
 import InboxFeature
+import ReviewFeature
 import SettingsFeature
 import SharpenFeature
 import SwiftUI
@@ -18,6 +19,7 @@ struct RootView: View {
     @State private var isShowingArchive = false
     @State private var isShowingSettings = false
     @State private var sharpening: Thought?
+    @State private var isReviewing = false
 
     var body: some View {
         CaptureView(
@@ -41,8 +43,21 @@ struct RootView: View {
                     changes: environment.changes,
                     onOpenArchive: { isShowingArchive = true },
                     onOpenSettings: { isShowingSettings = true },
-                    onSharpen: { sharpening = $0 }
+                    onSharpen: { sharpening = $0 },
+                    onReview: { isReviewing = true }
                 )
+                .navigationDestination(isPresented: $isReviewing) {
+                    ReviewView(
+                        model: ReviewModel(
+                            repository: environment.thoughts,
+                            selector: ReviewSelector(engine: environment.engine),
+                            engine: environment.engine,
+                            intelligence: environment.intelligence,
+                            changes: environment.changes,
+                            clock: environment.clock
+                        )
+                    )
+                }
                 .navigationDestination(item: $sharpening) { thought in
                     SharpenView(
                         model: SharpenModel(

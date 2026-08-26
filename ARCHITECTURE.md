@@ -101,7 +101,8 @@ Fleeting/
 │   │       │   ├── WriteUp.swift            ← a title and a paragraph (ADR-0016)
 │   │       │   └── Thought+Sharpening.swift ← begin, answer, attach, revert
 │   │       ├── Review/
-│   │       │   └── ReviewSelector.swift     ← pure: [Thought] → at most 7 that need a decision
+│   │       │   └── ReviewSelector.swift     ← pure: [Thought] → at most 7 needing a decision
+│   │       │                                 eligibility and urgency rules (ADR-0017)
 │   │       ├── Protocols/
 │   │       │   ├── ThoughtRepository.swift  ← implemented by Persistence; scoped + searchable
 │   │       │   ├── ArchiveSweeping.swift    ← lets features trigger a sweep without Persistence

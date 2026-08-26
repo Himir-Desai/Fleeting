@@ -60,7 +60,8 @@ extension ThoughtEntity {
             dueAt: thought.dueAt,
             streakCount: thought.streak?.count ?? 0,
             streakLastMarkedAt: thought.streak?.lastMarkedAt,
-            sharpeningJSON: StoredSharpening.encode(thought.sharpening)
+            sharpeningJSON: StoredSharpening.encode(thought.sharpening),
+            snoozeCount: thought.snoozeCount
         )
     }
 
@@ -77,7 +78,8 @@ extension ThoughtEntity {
             kindSource: KindSource(rawValue: kindSourceRaw) ?? .unclassified,
             dueAt: dueAt,
             streak: storedStreak,
-            sharpening: StoredSharpening.decode(sharpeningJSON)
+            sharpening: StoredSharpening.decode(sharpeningJSON),
+            snoozeCount: snoozeCount
         )
     }
 
@@ -102,5 +104,6 @@ extension ThoughtEntity {
         streakCount = thought.streak?.count ?? 0
         streakLastMarkedAt = thought.streak?.lastMarkedAt
         sharpeningJSON = StoredSharpening.encode(thought.sharpening)
+        snoozeCount = thought.snoozeCount
     }
 }

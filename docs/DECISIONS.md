@@ -410,3 +410,36 @@ with the question that produced it, and a test pins the exact sentence. Revert i
 therefore confirmed, consistent with deletion elsewhere in the app. `StoredWriteUp` changed shape;
 existing stored write-ups fail to decode and degrade to no sharpening, which is acceptable
 pre-release and is exactly what the corrupt-data path was built for.
+
+---
+
+## ADR-0017 · How a thought earns a place in the review
+
+**Status:** Accepted · Phase 5 · Builds on [ADR-0007](#adr-0007--curated-review-hard-capped-at-seven)
+
+**Context.** ADR-0007 settled that the review is curated and capped at seven. It did not say what
+makes a thought worth raising, and the cap alone is not a rule: seven arbitrary thoughts is still a
+chore.
+
+**Decision.** A thought earns a place by being **past halfway through its life**, or by having been
+**snoozed twice or more** regardless of freshness. Thoughts inside a running snooze are never
+raised. Urgency is decay plus a capped bonus for repeated deferral, so a much-deferred thought
+cannot crowd out things about to be lost. An empty session says so rather than inventing work.
+
+**Alternatives.**
+- *Everything past its grace period* — simpler, but on the standard profile that is nearly the whole
+  inbox within a fortnight, and the cap would then be picking seven at random.
+- *Only imminent expiry* — sharp and easy to explain, but it misses the thought you have snoozed
+  four times, which is the clearest signal in the app that a decision is being avoided.
+- *Uncapped deferral bonus* — makes repeated snoozing dominate. Rejected: something archiving
+  tomorrow is genuinely more urgent than something you have merely postponed.
+
+**Consequences.** A new user with only fresh thoughts gets an empty review, which is correct and has
+to be said plainly rather than looking broken. Because snoozing holds freshness (ADR-0013), a thought
+that has just woken is genuinely fresh and is not re-raised — a test pins this, since it reads like
+a bug until you see why.
+
+The ambient question on idea cards is stored as the **start of a real interview** rather than as a
+one-off answer, so work done in the review carries into Sharpen instead of being thrown away. That
+made a latent bug visible: a one-question interview leaves every question answered with no write-up,
+and `SharpenModel` used to render an empty screen in that state. It now generates.

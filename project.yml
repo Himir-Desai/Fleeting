@@ -53,6 +53,8 @@ targets:
         product: SettingsFeature
       - package: Features
         product: SharpenFeature
+      - package: Features
+        product: ReviewFeature
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.himirdesai.Fleeting

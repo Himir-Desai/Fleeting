@@ -118,6 +118,9 @@ affordance has the local model compose a rich, context-loaded prompt and hand it
 (Claude, ChatGPT) via the share sheet. Hidden by design — the app stays simple; the door is just there.
 
 ### ↻ Review — a ritual you'll actually finish
+
+<img src="docs/screenshots/review.png" width="260" align="right" alt="The review screen: a progress line reading 1 of 2, the thought's text, an amber note saying it archives tomorrow, and three decisions along the bottom — Let go, Snooze, and an emphasised Keep." />
+
 Once a week, Fleeting picks **at most seven** thoughts that genuinely need a decision — about to
 expire, or snoozed one too many times — and deals them as a card stack. Act, Snooze, or Drop. A short
 session you finish beats a complete one you abandon. Idea cards arrive with one ambient sharpening
@@ -203,8 +206,8 @@ Detail and acceptance criteria for each phase in **[docs/ROADMAP.md](docs/ROADMA
 | 2 | Decay | Freshness engine, visual fade, auto-archive, search | 🟢 Done |
 | 3 | Classification | Heuristic + on-device titling and typing, per-kind behaviour | 🟡 In progress |
 | 4 | Sharpen | Interview flow, structured write-up, escalation | ⚪️ Planned |
-| 5 | Review | Curated card stack, ambient sharpening | 🟡 In progress |
-| 6 | Ambient | Daily nudge, widgets, Control Center, App Intents | ⚪️ Planned |
+| 5 | Review | Curated card stack, ambient sharpening | 🟢 Done |
+| 6 | Ambient | Daily nudge, widgets, Control Center, App Intents | 🟡 In progress |
 | 7 | Sync | CloudKit, conflict handling | ⚪️ Planned |
 | 8 | Ship | Accessibility, motion, onboarding, TestFlight | ⚪️ Planned |
 

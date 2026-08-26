@@ -162,7 +162,7 @@ idea rows rather than the inert button the plan originally described.
 
 ---
 
-## Phase 5 · Review 🟡
+## Phase 5 · Review 🟢
 
 The ritual that closes the loop opened in Phase 2.
 
@@ -178,9 +178,24 @@ The ritual that closes the loop opened in Phase 2.
 **Done when** — selection logic is covered across backlog sizes from zero to hundreds; a full session
 takes under 90 seconds; skipping the review has no effect on the capture path.
 
+**Outcome.** Met. 178 unit tests and 27 UI tests.
+
+- `ReviewSelector` is pure and tested from an empty backlog to 300 thoughts, including the cap,
+  ordering, ties, running snoozes, and terminal states.
+- A UI test runs a whole session to its end and asserts it reports what was decided. Sessions are
+  built once and never grow, so they always have a visible end.
+- A UI test launches with a backlog that needs decisions and asserts the capture field is still
+  focused with nothing presented over it.
+- Letting go archives; a UI test then finds the thought in the archive. Nothing a review does
+  destroys anything.
+- Idea cards carry one generated question, and answering it counts as keeping the thought and seeds
+  a real interview ([ADR-0017](DECISIONS.md)).
+
+Deferred as planned: AI synthesis of weekly themes.
+
 ---
 
-## Phase 6 · Ambient ⚪️
+## Phase 6 · Ambient 🟡
 
 Get the app out of the app — nudges and glanceable surfaces.
 

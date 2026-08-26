@@ -575,3 +575,102 @@ final class SharpenRevertTests: XCTestCase {
         )
     }
 }
+
+/// Covers Phase 5: the review is offered, finite, and never imposed.
+@MainActor
+final class ReviewTests: XCTestCase {
+    override func setUp() {
+        continueAfterFailure = false
+    }
+
+    private func launchSeeded() -> XCUIApplication {
+        let app = XCUIApplication()
+        app.launchArguments = ["--reset-store", "--seed-demo"]
+        app.launch()
+        return app
+    }
+
+    func testAReviewIsNeverImposedOnLaunchEvenWithABacklog() {
+        let app = launchSeeded()
+
+        XCTAssertTrue(
+            app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 5),
+            "a backlog needing decisions must still not delay capture"
+        )
+        XCTAssertTrue(app.keyboards.element.waitForExistence(timeout: 5))
+        XCTAssertEqual(app.sheets.count, 0)
+        XCTAssertFalse(app.staticTexts["review.card"].exists)
+    }
+
+    func testTheInboxInvitesAReviewWhenSomethingNeedsADecision() {
+        let app = launchSeeded()
+        _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 5)
+        app.buttons["capture.browse"].tap()
+
+        let invitation = app.buttons["inbox.review"]
+        XCTAssertTrue(
+            invitation.waitForExistence(timeout: 10),
+            "the seeded backlog contains fading thoughts, so a review must be offered"
+        )
+        XCTAssertTrue(invitation.label.contains("need a decision"))
+    }
+
+    func testASessionRunsToAnEndAndReportsWhatWasDecided() {
+        let app = launchSeeded()
+        _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 5)
+        app.buttons["capture.browse"].tap()
+
+        XCTAssertTrue(app.buttons["inbox.review"].waitForExistence(timeout: 10))
+        app.buttons["inbox.review"].tap()
+
+        XCTAssertTrue(app.staticTexts["review.card"].waitForExistence(timeout: 10))
+        let total = app.staticTexts["review.progress"].label
+
+        // Decide every card. The stack is capped, so this always terminates.
+        for _ in 0 ..< 8 {
+            guard app.staticTexts["review.card"].exists else { break }
+            if app.buttons["review.act"].exists {
+                app.buttons["review.act"].tap()
+            }
+        }
+
+        XCTAssertTrue(
+            app.staticTexts["review.summary"].waitForExistence(timeout: 15),
+            "a session must end and say what was decided, not run forever (\(total))"
+        )
+        XCTAssertTrue(app.staticTexts["review.summary"].label.contains("kept"))
+
+        app.buttons["review.finish"].tap()
+        XCTAssertTrue(
+            app.buttons["inbox.done"].waitForExistence(timeout: 10),
+            "finishing a review must return to the app, not strand the user"
+        )
+    }
+
+    func testLettingGoArchivesRatherThanDestroys() {
+        let app = launchSeeded()
+        _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 5)
+        app.buttons["capture.browse"].tap()
+        XCTAssertTrue(app.buttons["inbox.review"].waitForExistence(timeout: 10))
+        app.buttons["inbox.review"].tap()
+
+        XCTAssertTrue(app.staticTexts["review.card"].waitForExistence(timeout: 10))
+        let dropped = app.staticTexts["review.card"].label
+        app.buttons["review.drop"].tap()
+
+        // Finish the rest of the session, then look for it in the archive.
+        for _ in 0 ..< 8 {
+            guard app.staticTexts["review.card"].exists else { break }
+            app.buttons["review.act"].tap()
+        }
+        XCTAssertTrue(app.staticTexts["review.summary"].waitForExistence(timeout: 15))
+        app.buttons["review.finish"].tap()
+
+        XCTAssertTrue(app.buttons["inbox.archive"].waitForExistence(timeout: 10))
+        app.buttons["inbox.archive"].tap()
+        XCTAssertTrue(
+            app.staticTexts[dropped].waitForExistence(timeout: 10),
+            "letting go must archive the thought, never destroy it"
+        )
+    }
+}
