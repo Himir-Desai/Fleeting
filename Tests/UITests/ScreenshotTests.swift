@@ -6,6 +6,21 @@ import XCTest
 /// working. Attachments are extracted from the result bundle with `xcresulttool`.
 @MainActor
 final class ScreenshotTests: XCTestCase {
+    func testCaptureCaptureScreenshot() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--reset-store"]
+        app.launch()
+
+        _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 10)
+        _ = app.descendants(matching: .any)["capture.hint"].waitForExistence(timeout: 5)
+        Thread.sleep(forTimeInterval: 1)
+
+        let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        shot.name = "capture"
+        shot.lifetime = .keepAlways
+        add(shot)
+    }
+
     func testCaptureInboxScreenshot() {
         let app = XCUIApplication()
         app.launchArguments = ["--reset-store", "--seed-demo"]
@@ -13,7 +28,7 @@ final class ScreenshotTests: XCTestCase {
 
         _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 10)
         app.buttons["capture.browse"].tap()
-        _ = app.staticTexts["call the dentist back"].waitForExistence(timeout: 10)
+        _ = app.staticTexts["pay the parking fine"].waitForExistence(timeout: 10)
         Thread.sleep(forTimeInterval: 2)
 
         let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())

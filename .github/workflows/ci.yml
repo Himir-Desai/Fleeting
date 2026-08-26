@@ -17,7 +17,7 @@ jobs:
       - name: Test every package that has tests
         run: |
           set -eo pipefail
-          for package in Core Intelligence Notifications Features; do
+          for package in Core DesignSystem Intelligence Notifications Features; do
             echo "::group::$package"
             swift test --package-path "Packages/$package"
             echo "::endgroup::"
@@ -27,8 +27,6 @@ jobs:
       # alongside a version 2 one makes both read the wrong columns.
       - name: Test Persistence
         run: swift test --package-path Packages/Persistence --no-parallel
-      - name: Build the packages without tests
-        run: swift build --package-path Packages/DesignSystem
 
   lint:
     name: Lint and format
