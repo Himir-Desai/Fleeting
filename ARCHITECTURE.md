@@ -228,6 +228,8 @@ Fleeting/
 │   ├── FleetingWidgetBundle.swift   ← @main; the extension's entry point
 │   ├── FreshnessWidget.swift        ← live count + the thought fading fastest
 │   ├── CaptureWidget.swift          ← lock screen; opens straight to a blank note
+│   ├── CaptureControl.swift         ← Control Center button onto the same field
+│   ├── OpenCaptureIntent.swift      ← what that button runs; opens the app and nothing else
 │   ├── WidgetStore.swift            ← reads through the same repository the app uses
 │   └── WidgetCompletion.swift       ← carries WidgetKit's completion across an await
 │

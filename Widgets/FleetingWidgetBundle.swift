@@ -7,5 +7,6 @@ struct FleetingWidgetBundle: WidgetBundle {
     var body: some Widget {
         FreshnessWidget()
         CaptureWidget()
+        CaptureControl()
     }
 }

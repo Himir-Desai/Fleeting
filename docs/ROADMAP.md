@@ -234,6 +234,9 @@ through the same repository as the app; nothing here can ever produce an in-app 
   when a build cannot share it.
 - `CaptureThoughtIntent` captures by voice without opening the app.
 
+The Control Center control in this phase's scope was missed and shipped in Phase 8, where it was
+found by checking the README's claims against the code.
+
 Two rules were changed by building them: a thought expiring within the day now gets whatever notice
 remains rather than being silently skipped, and only the soonest-expiring thought is warned about.
 
