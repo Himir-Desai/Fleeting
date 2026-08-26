@@ -127,10 +127,18 @@ final class InboxTests: XCTestCase {
         app.staticTexts[original].tap()
         let editor = app.descendants(matching: .any)["editor.field"]
         XCTAssertTrue(editor.waitForExistence(timeout: 5))
-        editor.tap()
-        // Select-all via the long-press menu is unreliable in CI; the keyboard shortcut is not.
-        editor.typeKey("a", modifierFlags: .command)
+        // Tapping past the end of the text puts the cursor after it; tapping the middle of the
+        // field would leave it mid-word and the deletes below would eat the wrong half.
+        editor.coordinate(withNormalizedOffset: CGVector(dx: 0.97, dy: 0.5)).tap()
+        // Deleting character by character rather than selecting all: the long-press menu and the
+        // command-A shortcut both depend on which keyboard the simulator happens to be showing,
+        // and this does not.
+        editor.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: original.count))
         editor.typeText(revised)
+        XCTAssertEqual(
+            editor.value as? String, revised,
+            "the field must hold exactly the new text before it is saved"
+        )
         app.buttons["editor.save"].tap()
 
         XCTAssertTrue(
