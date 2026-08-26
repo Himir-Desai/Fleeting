@@ -11,7 +11,7 @@
 ![UI](https://img.shields.io/badge/UI-SwiftUI-blue)
 ![Data](https://img.shields.io/badge/data-SwiftData%20%2B%20CloudKit-green)
 ![AI](https://img.shields.io/badge/AI-on--device%20Foundation%20Models-purple)
-![Status](https://img.shields.io/badge/status-in%20development-yellow)
+![Status](https://img.shields.io/badge/status-feature%20complete-brightgreen)
 
 [![CI](https://github.com/Himir-Desai/Fleeting/actions/workflows/ci.yml/badge.svg)](https://github.com/Himir-Desai/Fleeting/actions/workflows/ci.yml)
 
@@ -86,7 +86,7 @@ flowchart LR
 
 ### ✎ Capture — the only screen that matters
 
-<img src="docs/screenshots/capture.png" width="260" align="right" alt="The capture screen on cold launch: an empty field with the cursor already blinking and the keyboard already up." />
+<img src="docs/screenshots/capture.png" width="260" align="right" alt="The capture screen on cold launch: an empty field reading What's on your mind? with the cursor already blinking and the keyboard already up, and a single line of first-run text below it saying thoughts fade as they age and file themselves away, nothing is ever deleted, with a Got it control." />
 
 Cold launch lands on a cursor. Type, hit save, the field clears and waits for the next one. No
 navigation, no decisions, no confirmation. Also reachable without unlocking, from a lock-screen
@@ -94,7 +94,7 @@ widget, a Control Center control, and an App Intent so Siri can take dictation i
 
 ### 🕯 Decay — the anti-hoarding mechanic
 
-<img src="docs/screenshots/inbox.png" width="260" align="right" alt="The inbox: four thoughts at different ages, each fading in proportion to its remaining freshness, with a meter that shrinks and warms from accent to amber, and labels reading archives next month through archives tomorrow." />
+<img src="docs/screenshots/inbox.png" width="260" align="right" alt="The inbox: a review invitation reading 2 need a decision, then five thoughts at different ages, each with a kind glyph, fading in proportion to its remaining freshness, with a meter that shrinks and warms from purple to amber, and labels reading archives in 2 months through archives tomorrow." />
 
 Every thought has a **freshness** value that falls over time, rendered as a quiet visual fade in the
 list. Different kinds of thought rot at different speeds: a todo you ignored for two weeks is dead,
@@ -128,7 +128,7 @@ question attached, so the ritual quietly does double duty.
 
 ### 🔔 Nudges — one a day, never in the way
 
-<img src="docs/screenshots/settings.png" width="260" align="right" alt="The settings screen showing four sections: Sorting, reading On-device model; Notifications, reading Off with a Turn on notifications button; Widgets, reading Sharing; and How long things last, listing 30, 90, 14 and 7 days for unsorted, idea, todo and habit." />
+<img src="docs/screenshots/settings.png" width="260" align="right" alt="The settings screen showing five sections: Sorting, reading On-device model; Notifications, reading Off with a Turn on notifications button; Storage, reading On this device; Syncing, reading This iPhone only in amber because this build cannot reach iCloud; and Widgets, reading Not shared." />
 
 A daily notification where the on-device model surfaces one genuinely forgotten thought and phrases
 it in a way that might restart it — in your own words, never scolding. Plus a weekly review
@@ -153,6 +153,19 @@ two different devices and describe a state neither phone was ever in. Values tha
 something together are now stored together, and a test demonstrates the tear on the old shape and
 its absence on the new one. The migration keeps writing the old columns too, so installing an
 earlier build over this one still reads correct data ([ADR-0019](docs/DECISIONS.md)).
+
+### ♿︎ Accessibility — audited, not assumed
+
+The fade is the app's signature and it was also its worst accessibility bug: at the opacity it
+originally shipped, an old thought's text sat at **3.3:1** against the page, where the standard asks
+for 4.5:1. That was found by a test, not by looking — every palette pairing is checked for WCAG
+contrast in light, dark, and both increased-contrast appearances, and the build fails below AA.
+
+The floor moved, one accent split into a fill colour and a text colour, and the forced dark
+appearance went away. Under increased contrast the text stops fading entirely and the meter carries
+the signal alone. VoiceOver reads a row as *"pay the parking fine, archives tomorrow"* with a value
+of *"fading"* — words, not a percentage. Four UI tests drive capture, the inbox and the review at
+the largest accessibility type size, where the review's three decisions stack rather than clip.
 
 ## Architecture at a glance
 
@@ -207,16 +220,21 @@ This is deliberately built the way a shipped app is built, not the way a demo is
 - **Swift 6 strict concurrency,** actor-isolated persistence, `Sendable` domain types.
 - **Versioned storage.** The store has a `VersionedSchema` per shape and a migration plan between
   them, tested by opening a store written by the *previous* version and asserting nothing moved.
-- **Testing** — 228 unit tests on the pure domain, the selection algorithms, and an in-memory
-  SwiftData container, plus 34 UI tests on a simulator. Assertions are about mechanism, never about
-  what a model happens to say.
+- **Accessibility is enforced, not attempted.** The colour contrast audit is a unit test that
+  computes WCAG ratios for every palette pairing in light, dark, and both increased-contrast
+  appearances, and fails the build below AA. UI tests drive the whole app at the largest
+  accessibility type size.
+- **Testing** — 240 unit tests on the pure domain, the selection algorithms, the colour palette,
+  and an in-memory SwiftData container, plus 46 UI tests on a simulator. Assertions are about
+  mechanism, never about what a model happens to say.
 - **CI** on every push: every package's tests, the app's UI tests on a simulator, SwiftLint,
   SwiftFormat check.
 - **Architecture Decision Records** in [docs/DECISIONS.md](docs/DECISIONS.md) — every significant
   choice recorded with its alternatives and its cost.
 - **Built as a learning project, deliberately.** I came to this app fluent in other languages and new
-  to Swift. The phase order in [docs/LEARNING.md](docs/LEARNING.md) doubles as a curriculum — each
-  phase introduces the Swift and iOS concepts the app's next problem actually requires.
+  to Swift, and the phase order was chosen so each one introduces the Swift and iOS concepts the
+  app's next problem actually requires. [docs/LEARNING.md](docs/LEARNING.md) records what that
+  covered through Phase 1, before the explicit teaching track was paused in favour of shipping.
 
 ## Roadmap
 
@@ -232,11 +250,13 @@ Detail and acceptance criteria for each phase in **[docs/ROADMAP.md](docs/ROADMA
 | 5 | Review | Curated card stack, ambient sharpening | 🟢 Done |
 | 6 | Ambient | Daily nudge, widgets, Siri capture | 🟢 Done |
 | 7 | Sync | CloudKit, versioned migration, merge-safe schema | 🟢 Done¹ |
-| 8 | Ship | Accessibility, motion, onboarding, TestFlight | ⚪️ Planned |
+| 8 | Ship | Accessibility, contrast audit, motion, icon, privacy | 🟢 Done² |
 
 ¹ Everything is built and tested except the one thing that needs two signed devices under one iCloud
-account: convergence has not been *observed*. See the Phase 7 outcome in
-[docs/ROADMAP.md](docs/ROADMAP.md).
+account: convergence has not been *observed*.
+
+² Everything except the TestFlight build, which needs a Developer Program membership this machine
+does not have. Both are written up honestly in [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Getting started
 
@@ -254,9 +274,11 @@ intelligence layer automatically and stays fully usable.
 | Document | For |
 |---|---|
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Complete file map, module boundaries, conventions, "where do I add X" |
+| [docs/PRIVACY.md](docs/PRIVACY.md) | What is stored, what is not, and the privacy manifest |
+| [docs/ASSETS.md](docs/ASSETS.md) | Regenerating the app icon and the screenshots |
 | [docs/DECISIONS.md](docs/DECISIONS.md) | Architecture Decision Records — what was chosen, and what wasn't |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Phase breakdown with scope and acceptance criteria |
-| [docs/LEARNING.md](docs/LEARNING.md) | The Swift concepts each phase teaches, and the progress log |
+| [docs/LEARNING.md](docs/LEARNING.md) | The Swift concepts each phase covers — paused after Phase 1 |
 
 ---
 

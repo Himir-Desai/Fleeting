@@ -540,3 +540,85 @@ under one iCloud account, and this machine has no signing identity, so no build 
 entitlement at all. Everything that does not require it is covered: the migration runs against a
 store written by the shipped version 1 schema, and the merge rules are tested as pure functions.
 The convergence claim stays open until it has been seen.
+
+---
+
+## ADR-0020 · The contrast audit is a test, and it moved the fade
+
+**Status:** Accepted · Phase 8
+
+**Context.** The palette was tuned by eye against a dark background, and the app forced
+`preferredColorScheme(.dark)` so nobody ever saw it any other way. Phase 8 asks for a contrast
+audit. An audit done by looking at screenshots is an opinion; it does not survive the next colour
+change, and it cannot check the appearance nobody has looked at yet.
+
+**Decision.** Every palette entry is defined as sRGB components first and turned into a `Color`
+second, so the contrast between any two of them can be computed. `PaletteContrastTests` checks
+every pairing the app actually draws, in all four appearances — light and dark, each at standard
+and increased contrast — against the WCAG AA ratio. A colour change that breaks readability fails
+the build rather than shipping.
+
+Three things came out of running it:
+
+- **The fade was unreadable.** Ink at the old floor of 0.38 opacity, composited over the page, is
+  3.3:1 in dark and worse in light. AA asks for 4.5:1. The floor is now 0.60, which is the number
+  the *light* appearance needs — a single floor rather than one per appearance, because two floors
+  is a rule nobody would remember. Under increased contrast the text is not faded at all; the
+  meter and the "archives in" label carry the signal on their own.
+- **One accent could not do both jobs.** The same purple cannot be a fill with white text on it
+  and a text colour on the page: making it dark enough for one makes it fail the other. It is now
+  `accent` (fills) and `accentText` (text and tints), each audited in its own role.
+- **`preferredColorScheme(.dark)` is gone.** Overriding the appearance the user chose is a
+  legibility problem for anyone who needs a light screen, and the palette is now defined for both.
+
+Animation follows the same rule. `Motion` tokens existed since Phase 0 and were applied nowhere,
+so there was nothing to honour Reduce Motion *with*. There is now a single `View.motion(_:value:)`
+that drops the animation when the system asks, and it is the only way animation is applied.
+
+**Alternatives.**
+- *Asset catalog colour sets* — the usual way to do adaptive colour. Rejected: the values live in
+  a binary plist the tests cannot read, so the audit would have to be done by eye again.
+- *Deriving increased-contrast variants by adjusting lightness* — less to write. Rejected: the
+  test would then be checking a formula rather than the colours that ship.
+- *Keeping the app dark-only and calling it a design choice* — defensible for a 1am capture app.
+  Rejected because the reason it was dark-only was that light mode had never been done, and
+  writing that up as intent afterwards would be a lie.
+
+**Consequences.** The fade is weaker than it was. Going from 1.0 down to 0.60 is a smaller
+gesture than going down to 0.38, and that is a real loss to the app's signature. It is the right
+trade: a signal that makes the words unreadable has stopped being a signal. The meter, the colour
+shift towards amber, and the "archives tomorrow" label all still carry it, and VoiceOver now reads
+the band in words rather than a percentage.
+
+---
+
+## ADR-0021 · The first-run explanation is a line of text, not a screen
+
+**Status:** Accepted · Phase 8
+
+**Context.** Decay is not what a note app usually does. A user who captures a thought and finds it
+gone a month later, with no idea why, will conclude the app lost it. Something has to explain
+that. ADR-0008 forbids anything standing between a cold launch and a focused field, which rules
+out every conventional answer.
+
+**Decision.** One line of text under the capture field, on first launch only: *"Thoughts fade as
+they age and file themselves away. Nothing is ever deleted."* It is inline, so the field is still
+focused and the keyboard is still up. It has a *Got it* control, and it also retires itself the
+moment the first thought is captured — having captured something is proof the explanation was not
+needed. It never returns.
+
+**Alternatives.**
+- *A carousel or a welcome screen* — the industry default, and the one thing ADR-0008 exists to
+  prevent. Rejected outright.
+- *A sheet on second launch* — technically not blocking the first capture. Rejected: it is still a
+  screen between a user and a field, just delayed, and the second launch is as likely to be the
+  1am one as the first.
+- *No explanation, let the archive teach it* — tempting, and the archive genuinely does hold
+  everything. Rejected: the user has to already trust the app to go looking, and the moment they
+  need the explanation is the moment they think it lost their thought.
+- *A permanent "how this works" item in Settings* — kept as well, in effect: Settings has always
+  shown the decay rates in force. The hint is what makes anyone go and look.
+
+**Consequences.** The explanation is short enough to be read at a glance and easy to miss
+entirely, which is the accepted cost of not interrupting. It is dismissed by tapping, by capturing,
+or by ignoring, and `--reset-store` clears it so the UI tests see a genuine first launch.

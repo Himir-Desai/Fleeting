@@ -276,7 +276,7 @@ merely building the rest, which would have let a broken `Persistence` test throu
 
 ---
 
-## Phase 8 · Ship ⚪️
+## Phase 8 · Ship 🟢 *(one criterion unverified)*
 
 **Scope**
 - Full VoiceOver pass, Dynamic Type to accessibility sizes, Reduce Motion, contrast audit.
@@ -288,6 +288,38 @@ merely building the rest, which would have let a broken `Persistence` test throu
 
 **Done when** — the app is fully operable by VoiceOver at the largest Dynamic Type size, and a
 TestFlight build is installed and used for a week of real capture.
+
+**Outcome.** The first criterion is met and tested. **The second is not possible here** — see
+below. 240 unit tests and 46 UI tests.
+
+- The contrast audit is a **test**, not an opinion: every palette pairing the app draws is checked
+  against WCAG AA in all four appearances ([ADR-0020](DECISIONS.md)). Running it found three real
+  faults — the fade was unreadable at its old floor, one accent colour could not serve as both a
+  fill and a text colour, and the app was overriding the appearance the user had chosen.
+- Reduce Motion is honoured centrally. `Motion` had existed since Phase 0 and was applied nowhere,
+  so there was nothing to honour it *with*; there is now one `View.motion(_:value:)` and it is the
+  only way animation is applied.
+- Four UI tests drive the app at the largest accessibility type size: capture, the inbox, the
+  review's three decisions, and the names every control gives VoiceOver. The review's decisions
+  stack rather than clip, and the freshness band is spoken in words instead of a percentage.
+- The first-run explanation is one line under the field, retired by dismissing it *or* by
+  capturing anything ([ADR-0021](DECISIONS.md)). Three UI tests assert it blocks nothing and never
+  returns.
+- Empty and error states are written copy. `storageIsDegraded` had been computed since Phase 1 and
+  never shown to anyone — a store that failed to open now says so in the inbox and in Settings.
+- The performance budget is a **ratio**, because an absolute one measures the test harness: a
+  four-hundred-thought store must not cost more to launch than an empty one. Verified against the
+  previous phase's build, `XCUIApplication.launch()` costs ~3s whatever the app does.
+- App icon rendered from code so it can be regenerated ([docs/ASSETS.md](ASSETS.md)); privacy
+  manifest declaring nothing collected and nothing tracked ([docs/PRIVACY.md](PRIVACY.md)).
+
+**Not possible here: a TestFlight build used for a week.** TestFlight needs a Developer Program
+membership, and this machine has no signing identity at all, so no build made here can be
+distributed. It also needs a week. Everything that does not depend on either is done.
+
+Also fixed here, from earlier phases: `ScreenshotTests` was waiting on a thought the demo seed had
+not contained for several phases, so it silently timed out and shot whatever was on screen; and an
+inbox edit test depended on which keyboard the simulator happened to show.
 
 ---
 
