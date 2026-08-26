@@ -69,6 +69,16 @@ public struct HeuristicIntelligence: IntelligenceService {
         )
     }
 
+    /// Quotes the note back without comment.
+    ///
+    /// The rules cannot say anything insightful about a thought, so they say nothing: showing the
+    /// note itself is honest, and a fabricated observation would be worse than none.
+    public func resurfacingLine(for text: String) async -> String? {
+        let note = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !note.isEmpty else { return nil }
+        return note.count <= 120 ? note : String(note.prefix(117)) + "…"
+    }
+
     /// Turns one answer into a sentence, using the question to supply the framing.
     ///
     /// The first-step framing uses a colon rather than "is", because an answer may be a verb

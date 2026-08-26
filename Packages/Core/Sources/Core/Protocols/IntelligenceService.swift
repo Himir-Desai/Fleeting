@@ -52,6 +52,14 @@ public protocol IntelligenceService: Sendable {
     ///   - answers: What the user said, in the order asked.
     /// - Returns: The write-up, or `nil` if one could not be produced.
     func writeUp(for text: String, answers: [AnsweredQuestion], at date: Date) async -> WriteUp?
+
+    /// Writes one line that might restart a forgotten thought.
+    ///
+    /// Used as notification copy, so it must be short, must not scold, and must not invent
+    /// anything the note does not contain.
+    /// - Parameter text: The raw captured text.
+    /// - Returns: A single sentence, or `nil` if none could be produced.
+    func resurfacingLine(for text: String) async -> String?
 }
 
 public extension IntelligenceService {

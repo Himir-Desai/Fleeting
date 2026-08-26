@@ -8,6 +8,7 @@ public struct StubIntelligence: IntelligenceService {
     private let delay: Duration?
     private let questions: [String]
     private let generatedWriteUp: WriteUp?
+    private let line: String?
 
     /// Creates a stub.
     /// - Parameters:
@@ -16,18 +17,21 @@ public struct StubIntelligence: IntelligenceService {
     ///   - delay: An artificial pause before answering, for exercising timeouts.
     ///   - questions: What ``interviewQuestions(for:)`` returns.
     ///   - writeUp: What ``writeUp(for:answers:at:)`` returns.
+    ///   - resurfacingLine: What ``resurfacingLine(for:)`` returns.
     public init(
         result: Classification = .unknown,
         availability: IntelligenceAvailability = .onDevice,
         delay: Duration? = nil,
         questions: [String] = [],
-        writeUp: WriteUp? = nil
+        writeUp: WriteUp? = nil,
+        resurfacingLine: String? = nil
     ) {
         self.result = result
         reported = availability
         self.delay = delay
         self.questions = questions
         generatedWriteUp = writeUp
+        line = resurfacingLine
     }
 
     public var availability: IntelligenceAvailability {
@@ -57,5 +61,12 @@ public struct StubIntelligence: IntelligenceService {
             try? await Task.sleep(for: delay)
         }
         return generatedWriteUp
+    }
+
+    public func resurfacingLine(for _: String) async -> String? {
+        if let delay {
+            try? await Task.sleep(for: delay)
+        }
+        return line
     }
 }

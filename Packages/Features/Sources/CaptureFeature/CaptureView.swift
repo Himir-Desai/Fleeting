@@ -119,6 +119,10 @@ private struct PreviewIntelligence: IntelligenceService {
     ) async -> WriteUp? {
         nil
     }
+
+    func resurfacingLine(for _: String) async -> String? {
+        nil
+    }
 }
 
 /// A clock frozen at a fixed instant, so previews never depend on the system time.

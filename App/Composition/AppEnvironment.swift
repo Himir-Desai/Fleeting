@@ -1,5 +1,6 @@
 import Core
 import Foundation
+import Notifications
 import Persistence
 
 /// The composition root: the single place where protocols are bound to concrete types.
@@ -29,6 +30,18 @@ final class AppEnvironment {
     /// Announces stored-thought changes so open screens refresh themselves.
     let changes = ThoughtChangeNotifier()
 
+    /// Reads and writes when the app is allowed to speak.
+    let nudgePreferences: any NudgePreferencesStoring = UserDefaultsNudgePreferences()
+
+    /// Asks for, and reports, permission to send notifications.
+    let nudgePermissions: any NudgePermissions = SystemNotificationCentre()
+
+    /// Keeps queued notifications in step with the store.
+    let nudges: NudgeScheduler
+
+    /// Whether the store lives in the shared container, and is therefore visible to widgets.
+    let storageIsShared = ModelContainerFactory.isShared
+
     /// Whether the on-disk store failed to open and captures are being held in memory only.
     ///
     /// Surfaced quietly inside the app rather than at launch: a storage problem must never
@@ -53,6 +66,21 @@ final class AppEnvironment {
         engine = DecayEngine()
         sweeper = ArchiveSweeper(repository: self.thoughts, engine: engine, clock: clock)
         intelligence = IntelligenceFactory.make()
+
+        let centre = SystemNotificationCentre()
+        nudges = NudgeScheduler(
+            repository: self.thoughts,
+            composer: NudgeComposer(
+                review: ReviewSelector(engine: engine),
+                engine: engine,
+                intelligence: intelligence
+            ),
+            centre: centre,
+            permissions: centre,
+            preferences: nudgePreferences,
+            history: UserDefaultsNudgeHistory(),
+            clock: clock
+        )
     }
 
     /// Prepares the store after launch: seeds demo data when asked, then archives anything that
@@ -64,6 +92,7 @@ final class AppEnvironment {
             await seedDemoDataIfRequested()
         #endif
         await sweep()
+        await refreshNudges()
     }
 
     #if DEBUG
@@ -184,6 +213,14 @@ final class AppEnvironment {
     /// interfere with capture (ADR-0008). The next sweep will pick the work up.
     func sweep() async {
         _ = try? await sweeper.sweep()
+    }
+
+    /// Recomputes what the app has queued to say.
+    ///
+    /// Run after the field is on screen and after anything that changes the store, because copy is
+    /// written ahead of time and goes stale as thoughts decay.
+    func refreshNudges() async {
+        await nudges.refresh()
     }
 
     /// Opens the on-disk store, degrading to memory rather than failing to launch.

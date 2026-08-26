@@ -55,15 +55,54 @@ targets:
         product: SharpenFeature
       - package: Features
         product: ReviewFeature
+      - target: FleetingWidgets
+    entitlements:
+      path: App/Fleeting.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.himirdesai.Fleeting
+    info:
+      path: App/Info.plist
+      properties:
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        CFBundleURLTypes:
+          - CFBundleURLName: com.himirdesai.Fleeting
+            CFBundleURLSchemes: [fleeting]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.himirdesai.Fleeting
         MARKETING_VERSION: "0.1.0"
         CURRENT_PROJECT_VERSION: "1"
-        GENERATE_INFOPLIST_FILE: YES
-        INFOPLIST_KEY_UILaunchScreen_Generation: YES
-        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
         TARGETED_DEVICE_FAMILY: "1"
+
+  FleetingWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Widgets
+    dependencies:
+      - package: Core
+      - package: DesignSystem
+      - package: Persistence
+    entitlements:
+      path: Widgets/FleetingWidgets.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.himirdesai.Fleeting
+    info:
+      path: Widgets/Info.plist
+      properties:
+        CFBundleDisplayName: Fleeting
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.himirdesai.Fleeting.Widgets
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        TARGETED_DEVICE_FAMILY: "1"
+        SKIP_INSTALL: YES
 
   FleetingUITests:
     type: bundle.ui-testing
@@ -76,3 +115,4 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.himirdesai.Fleeting.UITests
         TEST_TARGET_NAME: Fleeting
+        GENERATE_INFOPLIST_FILE: YES

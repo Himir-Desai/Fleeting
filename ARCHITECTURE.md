@@ -59,7 +59,9 @@ Fleeting/
 ├── CLAUDE.md                        ← working agreement for AI sessions
 ├── .swiftlint.yml                   ← incl. custom rules enforcing the Date() and cross-feature bans
 ├── .swiftformat
-├── project.yml                      ← XcodeGen source of truth; *.xcodeproj is generated + gitignored
+├── project.yml                      ← XcodeGen source of truth. The .xcodeproj, both Info.plists
+│                                      and both .entitlements files are generated from it and
+│                                      gitignored: one place declares the app's shape.
 ├── .github/workflows/ci.yml         ← build · test · lint on every push
 │
 ├── docs/
@@ -73,6 +75,8 @@ Fleeting/
 │   ├── Composition/
 │   │   ├── AppEnvironment.swift     ← the single place concrete types are chosen
 │   │   └── IntelligenceFactory.swift← picks Foundation Models vs heuristics at runtime
+│   ├── Intents/
+│   │   └── CaptureThoughtIntent.swift ← Siri and Shortcuts capture without opening the app
 │   ├── Navigation/
 │   │   └── RootView.swift           ← capture is the root; everything else is a push or sheet
 │   └── Resources/
@@ -100,6 +104,8 @@ Fleeting/
 │   │       │   ├── SharpenQuestion.swift    ← one question + its answer; AnsweredQuestion
 │   │       │   ├── WriteUp.swift            ← a title and a paragraph (ADR-0016)
 │   │       │   └── Thought+Sharpening.swift ← begin, answer, attach, revert
+│   │       ├── Nudge/
+│   │       │   └── NudgeSelector.swift      ← pure: what is worth surfacing, and what expires soon
 │   │       ├── Review/
 │   │       │   └── ReviewSelector.swift     ← pure: [Thought] → at most 7 needing a decision
 │   │       │                                 eligibility and urgency rules (ADR-0017)
@@ -108,6 +114,8 @@ Fleeting/
 │   │       │   ├── ArchiveSweeping.swift    ← lets features trigger a sweep without Persistence
 │   │       │   ├── IntelligenceService.swift← the AI contract, Classification, availability
 │   │       │   ├── ThoughtChanges.swift     ← change signal so open screens see late work
+│   │       │   ├── NudgePreferences.swift   ← when the app may speak + its storage contract
+│   │       │   └── NudgeAuthorization.swift ← permission state + the asking contract
 │   │       │   ├── IntelligenceService.swift← implemented by Intelligence
 │   │       │   └── NudgeScheduling.swift    ← implemented by Notifications
 │   │       └── Support/
@@ -182,14 +190,21 @@ Fleeting/
 │   └── Notifications/               ← Scheduling and background composition of nudges.
 │       └── Sources/Notifications/
 │           ├── NudgeKind.swift                ← the three permitted notifications (ADR-0009)
-│           ├── NudgeScheduler.swift
-│           ├── BackgroundNudgeTask.swift     ← composes tomorrow's nudge with the on-device model
-│           └── PermissionCoordinator.swift   ← asks late and only in Settings, never on launch
+│           ├── NudgeIdentifier.swift          ← the identifiers this app owns, and only those
+│           ├── NudgeClock.swift               ← next daily / weekly occurrence, calendar injected
+│           ├── ScheduledNudge.swift           ← a delivery with its copy already written
+│           ├── NudgeComposer.swift            ← writes the copy for each kind
+│           ├── NudgeScheduler.swift           ← rebuilds the queue; cancels what is no longer wanted
+│           ├── NudgeHistory.swift             ← what was surfaced recently, so it is not repeated
+│           ├── UserDefaultsNudgePreferences.swift
+│           └── SystemNotificationCentre.swift ← the real UNUserNotificationCenter, and permission
 │
-├── Widgets/                         ← Widget extension + App Intents
-│   ├── CaptureWidget/               ← lock screen + home screen quick capture
-│   ├── FreshnessWidget/             ← inbox count and the oldest fading thought
-│   └── Intents/                     ← AppIntent so Siri and Shortcuts can capture
+├── Widgets/                         ← Widget extension. Reads the shared store via Persistence.
+│   ├── FleetingWidgetBundle.swift   ← @main; the extension's entry point
+│   ├── FreshnessWidget.swift        ← live count + the thought fading fastest
+│   ├── CaptureWidget.swift          ← lock screen; opens straight to a blank note
+│   ├── WidgetStore.swift            ← reads through the same repository the app uses
+│   └── WidgetCompletion.swift       ← carries WidgetKit's completion across an await
 │
 └── Tests/                           ← ONLY cross-cutting tests. Unit tests live inside their own
     └── UITests/                        package (Packages/Core/Tests/CoreTests, and so on), so

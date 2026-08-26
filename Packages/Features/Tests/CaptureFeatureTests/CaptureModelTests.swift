@@ -64,6 +64,10 @@ private struct StubIntelligence: IntelligenceService {
     ) async -> WriteUp? {
         nil
     }
+
+    func resurfacingLine(for _: String) async -> String? {
+        nil
+    }
 }
 
 @MainActor

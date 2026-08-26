@@ -3,9 +3,27 @@ import SwiftData
 
 /// Builds the SwiftData containers the app and its tests run against.
 public enum ModelContainerFactory {
+    /// The App Group the app and its widgets share.
+    ///
+    /// Widgets run in their own process, so the store has to live somewhere both can reach.
+    public static let appGroupIdentifier = "group.com.himirdesai.Fleeting"
+
     /// Where the on-disk store lives. Named explicitly so it can be removed deterministically.
+    ///
+    /// Falls back to the app's own support directory when the App Group is unavailable — an
+    /// unsigned build or a missing entitlement must degrade to a working app, not a broken one.
     private static var storeURL: URL {
-        URL.applicationSupportDirectory.appending(path: "Fleeting.store")
+        let shared = FileManager.default.containerURL(
+            forSecurityApplicationGroupIdentifier: appGroupIdentifier
+        )
+        return (shared ?? URL.applicationSupportDirectory).appending(path: "Fleeting.store")
+    }
+
+    /// Whether the store is in the shared container, and therefore visible to widgets.
+    public static var isShared: Bool {
+        FileManager.default.containerURL(
+            forSecurityApplicationGroupIdentifier: appGroupIdentifier
+        ) != nil
     }
 
     /// The on-disk store the app uses. CloudKit sync is attached in Phase 7.

@@ -61,4 +61,22 @@ final class ScreenshotTests: XCTestCase {
         shot.lifetime = .keepAlways
         add(shot)
     }
+
+    func testCaptureSettingsScreenshot() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--reset-store", "--seed-demo"]
+        app.launch()
+
+        _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 10)
+        app.buttons["capture.browse"].tap()
+        _ = app.buttons["inbox.settings"].waitForExistence(timeout: 10)
+        app.buttons["inbox.settings"].tap()
+        _ = app.staticTexts["Sorting"].waitForExistence(timeout: 10)
+        Thread.sleep(forTimeInterval: 1)
+
+        let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        shot.name = "settings"
+        shot.lifetime = .keepAlways
+        add(shot)
+    }
 }

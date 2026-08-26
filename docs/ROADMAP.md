@@ -195,7 +195,7 @@ Deferred as planned: AI synthesis of weekly themes.
 
 ---
 
-## Phase 6 · Ambient 🟡
+## Phase 6 · Ambient 🟢
 
 Get the app out of the app — nudges and glanceable surfaces.
 
@@ -212,9 +212,26 @@ Get the app out of the app — nudges and glanceable surfaces.
 **Done when** — nudges arrive at the chosen time without the app running; every ambient surface writes
 through the same repository as the app; nothing here can ever produce an in-app modal.
 
+**Outcome.** Met. 208 unit tests and 30 UI tests.
+
+- `NudgeSelector` and `NudgeScheduler` are covered without scheduling a real notification: permission
+  gating, stale-queue replacement, per-kind switches, and the rule that the app only cancels
+  identifiers it owns.
+- Copy is composed ahead of time because the model cannot run at delivery ([ADR-0018](DECISIONS.md)).
+- Permission is requested only from Settings. A UI test asserts a cold launch with a full backlog
+  shows no alert and reaches a focused field.
+- The store moved to an App Group so widgets read through the same repository; Settings says plainly
+  when a build cannot share it.
+- `CaptureThoughtIntent` captures by voice without opening the app.
+
+Two rules were changed by building them: a thought expiring within the day now gets whatever notice
+remains rather than being silently skipped, and only the soonest-expiring thought is warned about.
+
+Deferred as planned: Live Activities.
+
 ---
 
-## Phase 7 · Sync ⚪️
+## Phase 7 · Sync 🟡
 
 **Scope**
 - CloudKit private database via SwiftData; schema audited against CloudKit constraints.

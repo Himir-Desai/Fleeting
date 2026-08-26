@@ -14,6 +14,7 @@ let package = Package(
         .package(path: "../Intelligence")
     ],
     targets: [
-        .target(name: "Notifications", dependencies: ["Core", "Intelligence"])
+        .target(name: "Notifications", dependencies: ["Core", "Intelligence"]),
+        .testTarget(name: "NotificationsTests", dependencies: ["Notifications", "Core"])
     ]
 )

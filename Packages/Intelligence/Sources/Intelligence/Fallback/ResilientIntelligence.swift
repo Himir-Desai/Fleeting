@@ -96,6 +96,22 @@ public actor ResilientIntelligence: IntelligenceService {
         return unwrapped
     }
 
+    /// Asks the primary for notification copy, falling back when it cannot supply any.
+    public func resurfacingLine(for text: String) async -> String? {
+        guard let primary, await isPrimaryUsable() else {
+            return await fallback.resurfacingLine(for: text)
+        }
+
+        let line = await race { await primary.resurfacingLine(for: text) }
+        guard let line, let unwrapped = line, !unwrapped.isEmpty else {
+            lastFailure = .requestFailed
+            return await fallback.resurfacingLine(for: text)
+        }
+
+        lastFailure = nil
+        return unwrapped
+    }
+
     /// Whether the primary reports itself as able to answer.
     /// - Returns: `true` when the primary is on-device and ready.
     private func isPrimaryUsable() async -> Bool {

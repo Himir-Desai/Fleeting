@@ -443,3 +443,40 @@ The ambient question on idea cards is stored as the **start of a real interview*
 one-off answer, so work done in the review carries into Sharpen instead of being thrown away. That
 made a latent bug visible: a one-question interview leaves every question answered with no write-up,
 and `SharpenModel` used to render an empty screen in that state. It now generates.
+
+---
+
+## ADR-0018 · Nudges are written ahead of time and queued one at a time
+
+**Status:** Accepted · Phase 6
+
+**Context.** ADR-0009 fixed *what* the app may say. Building it exposed a constraint that shapes
+*how*: the on-device model cannot run when a notification fires, so copy has to exist before the
+delivery is queued.
+
+**Decision.** Each nudge is composed in advance and queued as a **single delivery at a computed
+date**, not as a repeating trigger. The queue is rebuilt on launch and whenever the store changes.
+Only one expiry warning is ever queued, for the thought closest to archiving. The store moved to the
+App Group `group.com.himirdesai.Fleeting` so widgets read the same data through the same repository.
+
+**Alternatives.**
+- *Repeating daily and weekly triggers* — survives the app never being opened, and is less code.
+  Rejected: the copy would be frozen at whatever was true the day it was scheduled, so a thought
+  already archived could still be resurfaced weeks later. Stale copy is worse than a missed nudge.
+- *Generic copy that never goes stale* ("You have thoughts waiting") — works with repeating
+  triggers. Rejected: a nudge that does not name the thought is a badge with extra steps, and ADR-0009
+  requires the daily nudge to resurface something specific.
+- *One expiry warning per expiring thought* — more complete. Rejected: several warnings in a row is
+  the nagging the app exists to avoid.
+- *A second copy of the database for widgets* — avoids the entitlement. Rejected outright; two
+  sources of truth for the same thoughts is how data gets lost.
+
+**Consequences.** The queue only stays current while the app is opened from time to time, which is
+honest for an app you already open to capture. `NudgeScheduler` cancels and re-queues wholesale, so
+anything no longer wanted actively goes away. Its identifiers are namespaced, and a test asserts the
+app only ever cancels its own.
+
+The App Group entitlement is stripped by `CODE_SIGNING_ALLOWED=NO`, which is how the test suite and
+CI build. `ModelContainerFactory` therefore falls back to the app's private container, and the app
+keeps working while widgets see nothing. That degradation is deliberate but must not be silent, so
+Settings reports whether the store is shared.

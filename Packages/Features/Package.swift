@@ -26,6 +26,7 @@ let package = Package(
         .target(name: "ArchiveFeature", dependencies: ["Core", "DesignSystem"]),
         .testTarget(name: "InboxFeatureTests", dependencies: ["InboxFeature", "Core"]),
         .target(name: "SettingsFeature", dependencies: ["Core", "DesignSystem"]),
+        .testTarget(name: "SettingsFeatureTests", dependencies: ["SettingsFeature", "Core"]),
         .target(name: "SharpenFeature", dependencies: ["Core", "DesignSystem"]),
         .target(name: "ReviewFeature", dependencies: ["Core", "DesignSystem"]),
         .testTarget(name: "ReviewFeatureTests", dependencies: ["ReviewFeature", "Core"]),

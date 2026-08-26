@@ -49,6 +49,10 @@ private struct StubIntelligence: IntelligenceService {
     func writeUp(for _: String, answers _: [AnsweredQuestion], at _: Date) async -> WriteUp? {
         nil
     }
+
+    func resurfacingLine(for _: String) async -> String? {
+        nil
+    }
 }
 
 @MainActor

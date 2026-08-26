@@ -111,6 +111,29 @@
             return "The note:\n\(text)\n\nWhat they told me:\n\(transcript)"
         }
 
+        /// Asks the model for one line that might restart a forgotten thought.
+        public func resurfacingLine(for text: String) async -> String? {
+            guard case .onDevice = availability else { return nil }
+
+            let session = LanguageModelSession(instructions: Self.nudgeInstructions)
+            do {
+                let response = try await session.respond(to: "The note:\n\(text)")
+                let line = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
+                return line.isEmpty ? nil : String(line.prefix(160))
+            } catch {
+                return nil
+            }
+        }
+
+        /// Standing instructions for notification copy.
+        private static var nudgeInstructions: String {
+            """
+            You write a single short sentence that brings a forgotten note back to someone's mind. \
+            Use their own words. Never scold, never imply they are behind, never invent detail the \
+            note does not contain. One sentence, no preamble, under twenty words.
+            """
+        }
+
         /// Translates the framework's unavailability reason into the app's vocabulary.
         /// - Parameter reason: Why the system reports the model as unusable.
         /// - Returns: The matching app-level reason.

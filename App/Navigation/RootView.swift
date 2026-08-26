@@ -81,7 +81,11 @@ struct RootView: View {
                     SettingsView(
                         model: SettingsModel(
                             intelligence: environment.intelligence,
-                            profiles: environment.engine.profiles
+                            profiles: environment.engine.profiles,
+                            storageIsShared: environment.storageIsShared,
+                            store: environment.nudgePreferences,
+                            permissions: environment.nudgePermissions,
+                            onNudgesChanged: { await environment.refreshNudges() }
                         )
                     )
                 }
@@ -89,5 +93,12 @@ struct RootView: View {
         }
         // Runs after the field is on screen, never before it.
         .task { await environment.prepare() }
+        .task {
+            // Copy is written ahead of time, so the queue is rebuilt whenever the store might
+            // have moved on. Never before the field is on screen.
+            for await _ in environment.changes.changes {
+                await environment.refreshNudges()
+            }
+        }
     }
 }

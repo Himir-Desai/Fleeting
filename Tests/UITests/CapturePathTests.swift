@@ -674,3 +674,49 @@ final class ReviewTests: XCTestCase {
         )
     }
 }
+
+/// Covers Phase 6: the app can speak outside itself, but only once asked.
+@MainActor
+final class NudgeTests: XCTestCase {
+    override func setUp() {
+        continueAfterFailure = false
+    }
+
+    func testNoPermissionIsRequestedOnLaunch() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--reset-store", "--seed-demo"]
+        app.launch()
+
+        XCTAssertTrue(app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.keyboards.element.waitForExistence(timeout: 5))
+        XCTAssertEqual(
+            app.alerts.count, 0,
+            "a permission prompt at launch would be the exact thing ADR-0008 forbids"
+        )
+    }
+
+    func testNotificationsAreOffUntilTurnedOnFromSettings() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--reset-store"]
+        app.launch()
+        _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 5)
+
+        app.buttons["capture.browse"].tap()
+        XCTAssertTrue(app.buttons["inbox.settings"].waitForExistence(timeout: 5))
+        app.buttons["inbox.settings"].tap()
+
+        XCTAssertTrue(
+            app.otherElements["settings.notifications"].waitForExistence(timeout: 5)
+                || app.staticTexts["Off"].waitForExistence(timeout: 5),
+            "Settings must say plainly whether the app can speak"
+        )
+        XCTAssertTrue(
+            app.buttons["settings.notifications.enable"].waitForExistence(timeout: 5),
+            "turning notifications on must be an explicit choice made here"
+        )
+        XCTAssertFalse(
+            app.switches["settings.nudge.daily"].exists,
+            "the switches must stay hidden until permission exists"
+        )
+    }
+}

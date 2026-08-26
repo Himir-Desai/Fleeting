@@ -127,9 +127,20 @@ session you finish beats a complete one you abandon. Idea cards arrive with one 
 question attached, so the ritual quietly does double duty.
 
 ### 🔔 Nudges — one a day, never in the way
+
+<img src="docs/screenshots/settings.png" width="260" align="right" alt="The settings screen showing four sections: Sorting, reading On-device model; Notifications, reading Off with a Turn on notifications button; Widgets, reading Sharing; and How long things last, listing 30, 90, 14 and 7 days for unsorted, idea, todo and habit." />
+
 A daily notification where the on-device model surfaces one genuinely forgotten thought and phrases
-it in a way that might restart it. Plus a weekly review invitation and a heads-up before something
-archives. All of it lives outside the app — opening Fleeting never costs you anything.
+it in a way that might restart it — in your own words, never scolding. Plus a weekly review
+invitation, sent only when something actually needs deciding, and a single heads-up before the next
+thought archives.
+
+Permission is requested from Settings and nowhere else. The app never asks at launch, and never
+twice. Copy is written ahead of time, because the on-device model cannot run when a notification
+fires.
+
+**Widgets** show what is still live and what is fading fastest, and a lock screen widget opens
+straight into a blank note. **Siri** captures without opening the app at all — *"add to Fleeting"*.
 
 ### ☁️ Sync
 Local-first SwiftData with automatic private CloudKit sync. Offline always works; there's no account,
@@ -207,8 +218,8 @@ Detail and acceptance criteria for each phase in **[docs/ROADMAP.md](docs/ROADMA
 | 3 | Classification | Heuristic + on-device titling and typing, per-kind behaviour | 🟡 In progress |
 | 4 | Sharpen | Interview flow, structured write-up, escalation | ⚪️ Planned |
 | 5 | Review | Curated card stack, ambient sharpening | 🟢 Done |
-| 6 | Ambient | Daily nudge, widgets, Control Center, App Intents | 🟡 In progress |
-| 7 | Sync | CloudKit, conflict handling | ⚪️ Planned |
+| 6 | Ambient | Daily nudge, widgets, Siri capture | 🟢 Done |
+| 7 | Sync | CloudKit, conflict handling | 🟡 In progress |
 | 8 | Ship | Accessibility, motion, onboarding, TestFlight | ⚪️ Planned |
 
 ## Getting started
