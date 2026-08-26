@@ -103,7 +103,7 @@ archives and never deletes; the archive is searchable from the inbox in two taps
 
 ---
 
-## Phase 3 · Classification 🟡
+## Phase 3 · Classification 🟢
 
 Teach the app to sort so the user never has to. First contact with the intelligence layer.
 
@@ -123,9 +123,19 @@ Teach the app to sort so the user never has to. First contact with the intellige
 **Done when** — the app behaves correctly on a device with Apple Intelligence disabled; classification
 never delays a save; a wrong classification is correctable in one tap and is remembered.
 
+**Outcome.** Met, and delivered together with Phase 4's entry point.
+
+- `HeuristicIntelligence` was written first, so every device has a complete app whether or not a
+  model exists. `ResilientIntelligence` races the model against a timeout and degrades silently.
+- Classification runs after the save returns and announces itself when it lands, because the
+  on-device model genuinely takes seconds ([ADR-0014](DECISIONS.md)).
+- A correction is one tap, and it is remembered: `kindSource` records that a human decided, so
+  nothing overwrites it later.
+- Settings reports which of the two is answering, in plain words.
+
 ---
 
-## Phase 4 · Sharpen ⚪️
+## Phase 4 · Sharpen 🟢
 
 The differentiator: half-baked in, fully-baked out.
 
@@ -231,7 +241,7 @@ Deferred as planned: Live Activities.
 
 ---
 
-## Phase 7 · Sync 🟡
+## Phase 7 · Sync 🟢 *(one criterion unverified)*
 
 **Scope**
 - CloudKit private database via SwiftData; schema audited against CloudKit constraints.
@@ -241,6 +251,28 @@ Deferred as planned: Live Activities.
 
 **Done when** — two devices converge after edits made while both were offline; a signed-out user has a
 fully functional local app with no errors.
+
+**Outcome.** The second criterion is met and tested. **The first is unverified** — see below.
+228 unit tests and 34 UI tests.
+
+- The conflict policy turned out to be a *schema* decision. CloudKit merges a record column by
+  column, so version 1's split lifecycle columns could produce a state neither device was ever in.
+  A test demonstrates that tear, and another proves the new single-column shape cannot produce it
+  ([ADR-0019](DECISIONS.md)).
+- The migration is a custom stage, tested against a store written by the version 1 schema: a
+  lightweight migration would have returned the entire archive to the inbox.
+- The rollback is real rather than documented-in-principle: version 2 keeps writing version 1's
+  columns, so an older build installed over this one reads correct data.
+- A build that cannot reach iCloud opens a device-local store and behaves normally. Four UI tests
+  cover it, including that nothing about signing in ever reaches the capture path.
+- Settings says which of the two is happening, and never claims more than the storage underneath it.
+
+**Not verified: two devices converging.** It needs two signed installs under one iCloud account.
+This machine has no signing identity, so no build made here carries the CloudKit entitlement at all.
+Everything that does not depend on it is covered.
+
+Also changed here: CI now runs *every* package's unit tests. It had been running only `Core`'s and
+merely building the rest, which would have let a broken `Persistence` test through.
 
 ---
 

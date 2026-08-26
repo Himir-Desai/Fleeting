@@ -14,15 +14,21 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Test Core
-        run: swift test --package-path Packages/Core
-      - name: Build every other package
+      - name: Test every package that has tests
         run: |
-          for package in DesignSystem Persistence Intelligence Notifications Features; do
+          set -eo pipefail
+          for package in Core Intelligence Notifications Features; do
             echo "::group::$package"
-            swift build --package-path "Packages/$package"
+            swift test --package-path "Packages/$package"
             echo "::endgroup::"
           done
+      # Serialised on purpose. The migration tests open a store at the previous schema version,
+      # and SwiftData resolves a model by name once per process, so a version 1 container built
+      # alongside a version 2 one makes both read the wrong columns.
+      - name: Test Persistence
+        run: swift test --package-path Packages/Persistence --no-parallel
+      - name: Build the packages without tests
+        run: swift build --package-path Packages/DesignSystem
 
   lint:
     name: Lint and format

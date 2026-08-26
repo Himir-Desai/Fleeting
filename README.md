@@ -143,8 +143,16 @@ fires.
 straight into a blank note. **Siri** captures without opening the app at all — *"add to Fleeting"*.
 
 ### ☁️ Sync
-Local-first SwiftData with automatic private CloudKit sync. Offline always works; there's no account,
-no server, and nothing leaves your iCloud.
+Local-first SwiftData with automatic private CloudKit sync. There is no account and no server, and
+nothing leaves your iCloud. Signed out, the app is complete — it opens a device-local store and says
+so in Settings rather than nagging you to sign in.
+
+The interesting part is what CloudKit does to a schema. It merges a record **column by column**, so
+a thought's lifecycle position and the date belonging to it — stored separately — could arrive from
+two different devices and describe a state neither phone was ever in. Values that only mean
+something together are now stored together, and a test demonstrates the tear on the old shape and
+its absence on the new one. The migration keeps writing the old columns too, so installing an
+earlier build over this one still reads correct data ([ADR-0019](docs/DECISIONS.md)).
 
 ## Architecture at a glance
 
@@ -197,9 +205,13 @@ This is deliberately built the way a shipped app is built, not the way a demo is
 - **Deterministic time.** The decay engine takes an injected `Clock`. Time-based behaviour is tested
   by advancing a fake clock, not by waiting.
 - **Swift 6 strict concurrency,** actor-isolated persistence, `Sendable` domain types.
-- **Testing** — unit tests on the pure domain and selection algorithms, integration tests against an
-  in-memory SwiftData container, and a UI test that asserts the capture path stays modal-free.
-- **CI** on every push: build, test, SwiftLint, SwiftFormat check.
+- **Versioned storage.** The store has a `VersionedSchema` per shape and a migration plan between
+  them, tested by opening a store written by the *previous* version and asserting nothing moved.
+- **Testing** — 228 unit tests on the pure domain, the selection algorithms, and an in-memory
+  SwiftData container, plus 34 UI tests on a simulator. Assertions are about mechanism, never about
+  what a model happens to say.
+- **CI** on every push: every package's tests, the app's UI tests on a simulator, SwiftLint,
+  SwiftFormat check.
 - **Architecture Decision Records** in [docs/DECISIONS.md](docs/DECISIONS.md) — every significant
   choice recorded with its alternatives and its cost.
 - **Built as a learning project, deliberately.** I came to this app fluent in other languages and new
@@ -215,12 +227,16 @@ Detail and acceptance criteria for each phase in **[docs/ROADMAP.md](docs/ROADMA
 | 0 | Foundations | Project, packages, CI, design tokens, docs | 🟢 Done |
 | 1 | Capture | Launch-to-cursor, persistence, raw inbox | 🟢 Done |
 | 2 | Decay | Freshness engine, visual fade, auto-archive, search | 🟢 Done |
-| 3 | Classification | Heuristic + on-device titling and typing, per-kind behaviour | 🟡 In progress |
-| 4 | Sharpen | Interview flow, structured write-up, escalation | ⚪️ Planned |
+| 3 | Classification | Heuristic + on-device titling and typing, per-kind behaviour | 🟢 Done |
+| 4 | Sharpen | Interview flow, structured write-up, escalation | 🟢 Done |
 | 5 | Review | Curated card stack, ambient sharpening | 🟢 Done |
 | 6 | Ambient | Daily nudge, widgets, Siri capture | 🟢 Done |
-| 7 | Sync | CloudKit, conflict handling | 🟡 In progress |
+| 7 | Sync | CloudKit, versioned migration, merge-safe schema | 🟢 Done¹ |
 | 8 | Ship | Accessibility, motion, onboarding, TestFlight | ⚪️ Planned |
+
+¹ Everything is built and tested except the one thing that needs two signed devices under one iCloud
+account: convergence has not been *observed*. See the Phase 7 outcome in
+[docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Getting started
 
