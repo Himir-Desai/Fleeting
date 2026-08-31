@@ -40,7 +40,7 @@ public struct NudgeSelector: Sendable {
         recentlySurfaced: Set<Thought.ID> = []
     ) -> Thought? {
         thoughts
-            .filter { isAwake($0, at: date) && !recentlySurfaced.contains($0.id) }
+            .filter { $0.isAwake(at: date) && !recentlySurfaced.contains($0.id) }
             .filter { engine.freshness(of: $0, at: date).value < forgottenBelow }
             .min { lhs, rhs in
                 let left = engine.freshness(of: lhs, at: date).value
@@ -59,25 +59,12 @@ public struct NudgeSelector: Sendable {
     /// - Returns: Thoughts expiring within the warning window, soonest first.
     public func expiringSoon(from thoughts: [Thought], at date: Date) -> [Thought] {
         thoughts
-            .filter { isAwake($0, at: date) }
+            .filter { $0.isAwake(at: date) }
             .compactMap { thought -> (Thought, Date)? in
                 guard let expiry = engine.expiryDate(of: thought), expiry > date else { return nil }
                 return expiry.timeIntervalSince(date) <= warnWithin ? (thought, expiry) : nil
             }
             .sorted { $0.1 < $1.1 }
             .map(\.0)
-    }
-
-    /// Whether a thought is live and not inside a running snooze.
-    /// - Parameters:
-    ///   - thought: The thought to test.
-    ///   - date: The instant to judge at.
-    /// - Returns: `true` when the thought is in play right now.
-    private func isAwake(_ thought: Thought, at date: Date) -> Bool {
-        guard thought.state.isLive else { return false }
-        if case let .snoozed(until) = thought.state {
-            return date >= until
-        }
-        return true
     }
 }

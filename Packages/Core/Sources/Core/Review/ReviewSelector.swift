@@ -67,21 +67,11 @@ public struct ReviewSelector: Sendable {
     ///   - date: The instant to judge at.
     /// - Returns: `true` if it is live, awake, and either fading or repeatedly deferred.
     private func isEligible(_ thought: Thought, at date: Date) -> Bool {
-        guard thought.state.isLive, !isAsleep(thought, at: date) else { return false }
+        guard thought.isAwake(at: date) else { return false }
         if thought.snoozeCount >= repeatedSnoozes {
             return true
         }
         return engine.freshness(of: thought, at: date).value <= threshold
-    }
-
-    /// Whether a snooze is still running.
-    /// - Parameters:
-    ///   - thought: The thought to test.
-    ///   - date: The instant to judge at.
-    /// - Returns: `true` while the thought is deliberately set aside.
-    private func isAsleep(_ thought: Thought, at date: Date) -> Bool {
-        guard case let .snoozed(until) = thought.state else { return false }
-        return date < until
     }
 
     /// How badly a thought needs a decision.

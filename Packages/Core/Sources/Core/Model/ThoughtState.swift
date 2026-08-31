@@ -18,12 +18,34 @@ public enum ThoughtState: Equatable, Sendable {
 }
 
 public extension ThoughtState {
-    /// Whether a thought in this state still decays and can be offered for review.
+    /// Whether a thought in this state still has an active life — that is, it has neither expired
+    /// nor been completed.
+    ///
+    /// Answers "does this still exist for the user", not "does this want attention now": a
+    /// snoozed thought is live but deliberately silent. Ask ``isAwake(at:)`` before showing a
+    /// thought or acting on it. This is date-free on purpose, because it is the rule the store
+    /// writes into a column, and a stored column cannot know when a snooze lapses.
     var isLive: Bool {
         switch self {
         case .inbox, .active, .snoozed: true
         case .archived, .done: false
         }
+    }
+
+    /// Whether a thought in this state is asking for attention at a given instant.
+    ///
+    /// Live and not inside a running snooze. Every surface that shows thoughts to a person — the
+    /// list, the widget, the review, the nudges — filters on this rather than on ``isLive``,
+    /// because setting something aside has to mean something or snoozing is just a slower way of
+    /// being nagged.
+    /// - Parameter date: The instant to judge at.
+    /// - Returns: `true` when the thought is in play right now.
+    func isAwake(at date: Date) -> Bool {
+        guard isLive else { return false }
+        if case let .snoozed(until) = self {
+            return date >= until
+        }
+        return true
     }
 
     /// The date this state was entered, for states that record one.

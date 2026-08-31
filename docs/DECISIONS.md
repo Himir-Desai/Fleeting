@@ -1002,3 +1002,48 @@ since a degraded store loses thoughts and that deserves a sentence rather than a
 **Consequences.** The screen is a `ScrollView` of cards rather than a `List`, so the sections can
 be genuinely different shapes. `SettingsToggle`, `ChoiceChip` and `SettingsStepperRow` put the
 controls in the app's own vocabulary, which is what stops Settings looking like the system's.
+
+---
+
+## ADR-0033 · Live is a storage question; awake is a presentation one
+
+**Status:** Accepted · Post-design-pass fix
+
+**Context.** `ThoughtState.isLive` was true for `.snoozed`, and `ThoughtScope.live` was defined as
+`state.isLive`. So `thoughts(in: .live)` returned thoughts inside a running snooze, and every
+caller had to remember to filter them out. Two of the four remembered: `ReviewSelector` had a
+private `isAsleep`, `NudgeSelector` had a private `isAwake`, and the two implementations were
+subtly different spellings of the same rule. The two that forgot were `InboxModel.load()` and the
+widget's `entry(at:)` — so snoozing a thought hid it only until the next load, and the home screen
+counted set-aside thoughts and could show one as the thing about to be lost.
+
+The obvious fix is a fourth filter at the two broken call sites. That was rejected: two selectors
+independently reimplementing the same predicate is the design telling us the vocabulary is wrong,
+and a fourth copy would only make the fifth omission more likely.
+
+**Decision.** Split the question in the domain. `isLive` keeps its date-free meaning — *not
+archived, not completed* — and gains a new `isAwake(at:)` that is `isLive` **and not inside a
+running snooze**, with `Thought.isAwake(at:)` forwarding to it. Every surface that shows thoughts
+to a person filters on `isAwake(at:)`. Both private copies were deleted in favour of it.
+
+`ThoughtScope.live` deliberately keeps including running snoozes, and now says so. It cannot do
+otherwise: the scope compiles to a SwiftData predicate over the stored `isLive` column, that column
+is written at save time, and whether a snooze has lapsed depends on the date at *read* time. A
+store-side answer would need either a date parameter threaded into every scope or a stored
+wake-date column, and the second would reintroduce exactly the multi-column CloudKit tear ADR-0019
+was written to eliminate.
+
+**Alternatives.**
+- *Make `isLive` false for a running snooze* — rejected: it is the rule the store writes into a
+  column, so a date-dependent answer cannot be persisted, and a snoozed thought would fall into the
+  `archived` scope and appear in the archive. A snooze is not an archive.
+- *Add a `.awake` case to `ThoughtScope`* — rejected: the scope is a storage vocabulary and the
+  store cannot answer the question. A case that every implementation had to satisfy in memory would
+  be a lie about where the filtering happens.
+- *Filter at the two broken call sites only* — rejected above.
+
+**Consequences.** One rule, in `Core`, with the two duplicates deleted. The regression test that
+found this asserts a **reload**, not just the optimistic in-memory removal — the original test
+stopped one line early, which is precisely why the bug survived. A companion test asserts a lapsed
+snooze returns the thought to the list, because a snooze that hid something forever would be an
+archive under another name.

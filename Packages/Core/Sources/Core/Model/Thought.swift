@@ -84,19 +84,19 @@ public struct Thought: Identifiable, Equatable, Hashable, Sendable {
         snoozeCount: Int = 0,
         customLifetime: TimeInterval? = nil
     ) {
+        self.id = id
+        self.body = body
+        self.title = title
+        self.kind = kind
         self.kindSource = kindSource
         self.dueAt = dueAt
         self.streak = streak
         self.sharpening = sharpening
         self.snoozeCount = max(snoozeCount, 0)
-        self.customLifetime = customLifetime.map { max($0, 0) }
-        self.id = id
-        self.body = body
-        self.capturedAt = capturedAt
-        self.kind = kind
         self.state = state
-        self.title = title
+        self.capturedAt = capturedAt
         self.lastActedAt = lastActedAt ?? capturedAt
+        self.customLifetime = customLifetime.map { max($0, 0) }
     }
 
     /// Replaces the captured text with a user-supplied revision, and counts as deliberate action.
@@ -210,5 +210,15 @@ public struct Thought: Identifiable, Equatable, Hashable, Sendable {
     /// - Returns: The interval since ``lastActedAt``, never negative.
     public func timeSinceLastAction(at date: Date) -> TimeInterval {
         max(0, date.timeIntervalSince(lastActedAt))
+    }
+
+    /// Whether the thought is asking for attention right now.
+    ///
+    /// Live and not inside a running snooze. This, not ``ThoughtState/isLive``, is the question
+    /// every surface that shows thoughts to a person should ask.
+    /// - Parameter date: The instant to judge at.
+    /// - Returns: `true` when the thought is in play right now.
+    public func isAwake(at date: Date) -> Bool {
+        state.isAwake(at: date)
     }
 }

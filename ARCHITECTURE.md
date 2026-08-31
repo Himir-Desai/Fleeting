@@ -95,9 +95,9 @@ Fleeting/
 │   │       │   ├── Thought.swift            ← the single domain entity
 │   │       │   ├── ThoughtKind.swift        ← idea · todo · habit · unsorted
 │   │       │   ├── ExpirationUnit.swift      ← days · weeks · months; a hand-set lifetime's unit
-│   │       │   ├── ThoughtState.swift       ← inbox · active · snoozed · archived · done
+│   │       │   ├── ThoughtState.swift       ← inbox · active · snoozed · archived · done; isLive vs isAwake(at:)
 │   │       │   ├── KindSource.swift          ← unclassified · inferred · confirmed
-│   │       │   ├── ThoughtScope.swift        ← live · archived · all
+│   │       │   ├── ThoughtScope.swift        ← live · archived · all; a storage question (ADR-0033)
 │   │       │   ├── KindGlyph.swift           ← the symbol and label for each kind (ADR-0012)
 │   │       │   ├── SortingPreference.swift   ← automatic · rules only; the choice (ADR-0030)
 │   │       │   └── Streak.swift             ← habit-specific payload
@@ -345,3 +345,8 @@ These are the things that, if broken, mean the app has become the thing it was b
    by column, so a lifecycle position and its date in separate columns can arrive from two different
    devices and describe a state neither was ever in. `CloudMergeTests` demonstrates the tear on the
    old shape and its absence on the new one (ADR-0019).
+7. **Setting a thought aside means it stays aside.** A snooze must survive a reload and must not be
+   visible on any surface until it lapses. `ThoughtScope.live` is a *storage* answer and still
+   contains running snoozes, because the store writes `isLive` at save time and cannot know when a
+   snooze expires; anything showing thoughts to a person filters with `Thought.isAwake(at:)`
+   (ADR-0033). The regression test asserts a **reload**, not just the in-memory removal.

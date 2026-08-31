@@ -104,12 +104,18 @@ public final class InboxModel {
     ///
     /// The archive is loaded here too so switching to its filter is instant; it is only shown when
     /// that filter is chosen.
+    ///
+    /// Thoughts inside a running snooze are dropped from the live list. The `.live` scope is a
+    /// storage question and includes them, because a stored column cannot know when a snooze
+    /// lapses; keeping them would put a thought the user set aside back in the list on the very
+    /// next load.
     public func load() async {
         do {
             try await sweeper.sweep()
-            thoughts = try await repository.thoughts(in: .live)
+            let now = clock.now
+            thoughts = try await repository.thoughts(in: .live).filter { $0.isAwake(at: now) }
             archivedThoughts = try await repository.thoughts(in: .archived)
-            reviewCount = selector.count(from: thoughts, at: clock.now)
+            reviewCount = selector.count(from: thoughts, at: now)
             lastError = nil
         } catch {
             lastError = error

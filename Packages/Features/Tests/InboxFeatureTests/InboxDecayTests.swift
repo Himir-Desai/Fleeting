@@ -56,6 +56,40 @@ struct InboxDecayTests {
         #expect(stored?.lastActedAt == now)
     }
 
+    @Test("a snoozed thought stays gone after a reload")
+    func snoozeSurvivesAReload() async {
+        let original = Thought(body: "later", capturedAt: epoch)
+        let repository = SpyRepository([original])
+        let now = epoch.addingTimeInterval(1 * .day)
+        let model = makeModel(repository, at: now)
+        await model.load()
+        await model.snooze(original, forDays: 7)
+
+        // The first assertion only proves the optimistic in-memory removal. The reload is the
+        // one that matters: `.live` still contains running snoozes, so an unfiltered load put
+        // the thought straight back in the list.
+        await model.load()
+
+        #expect(model.thoughts.isEmpty, "reappeared in the live list while still snoozed")
+        #expect(model.archivedThoughts.isEmpty, "a snooze is not an archive")
+    }
+
+    @Test("a thought comes back to the list once its snooze ends")
+    func snoozeEndsAndTheThoughtReturns() async {
+        let original = Thought(body: "later", capturedAt: epoch)
+        let repository = SpyRepository([original])
+        let snoozedAt = epoch.addingTimeInterval(1 * .day)
+        let model = makeModel(repository, at: snoozedAt)
+        await model.load()
+        await model.snooze(original, forDays: 7)
+
+        // A snooze that hid the thought forever would be an archive under another name.
+        let afterward = makeModel(repository, at: snoozedAt.addingTimeInterval(8 * .day))
+        await afterward.load()
+
+        #expect(afterward.thoughts.map(\.body) == ["later"])
+    }
+
     @Test("archiving by hand removes the thought without destroying it")
     func manualArchiveKeepsTheThought() async {
         let original = Thought(body: "done with this", capturedAt: epoch)

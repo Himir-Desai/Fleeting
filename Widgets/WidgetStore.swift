@@ -51,9 +51,14 @@ enum WidgetStore {
         }
 
         let repository = SwiftDataThoughtRepository(modelContainer: store.container)
-        guard let live = try? await repository.thoughts(in: .live) else {
+        guard let stored = try? await repository.thoughts(in: .live) else {
             return .unreadable(at: date)
         }
+
+        // The `.live` scope still contains running snoozes, so filter them out here: a thought
+        // the user set aside must not be counted on the home screen, and must never be the face
+        // the widget shows as the one about to be lost.
+        let live = stored.filter { $0.isAwake(at: date) }
 
         let engine = DecayEngine()
         let mostFaded = live.min {

@@ -96,6 +96,33 @@ struct ThoughtStateTests {
         #expect(!state.isLive)
     }
 
+    @Test("a running snooze is live but not awake")
+    func runningSnoozeIsAsleep() {
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let state = ThoughtState.snoozed(until: now.addingTimeInterval(.day))
+
+        // The distinction the whole snooze feature rests on: still in the collection, but not
+        // asking for attention. Anything shown to a person filters on the second.
+        #expect(state.isLive)
+        #expect(!state.isAwake(at: now))
+    }
+
+    @Test("a snooze that has run out is awake again")
+    func lapsedSnoozeIsAwake() {
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+
+        #expect(ThoughtState.snoozed(until: now).isAwake(at: now))
+        #expect(ThoughtState.snoozed(until: now.addingTimeInterval(-.day)).isAwake(at: now))
+    }
+
+    @Test(
+        "terminal states are never awake",
+        arguments: [ThoughtState.archived(at: .distantPast), .done(at: .distantPast)]
+    )
+    func terminalStatesAreNotAwake(state: ThoughtState) {
+        #expect(!state.isAwake(at: Date(timeIntervalSince1970: 1_700_000_000)))
+    }
+
     @Test("archiving records when it happened, so nothing is lost silently")
     func archivedCarriesItsDate() {
         let when = Date(timeIntervalSince1970: 1_700_000_000)
