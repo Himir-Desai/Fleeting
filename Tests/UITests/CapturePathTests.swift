@@ -419,14 +419,22 @@ final class SharpenTests: XCTestCase {
         _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 5)
         app.goToThoughts()
 
-        let idea = app.staticTexts["learn to sail? or a boat-shaped midlife crisis"]
-        XCTAssertTrue(idea.waitForExistence(timeout: 10))
-        idea.swipeRight()
-
-        let sharpen = app.buttons["Sharpen"]
-        XCTAssertTrue(sharpen.waitForExistence(timeout: 5), "an idea must offer Sharpen")
-        sharpen.tap()
+        openSharpen(for: "learn to sail? or a boat-shaped midlife crisis", in: app)
         return app
+    }
+
+    /// Opens a thought and taps Enhance, which is where Sharpen now lives.
+    ///
+    /// Sharpen left the row's swipe actions for the opened thought's action hub (ADR-0027), so
+    /// reaching it is a tap on the row and then a tap on Enhance.
+    private func openSharpen(for body: String, in app: XCUIApplication) {
+        let idea = app.staticTexts[body]
+        XCTAssertTrue(idea.waitForExistence(timeout: 10))
+        idea.tap()
+
+        let enhance = app.buttons["detail.action.enhance"]
+        XCTAssertTrue(enhance.waitForExistence(timeout: 5), "an opened idea must offer Enhance")
+        enhance.tap()
     }
 
     /// Answers whatever question is on screen, returning its text.
@@ -490,10 +498,7 @@ final class SharpenTests: XCTestCase {
 
         // Leave the screen entirely, then come back to it.
         app.navigationBars.buttons.element(boundBy: 0).tap()
-        let idea = app.staticTexts["learn to sail? or a boat-shaped midlife crisis"]
-        XCTAssertTrue(idea.waitForExistence(timeout: 10))
-        idea.swipeRight()
-        app.buttons["Sharpen"].tap()
+        openSharpen(for: "learn to sail? or a boat-shaped midlife crisis", in: app)
 
         let resumed = app.staticTexts["sharpen.question"]
         if resumed.waitForExistence(timeout: modelTimeout) {
@@ -521,9 +526,12 @@ final class SharpenRevertTests: XCTestCase {
     private func openTheSharpenedIdea(_ app: XCUIApplication) {
         let idea = app.staticTexts["newsletter about tools that do one thing"]
         XCTAssertTrue(idea.waitForExistence(timeout: 10))
-        idea.swipeRight()
-        XCTAssertTrue(app.buttons["Sharpen"].waitForExistence(timeout: 5))
-        app.buttons["Sharpen"].tap()
+        idea.tap()
+
+        // Sharpen lives inside the opened thought now, as Enhance (ADR-0027).
+        let enhance = app.buttons["detail.action.enhance"]
+        XCTAssertTrue(enhance.waitForExistence(timeout: 5))
+        enhance.tap()
     }
 
     func testRevertingReturnsTheNoteToHowItWasCaptured() {
@@ -552,8 +560,8 @@ final class SharpenRevertTests: XCTestCase {
         )
 
         // Reopening starts over rather than showing the old write-up.
-        idea.swipeRight()
-        app.buttons["Sharpen"].tap()
+        idea.tap()
+        app.buttons["detail.action.enhance"].tap()
         XCTAssertFalse(
             app.staticTexts["sharpen.title"].waitForExistence(timeout: 4),
             "a reverted idea must no longer carry its old write-up"

@@ -47,8 +47,8 @@ final class ScreenshotTests: XCTestCase {
 
         let idea = app.staticTexts["newsletter about tools that do one thing"]
         _ = idea.waitForExistence(timeout: 10)
-        idea.swipeRight()
-        app.buttons["Sharpen"].tap()
+        idea.tap()
+        app.buttons["detail.action.enhance"].tap()
 
         _ = app.staticTexts["sharpen.title"].waitForExistence(timeout: 30)
         Thread.sleep(forTimeInterval: 1)

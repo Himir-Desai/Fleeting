@@ -4,12 +4,15 @@ import SwiftUI
 
 /// The capture screen.
 ///
-/// The reason the app exists, and the tab a cold launch lands on. The field is not focused on
-/// launch, so the tab bar is visible; tapping the box starts typing. Its controls — advanced
-/// options and save — appear once you have started typing, directly beneath the box.
+/// The reason the app exists, and the tab a cold launch lands on. The field is focused with the
+/// keyboard up before anything else happens (ADR-0008). Its controls — advanced options and
+/// save — appear once you have started typing, directly beneath the box.
 public struct CaptureView: View {
     @State private var model: CaptureModel
     @State private var isAdvancedExpanded = false
+
+    /// Whether the first-run explanation has been dismissed by hand. Cleared by `--reset-store`.
+    @AppStorage("capture.hintDismissed") private var hintDismissed = false
     @FocusState private var isFieldFocused: Bool
     @Environment(\.dynamicTypeSize) private var typeSize
 
@@ -54,6 +57,12 @@ public struct CaptureView: View {
                 controls
             }
 
+            // A line, never a screen: the field stays focused and the keyboard stays up
+            // (ADR-0021). Retires itself the moment anything is captured.
+            if showsHint {
+                FirstRunHint { hintDismissed = true }
+            }
+
             Spacer(minLength: 0)
         }
         .padding(.horizontal, Spacing.loose)
@@ -67,6 +76,9 @@ public struct CaptureView: View {
                 .contentShape(.rect)
                 .onTapGesture { dismissField() }
         }
+        // ADR-0008, the highest-priority constraint in the project: a cold launch lands on a
+        // focused field with the keyboard already up. Capture must cost zero taps.
+        .task { isFieldFocused = true }
         .motion(Motion.commit, value: model.canSave)
         // The save is the one moment worth confirming, and a haptic does it without taking focus.
         .sensoryFeedback(.success, trigger: model.savedCount)
@@ -79,6 +91,14 @@ public struct CaptureView: View {
     }
 
     /// The field, in a recess that reads as somewhere to write rather than a control to fill in.
+    /// Whether the first-run explanation should show.
+    ///
+    /// Having captured anything is proof the explanation was not needed, so it retires itself
+    /// on the first save as well as on an explicit dismissal (ADR-0021).
+    private var showsHint: Bool {
+        !hintDismissed && model.savedCount == 0
+    }
+
     private var well: some View {
         TextField("What's on your mind?", text: $model.text, axis: .vertical)
             .font(Typography.capture)
