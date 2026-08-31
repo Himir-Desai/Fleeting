@@ -15,9 +15,7 @@ final class SyncTests: XCTestCase {
         app.launch()
         _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 5)
 
-        app.buttons["capture.browse"].tap()
-        XCTAssertTrue(app.buttons["inbox.settings"].waitForExistence(timeout: 5))
-        app.buttons["inbox.settings"].tap()
+        XCTAssertTrue(app.goToSettings())
         return app
     }
 
@@ -49,7 +47,7 @@ final class SyncTests: XCTestCase {
         field.typeText("rent split idea, per room not per head")
         app.buttons["capture.save"].tap()
 
-        app.buttons["capture.browse"].tap()
+        app.goToThoughts()
         XCTAssertTrue(
             app.staticTexts["rent split idea, per room not per head"].waitForExistence(timeout: 5),
             "a thought captured without iCloud must still be stored and listed"
@@ -65,14 +63,14 @@ final class SyncTests: XCTestCase {
         XCTAssertTrue(field.waitForExistence(timeout: 5))
         field.typeText("pay the parking fine")
         app.buttons["capture.save"].tap()
-        _ = app.buttons["capture.browse"].waitForExistence(timeout: 5)
+        _ = app.tabButton("Thoughts").waitForExistence(timeout: 5)
 
         // Relaunching against the existing store reopens it through the migration plan.
         app.terminate()
         app.launchArguments = []
         app.launch()
         _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 5)
-        app.buttons["capture.browse"].tap()
+        app.goToThoughts()
 
         XCTAssertTrue(
             app.staticTexts["pay the parking fine"].waitForExistence(timeout: 10),

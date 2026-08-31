@@ -31,25 +31,16 @@ struct CaptureTypeIcon: View {
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
-    /// The SF Symbol for a type choice.
+    /// The SF Symbol for a type choice. Only the automatic case is decided here; a real kind's
+    /// glyph comes from `Core` so capture and the inbox never drift apart.
     static func symbol(for kind: ThoughtKind?) -> String {
-        switch kind {
-        case .none: "sparkles"
-        case .unsorted: "circle.dotted"
-        case .idea: "lightbulb"
-        case .todo: "checkmark.circle"
-        case .habit: "repeat"
-        }
+        guard let kind else { return "sparkles" }
+        return KindGlyph.name(for: kind)
     }
 
     /// The spoken name for a type choice.
     static func label(for kind: ThoughtKind?) -> String {
-        switch kind {
-        case .none: "Let the app sort it"
-        case .unsorted: "Unsorted"
-        case .idea: "Idea"
-        case .todo: "To-do"
-        case .habit: "Habit"
-        }
+        guard let kind else { return "Let the app sort it" }
+        return KindGlyph.label(for: kind)
     }
 }

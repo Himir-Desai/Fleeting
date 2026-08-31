@@ -35,7 +35,7 @@ final class AccessibilityTests: XCTestCase {
         XCTAssertTrue(save.isHittable, "the save control must stay reachable at 60pt type")
         save.tap()
 
-        app.buttons["capture.browse"].tap()
+        app.goToThoughts()
         XCTAssertTrue(
             app.staticTexts["rent split idea"].waitForExistence(timeout: 10),
             "a thought captured at the largest type size must still be stored and listed"
@@ -45,7 +45,7 @@ final class AccessibilityTests: XCTestCase {
     func testTheInboxIsOperableAtTheLargestTypeSize() {
         let app = launch(atLargestType: true, arguments: ["--reset-store", "--seed-demo"])
         _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 10)
-        app.buttons["capture.browse"].tap()
+        app.goToThoughts()
 
         // The newest thought, so it is the one on screen: at this type size barely one row fits,
         // and a lazy list does not build the ones below it.
@@ -54,19 +54,19 @@ final class AccessibilityTests: XCTestCase {
             "rows must still render their text at the largest type size"
         )
         XCTAssertTrue(
-            app.buttons["inbox.done"].isHittable,
+            app.tabButton("New thought").isHittable,
             "the way back to capture must survive the largest type size"
         )
         XCTAssertTrue(
-            app.buttons["inbox.settings"].isHittable,
-            "the toolbar must not collapse into something unreachable"
+            app.tabButton("Settings").isHittable,
+            "the tab bar must not collapse into something unreachable"
         )
     }
 
     func testTheReviewIsOperableAtTheLargestTypeSize() {
         let app = launch(atLargestType: true, arguments: ["--reset-store", "--seed-demo"])
         _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 10)
-        app.buttons["capture.browse"].tap()
+        app.goToThoughts()
 
         guard app.buttons["inbox.review"].waitForExistence(timeout: 15) else {
             XCTFail("the seeded backlog should need decisions")
@@ -89,20 +89,24 @@ final class AccessibilityTests: XCTestCase {
         let app = launch(atLargestType: false)
         _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 10)
 
-        // An icon-only button with no label is a button VoiceOver calls "button".
-        XCTAssertEqual(app.buttons["capture.browse"].label, "Browse captured thoughts")
+        // Every tab is named, because a glyph on its own is a button VoiceOver calls "button".
+        for tab in ["New thought", "Thoughts", "Settings"] {
+            XCTAssertTrue(app.tabButton(tab).exists, "the \(tab) tab must be named")
+        }
 
-        app.buttons["capture.browse"].tap()
-        _ = app.buttons["inbox.settings"].waitForExistence(timeout: 10)
-        XCTAssertEqual(app.buttons["inbox.archive"].label, "Open archive")
-        XCTAssertEqual(app.buttons["inbox.settings"].label, "Open settings")
-        XCTAssertEqual(app.buttons["inbox.done"].label, "Back to capture")
+        // The inbox is a tab now, so its old top bar is gone: what has to be named is the
+        // filter row that replaced it (ADR-0026).
+        app.goToThoughts()
+        _ = app.buttons["inbox.filter.all"].waitForExistence(timeout: 10)
+        XCTAssertEqual(app.buttons["inbox.filter.all"].label, "All, 0")
+        XCTAssertEqual(app.buttons["inbox.filter.archived"].label, "Archived, 0")
+        XCTAssertEqual(app.buttons["inbox.filter.idea"].label, "Ideas, 0")
     }
 
     func testAThoughtRowSaysWhatItIsAndHowMuchLifeItHasLeft() {
         let app = launch(atLargestType: false, arguments: ["--reset-store", "--seed-demo"])
         _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 10)
-        app.buttons["capture.browse"].tap()
+        app.goToThoughts()
 
         let kind = app.buttons["row.kind"].firstMatch
         XCTAssertTrue(kind.waitForExistence(timeout: 15))

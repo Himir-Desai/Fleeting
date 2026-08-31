@@ -98,6 +98,7 @@ Fleeting/
 │   │       │   ├── ThoughtState.swift       ← inbox · active · snoozed · archived · done
 │   │       │   ├── KindSource.swift          ← unclassified · inferred · confirmed
 │   │       │   ├── ThoughtScope.swift        ← live · archived · all
+│   │       │   ├── KindGlyph.swift           ← the symbol and label for each kind (ADR-0012)
 │   │       │   └── Streak.swift             ← habit-specific payload
 │   │       ├── Decay/
 │   │       │   ├── Freshness.swift          ← 0…1 value type + presentation bands
@@ -220,7 +221,6 @@ Fleeting/
 │   │       │   ├── InboxListRow.swift   ← a live row: kind glyph, tap-to-open, inline done/streak
 │   │       │   ├── ArchivedListRow.swift ← an archived row: words + captured date, restore/delete
 │   │       │   ├── ThoughtRow.swift     ← freshness as weight not a meter (ADR-0025); ADR-0012
-│   │       │   ├── KindGlyph.swift      ← the symbol and label for each kind
 │   │       │   ├── ThoughtDetailModel.swift ← @Observable; edit · retype · keep · snooze · archive · delete
 │   │       │   ├── ThoughtDetailView.swift  ← the opened thought: the action hub (ADR-0027)
 │   │       │   └── ExpiryWheels.swift   ← number + unit wheels; a copy of capture's (ADR-0012)
@@ -228,9 +228,6 @@ Fleeting/
 │   │       │   ├── SharpenModel.swift   ← phases; every answer persisted as it is given
 │   │       │   └── SharpenView.swift    ← one question at a time; raw note always visible
 │   │       ├── ReviewFeature/       ← the weekly capped card stack
-│   │       ├── ArchiveFeature/      ← search the dead
-│   │       │   ├── ArchiveModel.swift   ← scoped search, restore, permanent delete
-│   │       │   └── ArchiveView.swift    ← .searchable over raw captured text
 │   │       └── SettingsFeature/     ← honest status: sorting, notifications, storage, syncing
 │   │
 │   └── Notifications/               ← Scheduling and background composition of nudges.

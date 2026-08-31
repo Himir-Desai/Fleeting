@@ -79,7 +79,7 @@ final class InboxTests: XCTestCase {
         app.launch()
 
         _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 5)
-        app.buttons["capture.browse"].tap()
+        app.goToThoughts()
 
         XCTAssertTrue(app.staticTexts["inbox.empty"].waitForExistence(timeout: 5))
     }
@@ -92,7 +92,7 @@ final class InboxTests: XCTestCase {
         app.launch()
         capture(thought, in: app)
 
-        app.buttons["capture.browse"].tap()
+        app.goToThoughts()
         XCTAssertTrue(
             app.staticTexts[thought].waitForExistence(timeout: 5),
             "A captured thought must appear in the inbox."
@@ -104,7 +104,7 @@ final class InboxTests: XCTestCase {
         app.launch()
 
         _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 5)
-        app.buttons["capture.browse"].tap()
+        app.goToThoughts()
 
         XCTAssertTrue(
             app.staticTexts[thought].waitForExistence(timeout: 5),
@@ -121,7 +121,7 @@ final class InboxTests: XCTestCase {
         app.launch()
         capture(original, in: app)
 
-        app.buttons["capture.browse"].tap()
+        app.goToThoughts()
         XCTAssertTrue(app.staticTexts[original].waitForExistence(timeout: 5))
 
         app.staticTexts[original].tap()
@@ -156,7 +156,8 @@ final class InboxTests: XCTestCase {
     }
 }
 
-/// Covers Phase 2: decay archives rather than deletes, and the archive stays reachable.
+/// Covers Phase 2: decay archives rather than deletes, and the archive stays reachable —
+/// now as a filter on the one stream rather than a page of its own (ADR-0026).
 @MainActor
 final class ArchiveTests: XCTestCase {
     override func setUp() {
@@ -182,11 +183,11 @@ final class ArchiveTests: XCTestCase {
         let app = launch()
         _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 5)
 
-        app.buttons["capture.browse"].tap()
-        XCTAssertTrue(app.buttons["inbox.archive"].waitForExistence(timeout: 5))
-        app.buttons["inbox.archive"].tap()
+        app.goToThoughts()
+        XCTAssertTrue(app.buttons["inbox.filter.archived"].waitForExistence(timeout: 5))
+        app.buttons["inbox.filter.archived"].tap()
 
-        XCTAssertTrue(app.staticTexts["archive.empty"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["inbox.empty"].waitForExistence(timeout: 5))
     }
 
     func testArchivingMovesAThoughtOutOfTheInboxWithoutDestroyingIt() {
@@ -194,7 +195,7 @@ final class ArchiveTests: XCTestCase {
         let app = launch()
         capture(thought, in: app)
 
-        app.buttons["capture.browse"].tap()
+        app.goToThoughts()
         XCTAssertTrue(app.staticTexts[thought].waitForExistence(timeout: 5))
 
         app.staticTexts[thought].swipeLeft()
@@ -206,7 +207,7 @@ final class ArchiveTests: XCTestCase {
             "An archived thought must leave the inbox."
         )
 
-        app.buttons["inbox.archive"].tap()
+        app.buttons["inbox.filter.archived"].tap()
         XCTAssertTrue(
             app.staticTexts[thought].waitForExistence(timeout: 5),
             "Archiving must never destroy the thought."
@@ -218,20 +219,20 @@ final class ArchiveTests: XCTestCase {
         let app = launch()
         capture(thought, in: app)
 
-        app.buttons["capture.browse"].tap()
+        app.goToThoughts()
         XCTAssertTrue(app.staticTexts[thought].waitForExistence(timeout: 5))
         app.staticTexts[thought].swipeLeft()
         app.buttons["Archive"].tap()
         XCTAssertTrue(app.staticTexts["inbox.empty"].waitForExistence(timeout: 5))
 
-        app.buttons["inbox.archive"].tap()
+        app.buttons["inbox.filter.archived"].tap()
         XCTAssertTrue(app.staticTexts[thought].waitForExistence(timeout: 5))
         app.staticTexts[thought].swipeRight()
         XCTAssertTrue(app.buttons["Restore"].waitForExistence(timeout: 5))
         app.buttons["Restore"].tap()
 
-        XCTAssertTrue(app.staticTexts["archive.empty"].waitForExistence(timeout: 5))
-        app.navigationBars.buttons.element(boundBy: 0).tap()
+        XCTAssertTrue(app.staticTexts["inbox.empty"].waitForExistence(timeout: 5))
+        app.buttons["inbox.filter.all"].tap()
         XCTAssertTrue(
             app.staticTexts[thought].waitForExistence(timeout: 5),
             "A restored thought must return to the inbox."
@@ -254,10 +255,10 @@ final class ReturnToCaptureTests: XCTestCase {
         app.launch()
 
         _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 5)
-        app.buttons["capture.browse"].tap()
+        app.goToThoughts()
         _ = app.staticTexts["inbox.empty"].waitForExistence(timeout: 5)
 
-        let back = app.buttons["inbox.done"]
+        let back = app.tabButton("New thought")
         XCTAssertTrue(
             back.waitForExistence(timeout: 5),
             "The inbox must show a visible control back to capture."
@@ -280,9 +281,9 @@ final class ReturnToCaptureTests: XCTestCase {
         let field = app.descendants(matching: .any)["capture.field"]
         _ = field.waitForExistence(timeout: 5)
 
-        app.buttons["capture.browse"].tap()
+        app.goToThoughts()
         _ = app.staticTexts["inbox.empty"].waitForExistence(timeout: 5)
-        app.buttons["inbox.done"].tap()
+        app.goToCapture()
 
         // The whole point: capturing still works after a round trip through the inbox.
         XCTAssertTrue(field.waitForExistence(timeout: 5))
@@ -295,7 +296,7 @@ final class ReturnToCaptureTests: XCTestCase {
             "The field must clear, proving the capture was saved."
         )
 
-        app.buttons["capture.browse"].tap()
+        app.goToThoughts()
         XCTAssertTrue(
             app.staticTexts["a thought I had after browsing"].waitForExistence(timeout: 5),
             "The thought captured after visiting the inbox must be stored."
@@ -332,7 +333,7 @@ final class ClassificationTests: XCTestCase {
     func testACapturedThoughtIsSortedWithoutBeingAskedAboutIt() {
         let app = launchAndCapture("call the dentist back")
 
-        app.buttons["capture.browse"].tap()
+        app.goToThoughts()
         let kind = app.buttons["row.kind"]
         XCTAssertTrue(kind.waitForExistence(timeout: 5))
 
@@ -355,7 +356,7 @@ final class ClassificationTests: XCTestCase {
     func testAKindCanBeCorrectedFromTheListAndIsRemembered() {
         let app = launchAndCapture("call mum every sunday")
 
-        app.buttons["capture.browse"].tap()
+        app.goToThoughts()
         let kind = app.buttons["row.kind"]
         XCTAssertTrue(kind.waitForExistence(timeout: 5))
 
@@ -369,8 +370,8 @@ final class ClassificationTests: XCTestCase {
         XCTAssertEqual(app.buttons["row.kind"].label, "Kind: \(target)", "the correction must apply")
 
         // Leave and come back: a human decision must outlive the screen that made it.
-        app.buttons["inbox.done"].tap()
-        app.buttons["capture.browse"].tap()
+        app.goToCapture()
+        app.goToThoughts()
         XCTAssertTrue(app.buttons["row.kind"].waitForExistence(timeout: 5))
         XCTAssertEqual(
             app.buttons["row.kind"].label, "Kind: \(target)",
@@ -384,9 +385,7 @@ final class ClassificationTests: XCTestCase {
         app.launch()
         _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 5)
 
-        app.buttons["capture.browse"].tap()
-        XCTAssertTrue(app.buttons["inbox.settings"].waitForExistence(timeout: 5))
-        app.buttons["inbox.settings"].tap()
+        XCTAssertTrue(app.goToSettings())
 
         XCTAssertTrue(
             app.otherElements["settings.intelligence"].waitForExistence(timeout: 5)
@@ -418,7 +417,7 @@ final class SharpenTests: XCTestCase {
         app.launch()
 
         _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 5)
-        app.buttons["capture.browse"].tap()
+        app.goToThoughts()
 
         let idea = app.staticTexts["learn to sail? or a boat-shaped midlife crisis"]
         XCTAssertTrue(idea.waitForExistence(timeout: 10))
@@ -532,7 +531,7 @@ final class SharpenRevertTests: XCTestCase {
         app.launchArguments = ["--reset-store", "--seed-demo"]
         app.launch()
         _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 5)
-        app.buttons["capture.browse"].tap()
+        app.goToThoughts()
 
         openTheSharpenedIdea(app)
         XCTAssertTrue(app.staticTexts["sharpen.title"].waitForExistence(timeout: 20))
@@ -566,7 +565,7 @@ final class SharpenRevertTests: XCTestCase {
         app.launchArguments = ["--reset-store", "--seed-demo"]
         app.launch()
         _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 5)
-        app.buttons["capture.browse"].tap()
+        app.goToThoughts()
 
         openTheSharpenedIdea(app)
         XCTAssertTrue(app.staticTexts["sharpen.title"].waitForExistence(timeout: 20))
@@ -613,7 +612,7 @@ final class ReviewTests: XCTestCase {
     func testTheInboxInvitesAReviewWhenSomethingNeedsADecision() {
         let app = launchSeeded()
         _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 5)
-        app.buttons["capture.browse"].tap()
+        app.goToThoughts()
 
         let invitation = app.buttons["inbox.review"]
         XCTAssertTrue(
@@ -626,7 +625,7 @@ final class ReviewTests: XCTestCase {
     func testASessionRunsToAnEndAndReportsWhatWasDecided() {
         let app = launchSeeded()
         _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 5)
-        app.buttons["capture.browse"].tap()
+        app.goToThoughts()
 
         XCTAssertTrue(app.buttons["inbox.review"].waitForExistence(timeout: 10))
         app.buttons["inbox.review"].tap()
@@ -650,7 +649,7 @@ final class ReviewTests: XCTestCase {
 
         app.buttons["review.finish"].tap()
         XCTAssertTrue(
-            app.buttons["inbox.done"].waitForExistence(timeout: 10),
+            app.tabButton("New thought").waitForExistence(timeout: 10),
             "finishing a review must return to the app, not strand the user"
         )
     }
@@ -658,7 +657,7 @@ final class ReviewTests: XCTestCase {
     func testLettingGoArchivesRatherThanDestroys() {
         let app = launchSeeded()
         _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 5)
-        app.buttons["capture.browse"].tap()
+        app.goToThoughts()
         XCTAssertTrue(app.buttons["inbox.review"].waitForExistence(timeout: 10))
         app.buttons["inbox.review"].tap()
 
@@ -674,8 +673,8 @@ final class ReviewTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["review.summary"].waitForExistence(timeout: 15))
         app.buttons["review.finish"].tap()
 
-        XCTAssertTrue(app.buttons["inbox.archive"].waitForExistence(timeout: 10))
-        app.buttons["inbox.archive"].tap()
+        XCTAssertTrue(app.buttons["inbox.filter.archived"].waitForExistence(timeout: 10))
+        app.buttons["inbox.filter.archived"].tap()
         XCTAssertTrue(
             app.staticTexts[dropped].waitForExistence(timeout: 10),
             "letting go must archive the thought, never destroy it"
@@ -709,9 +708,7 @@ final class NudgeTests: XCTestCase {
         app.launch()
         _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 5)
 
-        app.buttons["capture.browse"].tap()
-        XCTAssertTrue(app.buttons["inbox.settings"].waitForExistence(timeout: 5))
-        app.buttons["inbox.settings"].tap()
+        XCTAssertTrue(app.goToSettings())
 
         XCTAssertTrue(
             app.otherElements["settings.notifications"].waitForExistence(timeout: 5)

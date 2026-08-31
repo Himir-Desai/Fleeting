@@ -65,7 +65,7 @@ public struct SettingsView: View {
     public var body: some View {
         List {
             Section {
-                StatusBlock(headline: model.status.headline)
+                StatusBlock(headline: model.status.headline, detail: model.status.detail)
                     .modifier(SettingsRow())
                     .accessibilityIdentifier("settings.intelligence")
             } header: {
@@ -73,19 +73,27 @@ public struct SettingsView: View {
             }
 
             Section {
-                StatusBlock(headline: model.notificationStatus.headline)
-                    .modifier(SettingsRow())
+                VStack(alignment: .leading, spacing: Spacing.regular) {
+                    StatusBlock(
+                        headline: model.notificationStatus.headline,
+                        detail: model.notificationStatus.detail
+                    )
                     .accessibilityIdentifier("settings.notifications")
 
-                if model.authorization == .notAsked {
-                    Button("Turn on notifications") {
-                        Task { await model.requestPermission() }
+                    // The one action on this screen, so it sits inside the card it acts on
+                    // rather than below as a seventh status line.
+                    if model.authorization == .notAsked {
+                        Button("Turn on notifications") {
+                            Task { await model.requestPermission() }
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .buttonBorderShape(.capsule)
+                        .controlSize(.large)
+                        .tint(Palette.accent)
+                        .accessibilityIdentifier("settings.notifications.enable")
                     }
-                    .font(Typography.body)
-                    .tint(Palette.accentText)
-                    .modifier(SettingsRow())
-                    .accessibilityIdentifier("settings.notifications.enable")
                 }
+                .modifier(SettingsRow())
 
                 if model.canConfigureNudges {
                     nudgeToggles
@@ -97,6 +105,7 @@ public struct SettingsView: View {
             Section {
                 StatusBlock(
                     headline: model.storageDescription.headline,
+                    detail: model.storageDescription.detail,
                     tone: model.storageIsDegraded ? .warning : .normal
                 )
                 .modifier(SettingsRow())
@@ -108,6 +117,7 @@ public struct SettingsView: View {
             Section {
                 StatusBlock(
                     headline: model.syncDescription.headline,
+                    detail: model.syncDescription.detail,
                     tone: model.syncStatus.isSyncing ? .normal : .warning
                 )
                 .modifier(SettingsRow())
@@ -119,6 +129,7 @@ public struct SettingsView: View {
             Section {
                 StatusBlock(
                     headline: model.widgetStatus.headline,
+                    detail: model.widgetStatus.detail,
                     tone: model.storageIsShared ? .normal : .warning
                 )
                 .modifier(SettingsRow())
@@ -128,17 +139,32 @@ public struct SettingsView: View {
             }
 
             Section {
-                ForEach(model.lifetimes, id: \.kind) { entry in
-                    HStack {
-                        Text(entry.kind.rawValue.capitalized)
-                            .foregroundStyle(Palette.ink)
-                        Spacer()
-                        Text("\(entry.days) days")
-                            .foregroundStyle(Palette.inkMuted)
+                // One card rather than four, because these four lines are a single table:
+                // the read is down the day counts, not across any one row.
+                VStack(alignment: .leading, spacing: Spacing.regular) {
+                    ForEach(model.lifetimes, id: \.kind) { entry in
+                        HStack(spacing: Spacing.snug) {
+                            Image(systemName: KindGlyph.name(for: entry.kind))
+                                .font(Typography.caption)
+                                .foregroundStyle(Palette.inkMuted)
+                                .frame(width: Spacing.loose)
+                            Text(entry.kind.rawValue.capitalized)
+                                .foregroundStyle(Palette.ink)
+                            Spacer(minLength: Spacing.snug)
+                            Text("\(entry.days) days")
+                                .foregroundStyle(Palette.inkMuted)
+                        }
+                        .font(Typography.body)
+                        .accessibilityElement(children: .combine)
                     }
-                    .font(Typography.body)
-                    .modifier(SettingsRow())
+
+                    Text("A thought archives itself once it runs out of freshness. Nothing is deleted.")
+                        .font(Typography.caption)
+                        .foregroundStyle(Palette.inkMuted)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
+                .modifier(SettingsRow())
+                .accessibilityIdentifier("settings.lifetimes")
             } header: {
                 SectionLabel("How long things last")
             }

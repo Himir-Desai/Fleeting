@@ -67,7 +67,7 @@ final class PerformanceTests: XCTestCase {
         app.launchArguments = ["--reset-store", "--seed-many"]
         app.launch()
         _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 60)
-        app.buttons["capture.browse"].tap()
+        app.goToThoughts()
 
         XCTAssertTrue(
             app.staticTexts["thought number 0 about something worth remembering"]
@@ -80,7 +80,7 @@ final class PerformanceTests: XCTestCase {
         }
 
         XCTAssertTrue(
-            app.buttons["inbox.done"].isHittable,
+            app.tabButton("New thought").isHittable,
             "the way back to capture must survive scrolling a long list"
         )
     }

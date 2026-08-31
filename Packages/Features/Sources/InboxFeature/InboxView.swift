@@ -104,34 +104,12 @@ public struct InboxView: View {
 
     /// The kind filters, plus a trailing Archived chip that swaps the list to the archive.
     private var chips: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: Spacing.snug) {
-                FilterChip(
-                    systemImage: "tray.full",
-                    label: "All",
-                    count: model.liveCount,
-                    isSelected: model.filter == .all
-                ) { model.filter = .all }
-
-                ForEach([ThoughtKind.idea, .todo, .habit], id: \.self) { kind in
-                    FilterChip(
-                        systemImage: KindGlyph.name(for: kind),
-                        label: Self.pluralLabel(for: kind),
-                        count: model.count(of: kind),
-                        isSelected: model.filter == .kind(kind)
-                    ) { model.filter = .kind(kind) }
-                }
-
-                FilterChip(
-                    systemImage: "archivebox",
-                    label: "Archived",
-                    count: model.archivedCount,
-                    isSelected: model.filter == .archived
-                ) { model.filter = .archived }
-            }
-            .padding(.vertical, Spacing.tight)
-        }
-        .accessibilityIdentifier("inbox.filters")
+        FilterChipRow(
+            filter: $model.filter,
+            liveCount: model.liveCount,
+            archivedCount: model.archivedCount,
+            countOfKind: { model.count(of: $0) }
+        )
     }
 
     /// The scrolling list: the storage warning if any, then the filtered thoughts. Archived
@@ -233,15 +211,5 @@ public struct InboxView: View {
         )
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("inbox.storageWarning")
-    }
-
-    /// The plural chip label for a kind.
-    private static func pluralLabel(for kind: ThoughtKind) -> String {
-        switch kind {
-        case .idea: "Ideas"
-        case .todo: "To-dos"
-        case .habit: "Habits"
-        case .unsorted: "Unsorted"
-        }
     }
 }

@@ -27,7 +27,7 @@ final class ScreenshotTests: XCTestCase {
         app.launch()
 
         _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 10)
-        app.buttons["capture.browse"].tap()
+        app.goToThoughts()
         _ = app.staticTexts["pay the parking fine"].waitForExistence(timeout: 10)
         Thread.sleep(forTimeInterval: 2)
 
@@ -43,7 +43,7 @@ final class ScreenshotTests: XCTestCase {
         app.launch()
 
         _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 10)
-        app.buttons["capture.browse"].tap()
+        app.goToThoughts()
 
         let idea = app.staticTexts["newsletter about tools that do one thing"]
         _ = idea.waitForExistence(timeout: 10)
@@ -65,7 +65,7 @@ final class ScreenshotTests: XCTestCase {
         app.launch()
 
         _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 10)
-        app.buttons["capture.browse"].tap()
+        app.goToThoughts()
         _ = app.buttons["inbox.review"].waitForExistence(timeout: 10)
         app.buttons["inbox.review"].tap()
         _ = app.staticTexts["review.card"].waitForExistence(timeout: 15)
@@ -83,9 +83,7 @@ final class ScreenshotTests: XCTestCase {
         app.launch()
 
         _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 10)
-        app.buttons["capture.browse"].tap()
-        _ = app.buttons["inbox.settings"].waitForExistence(timeout: 10)
-        app.buttons["inbox.settings"].tap()
+        _ = app.goToSettings()
         _ = app.staticTexts["Sorting"].waitForExistence(timeout: 10)
         Thread.sleep(forTimeInterval: 1)
 

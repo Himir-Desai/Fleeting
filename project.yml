@@ -48,8 +48,6 @@ targets:
       - package: Features
         product: InboxFeature
       - package: Features
-        product: ArchiveFeature
-      - package: Features
         product: SettingsFeature
       - package: Features
         product: SharpenFeature

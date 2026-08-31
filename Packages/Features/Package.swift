@@ -10,7 +10,6 @@ let package = Package(
     products: [
         .library(name: "CaptureFeature", targets: ["CaptureFeature"]),
         .library(name: "InboxFeature", targets: ["InboxFeature"]),
-        .library(name: "ArchiveFeature", targets: ["ArchiveFeature"]),
         .library(name: "SettingsFeature", targets: ["SettingsFeature"]),
         .library(name: "SharpenFeature", targets: ["SharpenFeature"]),
         .library(name: "ReviewFeature", targets: ["ReviewFeature"])
@@ -23,14 +22,12 @@ let package = Package(
         .target(name: "CaptureFeature", dependencies: ["Core", "DesignSystem"]),
         .target(name: "InboxFeature", dependencies: ["Core", "DesignSystem"]),
         .testTarget(name: "CaptureFeatureTests", dependencies: ["CaptureFeature", "Core"]),
-        .target(name: "ArchiveFeature", dependencies: ["Core", "DesignSystem"]),
         .testTarget(name: "InboxFeatureTests", dependencies: ["InboxFeature", "Core"]),
         .target(name: "SettingsFeature", dependencies: ["Core", "DesignSystem"]),
         .testTarget(name: "SettingsFeatureTests", dependencies: ["SettingsFeature", "Core"]),
         .target(name: "SharpenFeature", dependencies: ["Core", "DesignSystem"]),
         .target(name: "ReviewFeature", dependencies: ["Core", "DesignSystem"]),
         .testTarget(name: "ReviewFeatureTests", dependencies: ["ReviewFeature", "Core"]),
-        .testTarget(name: "SharpenFeatureTests", dependencies: ["SharpenFeature", "Core"]),
-        .testTarget(name: "ArchiveFeatureTests", dependencies: ["ArchiveFeature", "Core"])
+        .testTarget(name: "SharpenFeatureTests", dependencies: ["SharpenFeature", "Core"])
     ]
 )

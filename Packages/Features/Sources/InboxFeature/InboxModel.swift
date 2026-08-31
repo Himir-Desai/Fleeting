@@ -232,6 +232,12 @@ public final class InboxModel {
             try await repository.update(thought)
             if removingFromList {
                 thoughts.removeAll { $0.id == thought.id }
+                // The archive is a filter on this same screen now, so a thought that has just
+                // been archived has to land in the archived list immediately. Without this the
+                // Archived chip stays stale until the next load.
+                if case .archived = thought.state {
+                    archivedThoughts.insert(thought, at: 0)
+                }
             } else if let index = thoughts.firstIndex(where: { $0.id == thought.id }) {
                 thoughts[index] = thought
             }
