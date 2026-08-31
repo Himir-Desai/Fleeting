@@ -100,7 +100,8 @@ Every thought has a **freshness** value that falls over time, rendered as a quie
 list. Different kinds of thought rot at different speeds: a todo you ignored for two weeks is dead,
 a business idea deserves three months. Freshness resets when you *do* something with a thought —
 not merely when you look at it. When it reaches zero the thought archives itself, silently. Nothing
-is ever deleted; the archive is fully searchable, it's just out of the way.
+is ever deleted; the archive is a filter on the same list, one chip away, where a thought can be
+restored to full freshness.
 
 ### ✦ Sharpen — half-baked in, fully-baked out
 
@@ -183,7 +184,7 @@ direction. The domain layer has zero framework dependencies and is exhaustively 
 flowchart TD
     App["<b>App</b><br/><i>composition root</i>"]
     Widgets["<b>Widgets</b><br/><i>extension</i>"]
-    Feat["<b>Features</b><br/>Capture · Inbox · Sharpen<br/>Review · Archive · Settings"]
+    Feat["<b>Features</b><br/>Capture · Inbox · Sharpen<br/>Review · Settings"]
     DS["<b>DesignSystem</b><br/><i>tokens, components</i>"]
     Intel["<b>Intelligence</b><br/><i>LLM abstraction</i>"]
     Persist["<b>Persistence</b><br/><i>SwiftData + CloudKit</i>"]

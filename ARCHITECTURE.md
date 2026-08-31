@@ -29,7 +29,7 @@ Dependencies point **downward only**. `Core` is the floor and imports nothing.
 ```
         App  ·  Widgets            ← composition roots, wiring only
               ↓
-           Features                ← Capture, Inbox, Sharpen, Review, Archive, Settings
+           Features                ← Capture, Inbox, Sharpen, Review, Settings
               ↓
   DesignSystem   Intelligence      ← presentation vocabulary · LLM abstraction
               ↓         ↓
@@ -212,12 +212,14 @@ Fleeting/
 │   │       │   ├── CaptureModel.swift   ← @Observable; the rules, unit-tested without a simulator
 │   │       │   ├── CaptureView.swift    ← the field; one card holds advanced · types · save + expiry
 │   │       │   ├── CaptureTypeIcon.swift ← one thought-type icon in the controls row
+│   │       │   ├── FirstRunHint.swift    ← the one-line explanation of decay (ADR-0021)
 │   │       │   └── ExpiryWheels.swift    ← the number + unit wheels for a capture's lifetime
 │   │       ├── InboxFeature/        ← the living list: kind filters, weight-faded rows, detail
 │   │       │   ├── InboxModel.swift     ← @Observable; load, filter by kind, counts, row actions
 │   │       │   ├── InboxView.swift      ← masthead + filter chips + list; no top bar (ADR-0026)
 │   │       │   ├── InboxFilter.swift    ← all · kind · archived; the chip selection
 │   │       │   ├── FilterChip.swift     ← one kind/archived pill in the filter row
+│   │       │   ├── FilterChipRow.swift  ← the whole filter row; reads and writes one selection
 │   │       │   ├── InboxListRow.swift   ← a live row: kind glyph, tap-to-open, inline done/streak
 │   │       │   ├── ArchivedListRow.swift ← an archived row: words + captured date, restore/delete
 │   │       │   ├── ThoughtRow.swift     ← freshness as weight not a meter (ADR-0025); ADR-0012
@@ -256,7 +258,8 @@ Fleeting/
 │
 └── Tests/                           ← ONLY cross-cutting tests. Unit tests live inside their own
     └── UITests/                        package (Packages/Core/Tests/CoreTests, and so on), so
-        └── CapturePathTests.swift      `swift test` on one package runs its suite in isolation.
+        ├── CapturePathTests.swift      `swift test` on one package runs its suite in isolation.
+        └── TabNavigation.swift      ← the one place tests know how the tabs are reached
                                      ← CapturePathTests: launch → typing is unobstructed
                                        InboxTests: browse, edit, delete, survive a force-quit
                                        ArchiveTests: archive, restore, never destroy

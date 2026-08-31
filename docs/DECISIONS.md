@@ -814,8 +814,8 @@ gone.
 - *Archived as a separate page* — reuse the existing `ArchiveView` behind the chip. Rejected on
   reflection: making Archived the one chip that navigates rather than filters was an inconsistency,
   and inlining it is barely more code — the model already loads the archive, and a small
-  `ArchivedListRow` carries the restore/delete a live row does not. `ArchiveView`/`ArchiveModel`
-  are now unused by the app (kept in the package for now).
+  `ArchivedListRow` carries the restore/delete a live row does not. `ArchiveFeature` was deleted
+  rather than left linked and dead, its coverage ported onto the filter first (ADR-0028).
 - *Search across the archive* — `ArchiveView` had a search field the inline filter drops. Deferred:
   the filtered list is enough for now, and search can return as a field above the archived rows.
 
@@ -857,3 +857,36 @@ refreshes through the same change signal the inbox already watches. Editing a th
 capture is now possible, which is why `ExpirationUnit` moved to `Core` and `Thought` gained
 `setCustomLifetime(_:)` (the stored column already existed, ADR-0024). Text is committed when the
 detail is left, so an edit is never lost by tapping back.
+
+---
+
+## ADR-0028 · A redesign may not quietly retire an accepted decision
+
+**Status:** Accepted · Thoughts redesign
+
+**Context.** The redesign changed screens faster than it changed the record. Three accepted
+decisions were dropped without their ADRs moving to Superseded, and nothing caught it because the
+UI tests that enforced them had been edited to match the new screens or were failing unread:
+ADR-0008's focused field on cold launch (capture silently began costing a tap), ADR-0021's
+first-run explanation (the view was deleted outright), and ADR-0012's dependency rule (`KindGlyph`
+was about to be imported across features). `ArchiveFeature` also survived as a linked, dead target
+after its page was removed.
+
+**Decision.** An accepted ADR is changed by **superseding it in writing**, in the same commit that
+changes the code. A UI test that stops matching the app is either **evidence of a regression** or
+evidence the ADR moved — never a test to quietly rewrite. When the behaviour genuinely moved, the
+test is repointed at the new control **and the commit says which ADR moved it**. When a screen is
+removed, its target, its package product, its `project.yml` entry and its tests go with it, and its
+coverage is ported before the deletion lands rather than after.
+
+**Alternatives.**
+- *Let the tests define the behaviour* — rejected: the tests had already been edited to accept the
+  regression, so they would have ratified it. The ADRs are what say what the app is for.
+- *Batch a documentation pass at the end of a redesign* — rejected: this was that pass, and three
+  decisions had already been lost by the time it ran.
+
+**Consequences.** `KindGlyph` lives in `Core` rather than a feature, because a third feature needed
+it and features never import each other. Test navigation is centralised in `Tests/UITests/
+TabNavigation.swift`, so the next navigation change is one edit and not thirty scattered taps that
+each invite a quiet rewrite. The full UI suite has to be green before a redesign is called done —
+it was 22 tests red when this pass began.
