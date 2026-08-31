@@ -919,3 +919,86 @@ uses — never at an old version with the current `ThoughtEntity`, which is the 
 **Consequences.** `swift test` on the Persistence package alone is no longer the whole story, so CI
 runs two invocations and the suite's doc comment says so. A version 4 schema adds its cases to this
 target, and never to `PersistenceTests`.
+
+---
+
+## ADR-0030 · Sorting is a choice, not a status line
+
+**Status:** Accepted · Settings redesign
+
+**Context.** Settings reported "On-device model" and offered nothing to press. Which classifier
+runs is not purely a device fact: the on-device model costs battery and time, its verdicts vary,
+and some people would rather the app be predictable than clever. Reporting that as immutable was
+the app deciding on the user's behalf and then telling them about it.
+
+**Decision.** Sorting is a **two-chip choice** — *Automatic* or *Rules only* — stored in
+`SortingPreference` and honoured by `PreferredIntelligence`, which reads the preference on **every
+call** so a change applies to the very next capture without a relaunch. Beneath the choice sits one
+line of reality, because what was asked for and what is running are not always the same: asking for
+the model on a device without one still gets rules, and the app says so rather than pretending.
+`HeuristicReason.userChose` exists so a deliberate choice is never reported as a degradation.
+
+**Alternatives.**
+- *Leave it as a status line* — rejected: it is the only screen in the app that could offer the
+  choice, and the information alone is not actionable.
+- *A single "Use Apple Intelligence" switch* — rejected: a switch implies the model is always
+  available, and the off state would have to mean two different things.
+
+**Consequences.** `IntelligenceFactory` gained `rulesOnly()`. The preference is read through a
+closure rather than captured, which is what makes it live.
+
+---
+
+## ADR-0031 · The decay rates are editable
+
+**Status:** Accepted · Settings redesign
+
+**Context.** How long each kind of thought lasts is the central rule of the app, and it was a
+read-only table. But a fortnight for a to-do is a guess about how someone works, not a law: a
+person who thinks a to-do deserves a month is not misusing the app.
+
+**Decision.** Each kind's lifetime is a **stepper**, stored as `DecayProfiles` JSON in
+`UserDefaults` and applied at once. Grace stays private — it exists so a fresh capture does not
+appear to start dying immediately, which is a feel detail rather than a preference — and is clamped
+to the lifetime so shortening a span cannot invert the decay window. A lifetime cannot go below one
+day, which would archive a thought the moment it was written. **Reset to defaults** appears only
+once the rates are custom.
+
+**Alternatives.**
+- *Wheels, as capture uses for a per-thought expiry* — rejected: these are nudged by a day or two,
+  not scrolled to, and a wheel inside a scrolling page fights the scroll.
+- *A single global "how fast things decay" slider* — rejected: the whole point of kinds is that a
+  to-do and an idea rot at different speeds (ADR-0005).
+
+**Consequences.** `DecayEngine` now reads its profiles through a closure, because one engine is
+copied by value into the inbox, the sweeper, the review and the widgets, and a stored snapshot
+would leave all of them on yesterday's rates. `DecayProfilesCache` holds the current value behind a
+lock so that read is cheap and thread-safe.
+
+---
+
+## ADR-0032 · Settings holds controls; facts go in About
+
+**Status:** Accepted · Settings redesign
+
+**Context.** Half of Settings was sections the user could not act on: Storage, Syncing and Widgets
+each had a heading, a card and a sentence, and each was purely a report. Given equal visual weight
+to the real controls, they made the screen look like a settings screen while offering almost
+nothing to set.
+
+**Decision.** A section in Settings is **a control or it is not a section**. Storage, syncing and
+widget sharing collapse into an **About** group of one-line facts, because they are decided by the
+device and the signing account and there is nothing to press. They are still shown, because a user
+whose thoughts are not reaching iCloud needs to know. Anything genuinely wrong — a store that
+failed to open, an iCloud account signed out — is lifted into a single `warning` above the facts,
+since a degraded store loses thoughts and that deserves a sentence rather than a quiet row.
+
+**Alternatives.**
+- *Delete the status entirely* — rejected: silence about a store that will lose thoughts is worse
+  than the fault, which is why it was reported in the first place.
+- *Keep the sections and add controls to them* — rejected: there is nothing to control. Whether
+  CloudKit is reachable is not a preference.
+
+**Consequences.** The screen is a `ScrollView` of cards rather than a `List`, so the sections can
+be genuinely different shapes. `SettingsToggle`, `ChoiceChip` and `SettingsStepperRow` put the
+controls in the app's own vocabulary, which is what stops Settings looking like the system's.

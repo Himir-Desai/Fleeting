@@ -24,4 +24,10 @@ enum IntelligenceFactory {
             fallback: HeuristicIntelligence(reason: .notBuiltIn)
         )
     }
+
+    /// Builds the deterministic classifier, for when the user has asked for rules only.
+    /// - Returns: Heuristics that report the choice as a choice rather than a failure.
+    static func rulesOnly() -> any IntelligenceService {
+        HeuristicIntelligence(reason: .userChose)
+    }
 }

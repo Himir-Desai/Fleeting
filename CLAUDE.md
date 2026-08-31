@@ -33,6 +33,15 @@ The docs are maintained continuously, without being asked:
   missing, slow, or wrong. Implement new capabilities in all three implementations.
 - **Never call `Date()` anywhere but `SystemClock`.** Inject `WallClock`.
 
+## Testing
+**Never run the full iOS UI suite.** `xcodebuild test` without `-only-testing:` takes ~10 minutes
+and is banned (2026-08-31). The package tests are the feedback loop: all 246 of them run in about
+four seconds with `swift test --package-path Packages/<name>`. If a UI test genuinely has to run,
+name the one suite with `-only-testing:FleetingUITests/<Suite>`.
+
+Persistence is two invocations, never one: `--filter PersistenceTests` and
+`--filter SchemaMigrationTests` (ADR-0029 — SwiftData binds an entity name per process).
+
 ## Working rhythm
 **Teaching is paused** (2026-08-18). Do not explain Swift concepts or run comprehension checks
 unless asked. Build **one roadmap phase at a time**, then stop and report what was added and how to

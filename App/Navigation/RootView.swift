@@ -118,7 +118,8 @@ struct RootView: View {
         SettingsView(
             model: SettingsModel(
                 intelligence: environment.intelligence,
-                profiles: environment.engine.profiles,
+                sortingStore: environment.sortingPreference,
+                decayStore: environment.decayProfiles,
                 storageIsShared: environment.storageIsShared,
                 storageIsDegraded: environment.storageIsDegraded,
                 sync: environment.sync,

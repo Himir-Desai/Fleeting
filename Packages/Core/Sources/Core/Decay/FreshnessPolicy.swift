@@ -5,7 +5,7 @@ import Foundation
 /// Decay is linear rather than exponential so that "expires in four days" is a statement the app
 /// can actually make. A grace period holds new captures at full freshness, so the list does not
 /// appear to start dying the moment something is written down.
-public struct FreshnessPolicy: Equatable, Sendable {
+public struct FreshnessPolicy: Equatable, Sendable, Codable {
     /// How long a thought stays at full freshness before decay begins.
     public let grace: TimeInterval
 

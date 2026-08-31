@@ -132,6 +132,8 @@ public enum HeuristicReason: String, CaseIterable, Sendable {
     case requestFailed
     /// This build has no on-device model available to it at all.
     case notBuiltIn
+    /// The user asked for rules in Settings. Not a degradation: a choice.
+    case userChose
 
     /// A short phrase suitable for showing in Settings.
     public var summary: String {
@@ -141,6 +143,7 @@ public enum HeuristicReason: String, CaseIterable, Sendable {
         case .modelNotReady: "The on-device model is still preparing."
         case .requestFailed: "The last request failed, so sorting fell back to rules."
         case .notBuiltIn: "This build sorts with rules only."
+        case .userChose: "You chose rules."
         }
     }
 }

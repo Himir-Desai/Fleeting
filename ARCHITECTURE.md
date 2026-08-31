@@ -99,12 +99,14 @@ Fleeting/
 │   │       │   ├── KindSource.swift          ← unclassified · inferred · confirmed
 │   │       │   ├── ThoughtScope.swift        ← live · archived · all
 │   │       │   ├── KindGlyph.swift           ← the symbol and label for each kind (ADR-0012)
+│   │       │   ├── SortingPreference.swift   ← automatic · rules only; the choice (ADR-0030)
 │   │       │   └── Streak.swift             ← habit-specific payload
 │   │       ├── Decay/
 │   │       │   ├── Freshness.swift          ← 0…1 value type + presentation bands
 │   │       │   ├── FreshnessPolicy.swift    ← grace + lifetime, linear decay (ADR-0013)
 │   │       │   ├── DecayProfiles.swift      ← per-kind rates: todo 14d · habit 7d · idea 90d
-│   │       │   └── DecayEngine.swift        ← pure: (Thought, Date) → Freshness
+│   │       │   ├── DecayEngine.swift        ← pure: (Thought, Date) → Freshness; reads rates live
+│   │       │   └── DecayProfilesStoring.swift ← where the editable rates live (ADR-0031)
 │   │       ├── Sharpen/
 │   │       │   ├── Sharpening.swift         ← the interview: questions, answers, write-up
 │   │       │   ├── SharpenQuestion.swift    ← one question + its answer; AnsweredQuestion
@@ -149,6 +151,10 @@ Fleeting/
 │   │       │   └── ArchiveSweeper.swift      ← runs the decay engine, archives what expired
 │   │       ├── Sync/
 │   │       │   └── CloudKitSyncReporter.swift ← asks CloudKit about the account, only if attached
+│   │       ├── Preferences/
+│   │       │   ├── UserDefaultsSortingPreference.swift ← the sorting choice
+│   │       │   ├── UserDefaultsDecayProfiles.swift     ← the rates, as JSON in defaults
+│   │       │   └── DecayProfilesCache.swift            ← the rates in force, read from any thread
 │   │       └── Container/
 │   │           ├── ModelContainerFactory.swift ← production, in-memory, and preview containers
 │   │           ├── OpenedStore.swift        ← the container + what opening it gave up
@@ -233,7 +239,12 @@ Fleeting/
 │   │       │   ├── SharpenModel.swift   ← phases; every answer persisted as it is given
 │   │       │   └── SharpenView.swift    ← one question at a time; raw note always visible
 │   │       ├── ReviewFeature/       ← the weekly capped card stack
-│   │       └── SettingsFeature/     ← honest status: sorting, notifications, storage, syncing
+│   │       └── SettingsFeature/     ← where behaviour is changed (ADR-0032)
+│   │           ├── SettingsModel.swift  ← @Observable; the choice, the switches, the rates
+│   │           ├── SettingsView.swift   ← a card per section; About holds what cannot be set
+│   │           ├── ChoiceChip.swift     ← one option in a small set, filled when chosen
+│   │           ├── SettingsToggle.swift ← a switch with a line saying what it does
+│   │           └── SettingsStepperRow.swift ← a value with a minus and a plus
 │   │
 │   └── Notifications/               ← Scheduling and background composition of nudges.
 │       └── Sources/Notifications/
@@ -278,7 +289,8 @@ Fleeting/
 | I want to add… | Put it in | And also |
 |---|---|---|
 | A new field on a thought | `Core/Model/Thought.swift` | mirror it in `Persistence/Schema` + the mapping file, add a schema version |
-| A new kind of thought | `Core/Model/ThoughtKind.swift` | give it a decay profile in `FreshnessPolicy`, a row treatment, a classifier case |
+| A new kind of thought | `Core/Model/ThoughtKind.swift` | give it a decay profile in `FreshnessPolicy`, a row treatment, a classifier case; it gains a Settings stepper for free |
+| A new user preference | a type in `Core` + a store in `Persistence/Preferences` | Settings owns the control; read it live if it must apply without a relaunch (ADR-0030) |
 | A new screen | a new target under `Packages/Features/` | declare it in `Package.swift`; route it from `App/Navigation/RootView.swift` |
 | A new AI capability | a method on `Core/Protocols/IntelligenceService.swift` | implement in **all three** of FoundationModels, Heuristic, Stub — no exceptions |
 | A new colour or spacing value | `DesignSystem/Tokens/` | never a literal in a feature; a new colour needs a pairing in `PaletteContrastTests` |

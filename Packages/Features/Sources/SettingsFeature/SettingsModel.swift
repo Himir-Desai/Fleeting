@@ -3,11 +3,18 @@ import Foundation
 import Observation
 
 /// State for the settings screen.
+///
+/// Settings is where the app's behaviour is *changed*, so everything here is either a control or
+/// the truth about something the user cannot change but would be misled by not knowing
+/// (ADR-0032). Pure status with no action behind it belongs in About, not in its own section.
 @MainActor
 @Observable
 public final class SettingsModel {
     /// What is currently sorting captured thoughts, or `nil` until asked.
     public private(set) var availability: IntelligenceAvailability?
+
+    /// How the user has asked for thoughts to be sorted.
+    public private(set) var sorting: SortingPreference
 
     /// Whether the app is currently permitted to send notifications.
     public private(set) var authorization: NudgeAuthorization = .notAsked
@@ -16,7 +23,7 @@ public final class SettingsModel {
     public private(set) var preferences: NudgePreferences
 
     /// The decay rates in force, one per kind.
-    public let profiles: DecayProfiles
+    public private(set) var profiles: DecayProfiles
 
     /// Whether the store is shared with the widgets.
     public let storageIsShared: Bool
@@ -30,13 +37,16 @@ public final class SettingsModel {
     private let intelligence: any IntelligenceService
     private let sync: any SyncReporting
     private let store: any NudgePreferencesStoring
+    private let sortingStore: any SortingPreferenceStoring
+    private let decayStore: any DecayProfilesStoring
     private let permissions: any NudgePermissions
     private let onNudgesChanged: @Sendable () async -> Void
 
     /// Creates the settings screen's state.
     /// - Parameters:
     ///   - intelligence: Asked what is currently answering.
-    ///   - profiles: The decay rates to display.
+    ///   - sortingStore: Reads and writes how the user wants thoughts sorted.
+    ///   - decayStore: Reads and writes how long each kind lasts.
     ///   - storageIsShared: Whether widgets can read the store.
     ///   - storageIsDegraded: Whether the on-disk store failed to open.
     ///   - sync: Asked whether thoughts are reaching iCloud.
@@ -45,7 +55,8 @@ public final class SettingsModel {
     ///   - onNudgesChanged: Called whenever something changes what should be queued.
     public init(
         intelligence: any IntelligenceService,
-        profiles: DecayProfiles,
+        sortingStore: any SortingPreferenceStoring,
+        decayStore: any DecayProfilesStoring,
         storageIsShared: Bool = true,
         storageIsDegraded: Bool = false,
         sync: any SyncReporting = LocalOnlySync(),
@@ -54,7 +65,8 @@ public final class SettingsModel {
         onNudgesChanged: @escaping @Sendable () async -> Void
     ) {
         self.intelligence = intelligence
-        self.profiles = profiles
+        self.sortingStore = sortingStore
+        self.decayStore = decayStore
         self.storageIsShared = storageIsShared
         self.storageIsDegraded = storageIsDegraded
         self.sync = sync
@@ -62,6 +74,8 @@ public final class SettingsModel {
         self.permissions = permissions
         self.onNudgesChanged = onNudgesChanged
         preferences = store.load()
+        sorting = sortingStore.load()
+        profiles = decayStore.load()
     }
 
     /// Reads the current state of everything shown.
@@ -70,6 +84,8 @@ public final class SettingsModel {
         authorization = await permissions.authorization
         syncStatus = await sync.status
         preferences = store.load()
+        sorting = sortingStore.load()
+        profiles = decayStore.load()
     }
 
     /// Asks the user for permission to send notifications.
@@ -96,77 +112,58 @@ public final class SettingsModel {
         await onNudgesChanged()
     }
 
-    /// How the current intelligence state should be described to the user.
-    /// - Returns: A headline and a supporting sentence.
-    public var status: (headline: String, detail: String) {
+    /// Records how the user wants thoughts sorted, and re-reads what will now answer.
+    /// - Parameter preference: The choice made.
+    public func chooseSorting(_ preference: SortingPreference) async {
+        guard preference != sorting else { return }
+        sorting = preference
+        sortingStore.save(preference)
+        availability = await intelligence.availability
+    }
+
+    /// Sets how long a kind of thought lasts before it archives.
+    ///
+    /// Applied immediately: the rates are read live, so the inbox behind this screen is already
+    /// showing the new freshness by the time the user goes back.
+    /// - Parameters:
+    ///   - days: The new lifetime in days.
+    ///   - kind: The kind being changed.
+    public func setLifetime(days: Int, for kind: ThoughtKind) {
+        let updated = profiles.setting(lifetime: Double(max(days, 1)) * .day, for: kind)
+        guard updated != profiles else { return }
+        profiles = updated
+        // Saved through the shared cache, so the inbox behind this screen is already using the
+        // new rate by the time the user goes back.
+        decayStore.save(updated)
+    }
+
+    /// Restores the decay rates the app ships with.
+    public func resetLifetimes() {
+        guard profiles != .standard else { return }
+        profiles = .standard
+        decayStore.save(.standard)
+    }
+
+    /// Whether the rates have been changed from the ones the app ships with.
+    public var lifetimesAreCustom: Bool {
+        !profiles.isStandard
+    }
+
+    /// What is actually answering, described honestly beneath the choice.
+    ///
+    /// The choice is the control; this is what that choice is currently getting you, which is not
+    /// always the same thing — asking for the model on a device that has none still gets rules.
+    public var sortingReality: String {
         switch availability {
         case .onDevice:
-            ("On-device model", "Sorting happens on this iPhone. Nothing is sent anywhere.")
+            "Sorting on this iPhone's model. Nothing is sent anywhere."
+        case let .heuristic(reason) where reason == .userChose:
+            "Sorting by rules, as you asked."
         case let .heuristic(reason):
-            ("Rules", reason.summary + " Sorting still works, it is just simpler.")
+            reason.summary + " Sorting still works, it is just simpler."
         case nil:
-            ("Checking…", "")
+            "Checking…"
         }
-    }
-
-    /// How notification permission should be described.
-    /// - Returns: A headline and a supporting sentence.
-    public var notificationStatus: (headline: String, detail: String) {
-        switch authorization {
-        case .notAsked:
-            ("Off", "Fleeting can resurface a forgotten thought once a day. It never asks twice.")
-        case .allowed:
-            ("On", "At most one nudge a day, plus a weekly invitation to review.")
-        case .denied:
-            ("Off", "Notifications are turned off for Fleeting in the Settings app.")
-        }
-    }
-
-    /// How storage itself should be described.
-    ///
-    /// Reported here rather than at launch, where an alert would be the one thing ADR-0008
-    /// forbids — but reported, because a store that never opened will lose thoughts when the
-    /// app closes, and silence about that would be worse than the fault.
-    /// - Returns: A headline and a supporting sentence.
-    public var storageDescription: (headline: String, detail: String) {
-        storageIsDegraded
-            ? (
-                "Holding thoughts in memory",
-                """
-                Fleeting could not open its database, so anything captured now is lost when the \
-                app closes. Restarting usually fixes it.
-                """
-            )
-            : ("On this device", "Thoughts are written to disk as soon as you save them.")
-    }
-
-    /// How syncing should be described.
-    /// - Returns: A headline and a supporting sentence.
-    public var syncDescription: (headline: String, detail: String) {
-        switch syncStatus {
-        case .syncing:
-            ("iCloud", "Thoughts follow you to your other devices. Nothing else sees them.")
-        case .signedOut:
-            (
-                "This iPhone only",
-                "Sign in to iCloud to keep thoughts in step across devices. Capture works either way."
-            )
-        case let .localOnly(reason):
-            ("This iPhone only", reason.summary + " Capture works either way.")
-        case .checking:
-            ("Checking…", "")
-        }
-    }
-
-    /// How the widgets' access to the store should be described.
-    /// - Returns: A headline and a supporting sentence.
-    public var widgetStatus: (headline: String, detail: String) {
-        storageIsShared
-            ? ("Sharing", "Widgets read the same thoughts the app does.")
-            : (
-                "Not shared",
-                "This build has no App Group, so widgets will look empty. The app itself is fine."
-            )
     }
 
     /// How long each kind of thought lasts before archiving.
@@ -175,5 +172,68 @@ public final class SettingsModel {
         ThoughtKind.allCases.map { kind in
             (kind, Int(profiles.policy(for: kind).lifetime / .day))
         }
+    }
+
+    /// One unchangeable fact about where thoughts live.
+    public struct Fact: Identifiable, Sendable {
+        /// What the fact is about.
+        public let label: String
+        /// The current answer.
+        public let value: String
+        /// Whether the answer is one the user would want to know is not the happy case.
+        public let isWarning: Bool
+
+        public var id: String {
+            label
+        }
+    }
+
+    /// The facts about where thoughts live, as one line each.
+    ///
+    /// None of these is a setting: storage, syncing and widget sharing are all decided by the
+    /// device and the signing account. They are reported because a user whose thoughts are not
+    /// syncing needs to know, and grouped under About because there is nothing to press.
+    public var facts: [Fact] {
+        var rows = [
+            Fact(
+                label: "Storage",
+                value: storageIsDegraded ? "In memory only" : "On this device",
+                isWarning: storageIsDegraded
+            )
+        ]
+
+        switch syncStatus {
+        case .syncing:
+            rows.append(Fact(label: "Syncing", value: "iCloud", isWarning: false))
+        case .signedOut, .localOnly:
+            rows.append(Fact(label: "Syncing", value: "This iPhone only", isWarning: true))
+        case .checking:
+            rows.append(Fact(label: "Syncing", value: "Checking…", isWarning: false))
+        }
+
+        rows.append(
+            Fact(
+                label: "Widgets",
+                value: storageIsShared ? "Sharing" : "Not shared",
+                isWarning: !storageIsShared
+            )
+        )
+        return rows
+    }
+
+    /// The one thing in About that the user may need to act on, if anything.
+    ///
+    /// Storage failing loses thoughts, so it is said plainly rather than left as a quiet row.
+    public var warning: String? {
+        if storageIsDegraded {
+            return """
+            Fleeting could not open its database, so anything captured now is lost when the app \
+            closes. Restarting usually fixes it.
+            """
+        }
+        if case .signedOut = syncStatus {
+            return "Sign in to iCloud to keep thoughts in step across devices. Capture works either way."
+        }
+        return nil
     }
 }

@@ -2,7 +2,12 @@ import Core
 import DesignSystem
 import SwiftUI
 
-/// Shows how the app is behaving: what is sorting thoughts, and how fast each kind decays.
+/// Where the app's behaviour is changed.
+///
+/// Every section here is a control. The things that cannot be changed — where thoughts are
+/// stored, whether iCloud is reachable, whether the widgets can see the store — are facts about
+/// the device rather than preferences, so they sit together under About instead of impersonating
+/// settings (ADR-0032).
 public struct SettingsView: View {
     @State private var model: SettingsModel
 
@@ -12,30 +17,192 @@ public struct SettingsView: View {
         _model = State(initialValue: model)
     }
 
-    /// The three switches ADR-0009 permits, and nothing more.
-    @ViewBuilder
-    private var nudgeToggles: some View {
-        Toggle("Daily nudge", isOn: binding(\.dailyEnabled))
-            .modifier(SettingsRow())
-            .accessibilityIdentifier("settings.nudge.daily")
+    public var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Spacing.section) {
+                sorting
+                notifications
+                lifetimes
+                about
+            }
+            .padding(.horizontal, Spacing.loose)
+            .padding(.vertical, Spacing.loose)
+        }
+        .background(Palette.surface)
+        .navigationTitle("Settings")
+        #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+        #endif
+            .task { await model.load() }
+    }
 
-        if model.preferences.dailyEnabled {
-            Picker("Time", selection: binding(\.dailyHour)) {
-                ForEach(0 ..< 24, id: \.self) { hour in
-                    Text(Self.hourLabel(hour)).tag(hour)
+    /// A titled group of controls on one card.
+    private func section(
+        _ title: String,
+        @ViewBuilder content: () -> some View
+    ) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.regular) {
+            SectionLabel(title)
+            VStack(alignment: .leading, spacing: Spacing.regular) {
+                content()
+            }
+            .padding(Spacing.inset)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background {
+                RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+                    .fill(Palette.raised)
+            }
+        }
+    }
+
+    /// The sorting choice, and what that choice is actually getting right now.
+    private var sorting: some View {
+        section("Sorting") {
+            HStack(spacing: Spacing.snug) {
+                ForEach(SortingPreference.allCases) { choice in
+                    ChoiceChip(
+                        label: choice.label,
+                        isSelected: model.sorting == choice
+                    ) {
+                        Task { await model.chooseSorting(choice) }
+                    }
+                    .accessibilityIdentifier("settings.sorting.\(choice.rawValue)")
                 }
             }
-            .modifier(SettingsRow())
-            .accessibilityIdentifier("settings.nudge.dailyHour")
+
+            Text(model.sorting.explanation)
+                .font(Typography.caption)
+                .foregroundStyle(Palette.inkMuted)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Divider().overlay(Palette.surfaceSunken)
+
+            // What the choice is currently getting, which is not always what was asked for.
+            Text(model.sortingReality)
+                .font(Typography.caption)
+                .foregroundStyle(Palette.inkMuted)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("settings.sorting.reality")
         }
+    }
 
-        Toggle("Weekly review invitation", isOn: binding(\.weeklyEnabled))
-            .modifier(SettingsRow())
-            .accessibilityIdentifier("settings.nudge.weekly")
+    /// Permission, then the three switches ADR-0009 permits.
+    private var notifications: some View {
+        section("Notifications") {
+            if model.canConfigureNudges {
+                SettingsToggle(
+                    label: "Daily nudge",
+                    detail: "One forgotten thought, brought back.",
+                    isOn: binding(\.dailyEnabled)
+                )
+                .accessibilityIdentifier("settings.nudge.daily")
 
-        Toggle("Warn before archiving", isOn: binding(\.expiryWarningsEnabled))
-            .modifier(SettingsRow())
-            .accessibilityIdentifier("settings.nudge.expiry")
+                if model.preferences.dailyEnabled {
+                    SettingsStepperRow(
+                        label: "Time",
+                        value: Self.hourLabel(model.preferences.dailyHour),
+                        onDecrease: { adjustHour(-1) },
+                        onIncrease: { adjustHour(1) }
+                    )
+                    .accessibilityIdentifier("settings.nudge.dailyHour")
+                }
+
+                SettingsToggle(
+                    label: "Weekly review",
+                    detail: "An invitation to decide what to keep.",
+                    isOn: binding(\.weeklyEnabled)
+                )
+                .accessibilityIdentifier("settings.nudge.weekly")
+
+                SettingsToggle(
+                    label: "Warn before archiving",
+                    detail: "A heads-up before a thought runs out.",
+                    isOn: binding(\.expiryWarningsEnabled)
+                )
+                .accessibilityIdentifier("settings.nudge.expiry")
+            } else {
+                Text(model.authorization == .denied
+                    ? "Notifications are turned off for Fleeting in the Settings app."
+                    : "Fleeting can resurface a forgotten thought once a day. It never asks twice.")
+                    .font(Typography.caption)
+                    .foregroundStyle(Palette.inkMuted)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if model.authorization == .notAsked {
+                    Button("Turn on notifications") {
+                        Task { await model.requestPermission() }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .buttonBorderShape(.capsule)
+                    .controlSize(.large)
+                    .tint(Palette.accent)
+                    .accessibilityIdentifier("settings.notifications.enable")
+                }
+            }
+        }
+    }
+
+    /// The decay rates, each one editable.
+    private var lifetimes: some View {
+        section("How long things last") {
+            ForEach(model.lifetimes, id: \.kind) { entry in
+                SettingsStepperRow(
+                    label: KindGlyph.label(for: entry.kind),
+                    symbol: KindGlyph.name(for: entry.kind),
+                    value: "\(entry.days) \(entry.days == 1 ? "day" : "days")",
+                    onDecrease: { model.setLifetime(days: entry.days - 1, for: entry.kind) },
+                    onIncrease: { model.setLifetime(days: entry.days + 1, for: entry.kind) }
+                )
+                .accessibilityIdentifier("settings.lifetime.\(entry.kind.rawValue)")
+            }
+
+            Text("A thought archives itself once it runs out of freshness. Nothing is deleted.")
+                .font(Typography.caption)
+                .foregroundStyle(Palette.inkMuted)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if model.lifetimesAreCustom {
+                Button("Reset to defaults") {
+                    model.resetLifetimes()
+                }
+                .font(Typography.subtitle)
+                .foregroundStyle(Palette.accentText)
+                .accessibilityIdentifier("settings.lifetimes.reset")
+            }
+        }
+    }
+
+    /// The facts the user cannot change but would be misled by not knowing.
+    private var about: some View {
+        section("About") {
+            if let warning = model.warning {
+                Text(warning)
+                    .font(Typography.caption)
+                    .foregroundStyle(Palette.fading)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("settings.warning")
+            }
+
+            ForEach(model.facts, id: \.label) { fact in
+                HStack {
+                    Text(fact.label)
+                        .foregroundStyle(Palette.ink)
+                    Spacer(minLength: Spacing.snug)
+                    Text(fact.value)
+                        .foregroundStyle(fact.isWarning ? Palette.fading : Palette.inkMuted)
+                }
+                .font(Typography.body)
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("settings.fact.\(fact.label.lowercased())")
+            }
+        }
+    }
+
+    /// Moves the daily nudge an hour, wrapping around the clock.
+    private func adjustHour(_ delta: Int) {
+        Task {
+            await model.update { $0.dailyHour = ($0.dailyHour + delta + 24) % 24 }
+        }
     }
 
     /// A binding that writes a preference change straight through the model.
@@ -60,146 +227,5 @@ public struct SettingsView: View {
         case 12: "12pm"
         default: "\(hour - 12)pm"
         }
-    }
-
-    public var body: some View {
-        List {
-            Section {
-                StatusBlock(headline: model.status.headline, detail: model.status.detail)
-                    .modifier(SettingsRow())
-                    .accessibilityIdentifier("settings.intelligence")
-            } header: {
-                SectionLabel("Sorting")
-            }
-
-            Section {
-                VStack(alignment: .leading, spacing: Spacing.regular) {
-                    StatusBlock(
-                        headline: model.notificationStatus.headline,
-                        detail: model.notificationStatus.detail
-                    )
-                    .accessibilityIdentifier("settings.notifications")
-
-                    // The one action on this screen, so it sits inside the card it acts on
-                    // rather than below as a seventh status line.
-                    if model.authorization == .notAsked {
-                        Button("Turn on notifications") {
-                            Task { await model.requestPermission() }
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .buttonBorderShape(.capsule)
-                        .controlSize(.large)
-                        .tint(Palette.accent)
-                        .accessibilityIdentifier("settings.notifications.enable")
-                    }
-                }
-                .modifier(SettingsRow())
-
-                if model.canConfigureNudges {
-                    nudgeToggles
-                }
-            } header: {
-                SectionLabel("Notifications")
-            }
-
-            Section {
-                StatusBlock(
-                    headline: model.storageDescription.headline,
-                    detail: model.storageDescription.detail,
-                    tone: model.storageIsDegraded ? .warning : .normal
-                )
-                .modifier(SettingsRow())
-                .accessibilityIdentifier("settings.storage")
-            } header: {
-                SectionLabel("Storage")
-            }
-
-            Section {
-                StatusBlock(
-                    headline: model.syncDescription.headline,
-                    detail: model.syncDescription.detail,
-                    tone: model.syncStatus.isSyncing ? .normal : .warning
-                )
-                .modifier(SettingsRow())
-                .accessibilityIdentifier("settings.sync")
-            } header: {
-                SectionLabel("Syncing")
-            }
-
-            Section {
-                StatusBlock(
-                    headline: model.widgetStatus.headline,
-                    detail: model.widgetStatus.detail,
-                    tone: model.storageIsShared ? .normal : .warning
-                )
-                .modifier(SettingsRow())
-                .accessibilityIdentifier("settings.widgets")
-            } header: {
-                SectionLabel("Widgets")
-            }
-
-            Section {
-                // One card rather than four, because these four lines are a single table:
-                // the read is down the day counts, not across any one row.
-                VStack(alignment: .leading, spacing: Spacing.regular) {
-                    ForEach(model.lifetimes, id: \.kind) { entry in
-                        HStack(spacing: Spacing.snug) {
-                            Image(systemName: KindGlyph.name(for: entry.kind))
-                                .font(Typography.caption)
-                                .foregroundStyle(Palette.inkMuted)
-                                .frame(width: Spacing.loose)
-                            Text(entry.kind.rawValue.capitalized)
-                                .foregroundStyle(Palette.ink)
-                            Spacer(minLength: Spacing.snug)
-                            Text("\(entry.days) days")
-                                .foregroundStyle(Palette.inkMuted)
-                        }
-                        .font(Typography.body)
-                        .accessibilityElement(children: .combine)
-                    }
-
-                    Text("A thought archives itself once it runs out of freshness. Nothing is deleted.")
-                        .font(Typography.caption)
-                        .foregroundStyle(Palette.inkMuted)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .modifier(SettingsRow())
-                .accessibilityIdentifier("settings.lifetimes")
-            } header: {
-                SectionLabel("How long things last")
-            }
-        }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
-        .background(Palette.surface)
-        .tint(Palette.accentText)
-        .navigationTitle("Settings")
-        #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-        #endif
-            .task { await model.load() }
-    }
-}
-
-/// The card treatment every settings row shares.
-///
-/// Settings is a stack of statements about how the app is behaving, and each one is a card. The
-/// modifier is what keeps six of them identical without six copies of the same four lines.
-private struct SettingsRow: ViewModifier {
-    func body(content: Content) -> some View {
-        content
-            .padding(.vertical, Spacing.regular)
-            .listRowInsets(
-                EdgeInsets(
-                    top: 0, leading: Spacing.loose,
-                    bottom: 0, trailing: Spacing.loose
-                )
-            )
-            .listRowSeparator(.hidden)
-            .listRowBackground(
-                CardSurface()
-                    .padding(.horizontal, Spacing.snug)
-                    .padding(.vertical, Spacing.tight)
-            )
     }
 }

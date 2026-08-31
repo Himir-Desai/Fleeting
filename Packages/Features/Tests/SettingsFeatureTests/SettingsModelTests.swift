@@ -3,82 +3,6 @@ import Foundation
 @testable import SettingsFeature
 import Testing
 
-private struct StubIntelligence: IntelligenceService {
-    var reported: IntelligenceAvailability = .onDevice
-    var availability: IntelligenceAvailability {
-        reported
-    }
-
-    func classify(_: String) async -> Classification {
-        .unknown
-    }
-
-    func interviewQuestions(for _: String) async -> [String] {
-        []
-    }
-
-    func writeUp(for _: String, answers _: [AnsweredQuestion], at _: Date) async -> WriteUp? {
-        nil
-    }
-
-    func resurfacingLine(for _: String) async -> String? {
-        nil
-    }
-}
-
-private struct StubSync: SyncReporting {
-    var reported: SyncStatus
-    var status: SyncStatus {
-        reported
-    }
-}
-
-private final class MemoryPreferences: NudgePreferencesStoring, @unchecked Sendable {
-    private(set) var stored: NudgePreferences
-    private(set) var saveCount = 0
-    init(_ stored: NudgePreferences = .standard) {
-        self.stored = stored
-    }
-
-    func load() -> NudgePreferences {
-        stored
-    }
-
-    func save(_ preferences: NudgePreferences) {
-        stored = preferences
-        saveCount += 1
-    }
-}
-
-private final class SpyPermissions: NudgePermissions, @unchecked Sendable {
-    private(set) var requestCount = 0
-    private var state: NudgeAuthorization
-    private let granting: NudgeAuthorization
-
-    init(_ state: NudgeAuthorization = .notAsked, granting: NudgeAuthorization = .allowed) {
-        self.state = state
-        self.granting = granting
-    }
-
-    var authorization: NudgeAuthorization {
-        get async { state }
-    }
-
-    func request() async -> NudgeAuthorization {
-        requestCount += 1
-        state = granting
-        return granting
-    }
-}
-
-/// Counts how often the app was told to rebuild its notification queue.
-private final class RefreshCounter: @unchecked Sendable {
-    private(set) var count = 0
-    func record() {
-        count += 1
-    }
-}
-
 @MainActor
 @Suite("SettingsModel")
 struct SettingsModelTests {
@@ -86,11 +10,14 @@ struct SettingsModelTests {
         preferences: MemoryPreferences = MemoryPreferences(),
         permissions: SpyPermissions = SpyPermissions(),
         refreshes: RefreshCounter = RefreshCounter(),
-        intelligence: StubIntelligence = StubIntelligence()
+        intelligence: StubIntelligence = StubIntelligence(),
+        sorting: MemorySorting = MemorySorting(),
+        decay: MemoryDecay = MemoryDecay()
     ) -> SettingsModel {
         SettingsModel(
             intelligence: intelligence,
-            profiles: .standard,
+            sortingStore: sorting,
+            decayStore: decay,
             store: preferences,
             permissions: permissions,
             onNudgesChanged: { refreshes.record() }
@@ -129,7 +56,7 @@ struct SettingsModelTests {
 
         #expect(model.authorization == .denied)
         #expect(!model.canConfigureNudges)
-        #expect(model.notificationStatus.detail.contains("Settings app"))
+        #expect(!model.canConfigureNudges, "denied means the switches stay hidden")
     }
 
     @Test("granting permission rebuilds the queue immediately")
@@ -164,18 +91,34 @@ struct SettingsModelTests {
         #expect(NudgePreferences(weeklyWeekday: 12).weeklyWeekday == 7)
     }
 
-    @Test("settings reports which implementation is sorting thoughts")
-    func intelligenceStatusIsHonest() async {
+    @Test("settings reports what is actually sorting thoughts, not what was asked for")
+    func intelligenceRealityIsHonest() async {
         let onDevice = makeModel(intelligence: StubIntelligence(reported: .onDevice))
         await onDevice.load()
-        #expect(onDevice.status.headline == "On-device model")
+        #expect(onDevice.sortingReality.contains("this iPhone's model"))
 
         let rules = makeModel(
             intelligence: StubIntelligence(reported: .heuristic(reason: .modelDisabled))
         )
         await rules.load()
-        #expect(rules.status.headline == "Rules")
-        #expect(rules.status.detail.contains("turned off"))
+        #expect(rules.sortingReality.contains("turned off"))
+    }
+
+    @Test("choosing how to sort is saved, and is a choice rather than a failure")
+    func sortingIsAChoice() async {
+        let sorting = MemorySorting()
+        let model = makeModel(
+            intelligence: StubIntelligence(reported: .heuristic(reason: .userChose)),
+            sorting: sorting
+        )
+        await model.load()
+        #expect(model.sorting == .automatic)
+
+        await model.chooseSorting(.rulesOnly)
+
+        #expect(sorting.stored == .rulesOnly, "a preference nobody stores is a lie")
+        #expect(model.sorting == .rulesOnly)
+        #expect(model.sortingReality.contains("as you asked"))
     }
 }
 
@@ -185,7 +128,8 @@ struct SettingsSyncTests {
     private func makeModel(_ status: SyncStatus) -> SettingsModel {
         SettingsModel(
             intelligence: StubIntelligence(),
-            profiles: .standard,
+            sortingStore: MemorySorting(),
+            decayStore: MemoryDecay(),
             sync: StubSync(reported: status),
             store: MemoryPreferences(),
             permissions: SpyPermissions(),
@@ -203,7 +147,7 @@ struct SettingsSyncTests {
         let model = makeModel(.syncing)
         await model.load()
         #expect(model.syncStatus == .syncing)
-        #expect(model.syncDescription.headline == "iCloud")
+        #expect(model.facts.first { $0.label == "Syncing" }?.value == "iCloud")
     }
 
     @Test("a store that is not syncing says so, and says capture still works")
@@ -214,8 +158,9 @@ struct SettingsSyncTests {
         for state in states {
             let model = makeModel(state)
             await model.load()
-            #expect(model.syncDescription.headline == "This iPhone only")
-            #expect(model.syncDescription.detail.contains("either way"))
+            let fact = model.facts.first { $0.label == "Syncing" }
+            #expect(fact?.value == "This iPhone only")
+            #expect(fact?.isWarning == true)
         }
     }
 }
@@ -226,7 +171,8 @@ struct SettingsStorageTests {
     private func makeModel(degraded: Bool) -> SettingsModel {
         SettingsModel(
             intelligence: StubIntelligence(),
-            profiles: .standard,
+            sortingStore: MemorySorting(),
+            decayStore: MemoryDecay(),
             storageIsDegraded: degraded,
             store: MemoryPreferences(),
             permissions: SpyPermissions(),
@@ -237,14 +183,14 @@ struct SettingsStorageTests {
     @Test("a working store is described without alarming anyone")
     func healthyStorageReads() {
         let model = makeModel(degraded: false)
-        #expect(model.storageDescription.headline == "On this device")
-        #expect(model.storageDescription.detail.contains("written to disk"))
+        #expect(model.facts.first { $0.label == "Storage" }?.value == "On this device")
+        #expect(model.warning == nil)
     }
 
     @Test("a store that never opened says so, and says what it costs")
     func degradedStorageReads() {
         let model = makeModel(degraded: true)
-        #expect(model.storageDescription.headline == "Holding thoughts in memory")
-        #expect(model.storageDescription.detail.contains("lost when the app closes"))
+        #expect(model.facts.first { $0.label == "Storage" }?.isWarning == true)
+        #expect(model.warning?.contains("lost when the app closes") == true)
     }
 }

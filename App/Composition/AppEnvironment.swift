@@ -1,5 +1,6 @@
 import Core
 import Foundation
+import Intelligence
 import Notifications
 import Persistence
 
@@ -32,6 +33,15 @@ final class AppEnvironment {
 
     /// Reads and writes when the app is allowed to speak.
     let nudgePreferences: any NudgePreferencesStoring = UserDefaultsNudgePreferences()
+
+    /// Reads and writes how the user wants thoughts sorted.
+    let sortingPreference: any SortingPreferenceStoring = UserDefaultsSortingPreference()
+
+    /// The decay rates in force, and the way to change them.
+    ///
+    /// A cache rather than a plain store because the engine consults the rates on every freshness
+    /// calculation, and every screen shares one engine.
+    let decayProfiles = DecayProfilesCache(store: UserDefaultsDecayProfiles())
 
     /// Asks for, and reports, permission to send notifications.
     let nudgePermissions: any NudgePermissions = SystemNotificationCentre()
@@ -70,9 +80,19 @@ final class AppEnvironment {
             storageIsShared = store.isShared
             sync = store.sync
         }
-        engine = DecayEngine()
+        // The engine reads the rates afresh each time, so editing a lifetime in Settings applies
+        // to the inbox, the sweeper and the review at once rather than after a relaunch.
+        let profiles = decayProfiles
+        engine = DecayEngine(profiles: { profiles.current })
         sweeper = ArchiveSweeper(repository: self.thoughts, engine: engine, clock: clock)
-        intelligence = IntelligenceFactory.make()
+
+        // Read on every call, so choosing Rules only takes effect on the very next capture.
+        let sorting = sortingPreference
+        intelligence = PreferredIntelligence(
+            automatic: IntelligenceFactory.make(),
+            rules: IntelligenceFactory.rulesOnly(),
+            preference: { sorting.load() }
+        )
 
         let centre = SystemNotificationCentre()
         nudges = NudgeScheduler(

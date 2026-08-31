@@ -5,13 +5,27 @@ import Foundation
 /// Pure and clock-free: every method takes the instant to evaluate against, so decay is tested by
 /// passing dates rather than by waiting.
 public struct DecayEngine: Sendable {
-    /// The rates this engine applies, one per kind of thought.
-    public let profiles: DecayProfiles
+    private let source: @Sendable () -> DecayProfiles
 
-    /// Creates an engine.
+    /// The rates this engine applies, one per kind of thought.
+    ///
+    /// Read through a closure rather than stored, because the rates are editable in Settings and
+    /// this engine is copied by value into the inbox, the sweeper, the review and the widgets.
+    /// A stored snapshot would leave every one of those on yesterday's rates until relaunch.
+    public var profiles: DecayProfiles {
+        source()
+    }
+
+    /// Creates an engine with fixed rates.
     /// - Parameter profiles: How fast each kind decays. Defaults to ``DecayProfiles/standard``.
     public init(profiles: DecayProfiles = .standard) {
-        self.profiles = profiles
+        source = { profiles }
+    }
+
+    /// Creates an engine that reads its rates afresh on every use.
+    /// - Parameter profiles: Consulted whenever a rate is needed. Must be cheap.
+    public init(profiles: @escaping @Sendable () -> DecayProfiles) {
+        source = profiles
     }
 
     /// The policy governing a particular thought.
