@@ -93,6 +93,7 @@ public struct ThoughtDetailView: View {
                 .background { Circle().fill(isSelected ? Palette.accent : Palette.surfaceSunken) }
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier("detail.type.\(kind.rawValue)")
         .accessibilityLabel(KindGlyph.label(for: kind))
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }

@@ -48,10 +48,10 @@ final class CapturePathTests: XCTestCase {
         field.typeText("an idea I had at a bad moment")
         app.buttons["capture.save"].tap()
 
-        let saveButton = app.buttons["capture.save"]
-        XCTAssertTrue(saveButton.waitForExistence(timeout: 5))
-        XCTAssertFalse(
-            saveButton.isEnabled,
+        // The controls only show once there is something to act on, so the save going away is
+        // the field having cleared.
+        XCTAssertTrue(
+            app.buttons["capture.save"].waitForNonExistence(timeout: 5),
             "After a successful save the field must be empty and ready for the next thought."
         )
     }
@@ -125,7 +125,7 @@ final class InboxTests: XCTestCase {
         XCTAssertTrue(app.staticTexts[original].waitForExistence(timeout: 5))
 
         app.staticTexts[original].tap()
-        let editor = app.descendants(matching: .any)["editor.field"]
+        let editor = app.descendants(matching: .any)["detail.text"]
         XCTAssertTrue(editor.waitForExistence(timeout: 5))
         // Tapping past the end of the text puts the cursor after it; tapping the middle of the
         // field would leave it mid-word and the deletes below would eat the wrong half.
@@ -139,7 +139,8 @@ final class InboxTests: XCTestCase {
             editor.value as? String, revised,
             "the field must hold exactly the new text before it is saved"
         )
-        app.buttons["editor.save"].tap()
+        // The detail commits its text on leaving, so going back is the save (ADR-0027).
+        app.navigationBars.buttons.element(boundBy: 0).tap()
 
         XCTAssertTrue(
             app.staticTexts[revised].waitForExistence(timeout: 5),
@@ -291,8 +292,8 @@ final class ReturnToCaptureTests: XCTestCase {
         field.typeText("a thought I had after browsing")
         app.buttons["capture.save"].tap()
 
-        XCTAssertFalse(
-            app.buttons["capture.save"].isEnabled,
+        XCTAssertTrue(
+            app.buttons["capture.save"].waitForNonExistence(timeout: 5),
             "The field must clear, proving the capture was saved."
         )
 
@@ -334,7 +335,8 @@ final class ClassificationTests: XCTestCase {
         let app = launchAndCapture("call the dentist back")
 
         app.goToThoughts()
-        let kind = app.buttons["row.kind"]
+        // The glyph is an indicator now rather than a control (ADR-0027), so it is an image.
+        let kind = app.images["row.kind"].firstMatch
         XCTAssertTrue(kind.waitForExistence(timeout: 5))
 
         let sorted = NSPredicate(format: "label != %@", "Kind: Unsorted")
@@ -349,7 +351,7 @@ final class ClassificationTests: XCTestCase {
         _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 5)
 
         // The capture screen must offer no classification control of any sort.
-        XCTAssertFalse(app.buttons["row.kind"].exists)
+        XCTAssertFalse(app.images["row.kind"].exists)
         XCTAssertEqual(app.sheets.count, 0)
     }
 
@@ -357,24 +359,30 @@ final class ClassificationTests: XCTestCase {
         let app = launchAndCapture("call mum every sunday")
 
         app.goToThoughts()
-        let kind = app.buttons["row.kind"]
+        let kind = app.images["row.kind"].firstMatch
         XCTAssertTrue(kind.waitForExistence(timeout: 5))
 
+        // Correcting a kind lives inside the opened thought now (ADR-0027), as the type chips.
         // Correct it to whichever kind it is not, so the test does not depend on the verdict.
-        let target = kind.label == "Kind: Idea" ? "Todo" : "Idea"
-        kind.tap()
-        XCTAssertTrue(app.buttons[target].waitForExistence(timeout: 5))
-        app.buttons[target].tap()
+        let target: ThoughtKindName = kind.label == "Kind: Idea" ? .todo : .idea
+        app.staticTexts["call mum every sunday"].tap()
+        let chip = app.buttons["detail.type.\(target.rawValue)"]
+        XCTAssertTrue(chip.waitForExistence(timeout: 5))
+        chip.tap()
+        app.navigationBars.buttons.element(boundBy: 0).tap()
 
-        XCTAssertTrue(app.buttons["row.kind"].waitForExistence(timeout: 5))
-        XCTAssertEqual(app.buttons["row.kind"].label, "Kind: \(target)", "the correction must apply")
+        XCTAssertTrue(app.images["row.kind"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertEqual(
+            app.images["row.kind"].firstMatch.label, "Kind: \(target.label)",
+            "the correction must apply"
+        )
 
         // Leave and come back: a human decision must outlive the screen that made it.
         app.goToCapture()
         app.goToThoughts()
-        XCTAssertTrue(app.buttons["row.kind"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.images["row.kind"].firstMatch.waitForExistence(timeout: 5))
         XCTAssertEqual(
-            app.buttons["row.kind"].label, "Kind: \(target)",
+            app.images["row.kind"].firstMatch.label, "Kind: \(target.label)",
             "a corrected kind must be remembered, and never overwritten by the classifier"
         )
     }

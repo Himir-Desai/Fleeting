@@ -108,11 +108,13 @@ final class AccessibilityTests: XCTestCase {
         _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 10)
         app.goToThoughts()
 
-        let kind = app.buttons["row.kind"].firstMatch
+        // An indicator rather than a control now (ADR-0027), so it is an image — but it still
+        // has to say what the thought is, not merely show a glyph.
+        let kind = app.images["row.kind"].firstMatch
         XCTAssertTrue(kind.waitForExistence(timeout: 15))
         XCTAssertTrue(
             kind.label.hasPrefix("Kind:"),
-            "the kind control must say what the thought currently is, not just show a glyph"
+            "the kind glyph must say what the thought currently is, not just show a shape"
         )
 
         // The row combines its children, so one element carries the text, the expiry and the

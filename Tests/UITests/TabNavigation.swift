@@ -50,3 +50,20 @@ extension XCUIApplication {
         return descendants(matching: .any)["settings.intelligence"].waitForExistence(timeout: timeout)
     }
 }
+
+/// The two kinds a correction test can flip between, with the raw value the detail's type chip
+/// identifier uses and the label the row's glyph reports.
+///
+/// The UI tests do not link `Core`, so the pair is spelled out here rather than derived.
+enum ThoughtKindName: String {
+    case idea
+    case todo
+
+    /// The label the row's kind glyph reports for this kind.
+    var label: String {
+        switch self {
+        case .idea: "Idea"
+        case .todo: "To-do"
+        }
+    }
+}

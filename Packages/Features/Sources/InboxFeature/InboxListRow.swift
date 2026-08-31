@@ -83,6 +83,9 @@ struct InboxListRow: View {
                     .fill(thought.kind == .unsorted ? Palette.surfaceSunken : Palette.accentSoft)
             }
             .frame(width: controlSize, height: controlSize)
+            // An indicator, not a control (ADR-0027) — but still the one place the list says
+            // what a thought was sorted as, so it stays addressable.
+            .accessibilityIdentifier("row.kind")
             .accessibilityLabel("Kind: \(KindGlyph.label(for: thought.kind))")
     }
 
