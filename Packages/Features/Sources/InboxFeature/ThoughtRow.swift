@@ -2,49 +2,43 @@ import Core
 import DesignSystem
 import SwiftUI
 
-/// One live thought in the inbox, faded in proportion to how much freshness it has left.
+/// One live thought in the inbox, its freshness read through weight rather than a meter: fresh
+/// thoughts sit heavier and fuller, fading ones lighten (ADR-0025).
+///
+/// The opacity half of that fade is applied by ``InboxListRow`` to the whole row, so the kind
+/// glyph and the inline action fade in step with the words rather than staying bright over a
+/// faded thought.
 struct ThoughtRow: View {
     let thought: Thought
     let freshness: Freshness
     let expiresAt: Date?
 
-    @Environment(\.colorSchemeContrast) private var contrast
     @Environment(\.dynamicTypeSize) private var typeSize
-
-    /// The meter's width, so it grows with the text beside it rather than staying a hairline
-    /// against 60pt type.
-    @ScaledMetric(relativeTo: .caption) private var meterWidth: CGFloat = 72
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.snug) {
             Text(thought.body)
-                .font(Typography.emphasis)
+                .font(Typography.body)
+                .fontWeight(FreshnessStyle.weight(for: freshness.value))
                 .foregroundStyle(Palette.ink)
                 .lineLimit(typeSize.isAccessibilitySize ? 6 : 3)
 
             metadata
         }
-        .opacity(FreshnessStyle.opacity(for: freshness.value, increasedContrast: isHighContrast))
-        .motion(Motion.decay, value: freshness.value)
         .padding(.vertical, Spacing.snug)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
         .accessibilityValue(spokenFreshness)
     }
 
-    /// The meter, the streak, and when the thought archives.
-    ///
-    /// Laid out down the screen at accessibility type sizes, because three items side by side at
-    /// 60pt leaves no room for any of them.
+    /// The streak and when the thought archives. No meter — freshness is the text's own weight.
     @ViewBuilder
     private var metadata: some View {
         let layout = typeSize.isAccessibilitySize
-            ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.snug))
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.tight))
             : AnyLayout(HStackLayout(alignment: .center, spacing: Spacing.regular))
 
         layout {
-            FreshnessMeter(freshness: freshness.value)
-                .frame(width: meterWidth)
-
             if let streak = thought.streak, streak.hasStarted {
                 Text("\(streak.count) day streak")
                     .font(Typography.caption)
@@ -61,15 +55,7 @@ struct ThoughtRow: View {
         }
     }
 
-    /// Whether the fade should be suppressed in favour of readable text.
-    private var isHighContrast: Bool {
-        contrast == .increased
-    }
-
-    /// How much life is left, in words.
-    ///
-    /// VoiceOver reads the row's text and its "archives in" label already; a percentage on top of
-    /// that is noise. The band is the thing the fade is trying to say.
+    /// How much life is left, in words, for VoiceOver — the band the weight is trying to convey.
     private var spokenFreshness: String {
         switch freshness.band {
         case .fresh: "fresh"

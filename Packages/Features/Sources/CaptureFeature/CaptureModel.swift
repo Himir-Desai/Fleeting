@@ -13,6 +13,74 @@ public final class CaptureModel {
     /// The text currently in the field. Bound directly to the capture field.
     public var text: String = ""
 
+    /// A kind the user chose in advanced options before saving, or `nil` to let the app sort it.
+    ///
+    /// When set, the saved thought is created with that kind already confirmed, so classification
+    /// leaves it alone. Cleared after each save, so every capture starts from "let the app sort".
+    /// Set through ``chooseKind(_:)``, which also moves the expiry wheels.
+    public private(set) var chosenKind: ThoughtKind?
+
+    /// Whether the next capture applies the wheels' lifetime instead of its type's normal rate.
+    ///
+    /// Not a visible control: it turns on when a person picks a specific type or spins the wheels,
+    /// and stays off for an untouched automatic capture so classification still governs decay.
+    public private(set) var usesCustomExpiration = false
+
+    /// How many ``expirationUnit`` the next capture should last.
+    ///
+    /// The wheels show this whenever advanced options are open. It defaults to the selected type's
+    /// natural period and is reset after each save.
+    public private(set) var expirationCount = 1
+
+    /// The unit the ``expirationCount`` is measured in.
+    public private(set) var expirationUnit: ExpirationUnit = .months
+
+    /// The chosen lifetime in seconds, or `nil` to let the thought decay at its kind's rate.
+    var customLifetime: TimeInterval? {
+        guard usesCustomExpiration else { return nil }
+        return TimeInterval(max(expirationCount, 1)) * expirationUnit.seconds
+    }
+
+    /// Picks a type by hand — or `nil` for automatic — and moves the expiry wheels to that type's
+    /// natural period.
+    ///
+    /// A specific type turns on the custom lifetime, because picking one is an explicit decision;
+    /// automatic turns it back off, so the app still decides both kind and timing.
+    /// - Parameter kind: The chosen type, or `nil` for automatic sorting.
+    public func chooseKind(_ kind: ThoughtKind?) {
+        chosenKind = kind
+        let expiry = Self.defaultExpiry(for: kind)
+        expirationCount = expiry.count
+        expirationUnit = expiry.unit
+        usesCustomExpiration = kind != nil
+    }
+
+    /// Records a deliberate spin of the number wheel, which commits to a custom lifetime.
+    /// - Parameter count: The new amount.
+    public func setExpirationCount(_ count: Int) {
+        expirationCount = count
+        usesCustomExpiration = true
+    }
+
+    /// Records a deliberate spin of the unit wheel, which commits to a custom lifetime.
+    /// - Parameter unit: The new unit.
+    public func setExpirationUnit(_ unit: ExpirationUnit) {
+        expirationUnit = unit
+        usesCustomExpiration = true
+    }
+
+    /// The lifetime the wheels show for a given type, mirroring the shipping decay profiles.
+    /// - Parameter kind: The type, or `nil` for automatic (the unsorted period).
+    /// - Returns: The number and unit to display.
+    static func defaultExpiry(for kind: ThoughtKind?) -> (count: Int, unit: ExpirationUnit) {
+        switch kind {
+        case .none, .unsorted: (1, .months)
+        case .idea: (3, .months)
+        case .todo: (2, .weeks)
+        case .habit: (1, .weeks)
+        }
+    }
+
     /// Whether a save is in flight. Never disables the field — typing must never wait on a write.
     public private(set) var isSaving = false
 
@@ -71,17 +139,32 @@ public final class CaptureModel {
     public func save() async {
         guard canSave, !isSaving else { return }
 
-        let thought = Thought(body: trimmedText, capturedAt: clock.now)
+        let picked = chosenKind
+        let thought = Thought(
+            body: trimmedText,
+            capturedAt: clock.now,
+            kind: picked ?? .unsorted,
+            kindSource: picked == nil ? .unclassified : .confirmed,
+            customLifetime: customLifetime
+        )
         isSaving = true
         defer { isSaving = false }
 
         do {
             try await repository.add(thought)
             text = ""
+            chosenKind = nil
+            usesCustomExpiration = false
+            expirationCount = 1
+            expirationUnit = .months
             lastError = nil
             savedCount += 1
             changes.notify()
-            classifyInBackground(thought)
+            // A kind the user chose is already confirmed, so classification would only be
+            // ignored; only an unsorted capture is worth sorting in the background.
+            if picked == nil {
+                classifyInBackground(thought)
+            }
         } catch {
             lastError = error
             failedCount += 1

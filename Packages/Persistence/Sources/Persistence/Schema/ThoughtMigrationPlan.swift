@@ -4,12 +4,21 @@ import SwiftData
 /// How an existing store is brought up to the current schema version.
 enum ThoughtMigrationPlan: SchemaMigrationPlan {
     static var schemas: [any VersionedSchema.Type] {
-        [ThoughtSchemaV1.self, ThoughtSchemaV2.self]
+        [ThoughtSchemaV1.self, ThoughtSchemaV2.self, ThoughtSchemaV3.self]
     }
 
     static var stages: [MigrationStage] {
-        [version1To2]
+        [version1To2, version2To3]
     }
+
+    /// Adds version 3's optional `customLifetime` column.
+    ///
+    /// Lightweight rather than custom: the new attribute is optional with a default, so existing
+    /// rows migrate to `nil` — no per-thought override, which is exactly the previous behaviour.
+    private static let version2To3 = MigrationStage.lightweight(
+        fromVersion: ThoughtSchemaV2.self,
+        toVersion: ThoughtSchemaV3.self
+    )
 
     /// Fills in version 2's combined lifecycle columns from version 1's separate ones.
     ///

@@ -65,7 +65,7 @@ public struct SettingsView: View {
     public var body: some View {
         List {
             Section {
-                StatusBlock(headline: model.status.headline, detail: model.status.detail)
+                StatusBlock(headline: model.status.headline)
                     .modifier(SettingsRow())
                     .accessibilityIdentifier("settings.intelligence")
             } header: {
@@ -73,12 +73,9 @@ public struct SettingsView: View {
             }
 
             Section {
-                StatusBlock(
-                    headline: model.notificationStatus.headline,
-                    detail: model.notificationStatus.detail
-                )
-                .modifier(SettingsRow())
-                .accessibilityIdentifier("settings.notifications")
+                StatusBlock(headline: model.notificationStatus.headline)
+                    .modifier(SettingsRow())
+                    .accessibilityIdentifier("settings.notifications")
 
                 if model.authorization == .notAsked {
                     Button("Turn on notifications") {
@@ -100,7 +97,6 @@ public struct SettingsView: View {
             Section {
                 StatusBlock(
                     headline: model.storageDescription.headline,
-                    detail: model.storageDescription.detail,
                     tone: model.storageIsDegraded ? .warning : .normal
                 )
                 .modifier(SettingsRow())
@@ -112,7 +108,6 @@ public struct SettingsView: View {
             Section {
                 StatusBlock(
                     headline: model.syncDescription.headline,
-                    detail: model.syncDescription.detail,
                     tone: model.syncStatus.isSyncing ? .normal : .warning
                 )
                 .modifier(SettingsRow())
@@ -124,7 +119,6 @@ public struct SettingsView: View {
             Section {
                 StatusBlock(
                     headline: model.widgetStatus.headline,
-                    detail: model.widgetStatus.detail,
                     tone: model.storageIsShared ? .normal : .warning
                 )
                 .modifier(SettingsRow())

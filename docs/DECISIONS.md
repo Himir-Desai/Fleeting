@@ -718,3 +718,142 @@ opacity floor is no longer load-bearing on its own — under increased contrast,
 entirely ([ADR-0020](DECISIONS.md)), two of the three still speak. The rail lives on `CardSurface`
 as a plain `Color`, so `DesignSystem` still knows nothing about a `Thought`
 ([ADR-0012](DECISIONS.md)); the feature decides what colour to hand it.
+
+---
+
+## ADR-0024 · A capture can override its own lifetime, and that override wins over the kind
+
+**Status:** Accepted · New-thought redesign
+
+**Context.** Decay rate was a pure function of a thought's kind (ADR-0005): a todo dies in a
+fortnight, an idea lasts months. The redesigned capture screen lets a person set an explicit
+"expires in N days/weeks/months" at the moment of writing, which the kind-only model had no place
+to store or honour.
+
+**Decision.** A thought carries an optional `customLifetime` in seconds, set once at capture and
+never touched by classification. When present, `DecayEngine.policy(for:)` returns
+`FreshnessPolicy(grace: 0, lifetime: customLifetime)` instead of the kind's profile: the whole
+chosen span is the decay ramp with no grace, so "expires in two weeks" reaches zero at exactly two
+weeks. When absent, decay is unchanged — the kind's profile still governs, which is what every
+existing thought and every quick capture uses.
+
+The choice is gated behind a "Custom expiry" toggle in advanced options, off by default, so a
+normal capture keeps per-kind decay and only a deliberate act opts into a fixed lifetime.
+
+**Alternatives.**
+- *Couple expiry to the type icons* — reuse the type choice to imply a lifetime. Rejected: type and
+  lifetime are different questions ("what is this" vs "how long do I want it"), and folding them
+  forces a type choice on someone who only wanted to set a duration.
+- *A grace period proportional to the custom lifetime* — softer, matching how kind profiles hold new
+  captures at full freshness first. Rejected for now: grace 0 makes the label exact and predictable,
+  which is the point of letting someone set the number themselves. Revisit if fresh custom-expiry
+  thoughts read as already-fading.
+- *Store an absolute `expiresAt` date instead of a duration* — rejected: decay is measured from
+  `lastActedAt`, which moves when a thought is acted on, so a duration composes with that reference
+  while a fixed date would not.
+
+**Consequences.** The store gained a column, so the schema moved to version 3. The new attribute is
+optional with a default, making the migration lightweight rather than custom, and version 1's and
+version 2's columns are still written so the rollback story of ADR-0019 holds. The wheels are a
+capture-time preference that is now fully persisted and honoured by decay; a future "edit expiry on
+an existing thought" would reuse the same field.
+
+---
+
+## ADR-0025 · Freshness reads as weight, not a meter
+
+**Status:** Accepted · Thoughts redesign
+
+**Context.** The inbox row drew freshness three ways at once: an opacity fade, a thin meter, and a
+tinted rail down the card's edge. It read as a dashboard, which fought the app's calm. The redesign
+asked for a simpler list where freshness is felt rather than measured.
+
+**Decision.** A row's freshness is expressed as the **weight of its own words** — semibold while
+fresh, stepping down to regular as it fades — plus a gentle opacity fade applied to the whole row
+(glyph, text and inline action together). The meter and the rail are gone. `FreshnessStyle` gains a
+`weight(for:)` that maps a `Double` to a `Font.Weight`, staying domain-free (ADR-0012).
+
+**Alternatives.**
+- *Keep the meter* — precise, but it is exactly the "measured, not felt" reading the redesign moved
+  away from, and a column of meters competes with the words for the row's width.
+- *Vary row height / spacing by freshness too* — "fresh breathes, faded compresses." Rejected: a
+  list whose row heights shift as things decay reads as janky rather than calm; weight and opacity
+  carry the signal without moving the layout.
+- *Weight alone, no opacity* — rejected: two channels separate the bands more clearly, and the
+  opacity is what lets the kind glyph and the inline button fade with the words instead of staying
+  bright over a spent thought.
+
+**Consequences.** Weight is never taken below regular and the opacity keeps its audited floor, so a
+faded thought stays legible; VoiceOver still speaks the band word, because weight is not perceivable
+to everyone. Under increased contrast the opacity fade is suppressed, as the fade always was
+(ADR-0020).
+
+---
+
+## ADR-0026 · One filtered stream with a masthead, and no top bar
+
+**Status:** Accepted · Thoughts redesign
+
+**Context.** The Thoughts page was a flat reverse-chronological list with a toolbar carrying
+back-to-capture, archive and settings buttons. Once capture and settings became tabs, those buttons
+were redundant, and the flat list gave no sense of the shape of the pile or a way to narrow it.
+
+**Decision.** The page is a **single stream** with a row of **filter chips**
+(`All · Ideas · To-dos · Habits · Archived`) and a one-line **masthead** ("5 thoughts · 2 fading",
+with "N to decide" opening the review). The chips filter in place; Unsorted folds into All. The
+trailing **Archived chip is a real filter too**: it swaps the list to archived thoughts, drawn as
+restore/delete rows, and archived thoughts never appear under All or any kind. The top toolbar is
+gone.
+
+**Alternatives.**
+- *Kind sections instead of chips* — grouping the list by kind. Rejected: it splits the one calm
+  stream into four and makes "what's fading across everything" harder to see; a filter keeps the
+  stream whole and is a lighter touch.
+- *An Unsorted chip* — rejected: an unsorted thought is a transient pre-classification state, not a
+  category a person curates, so it lives under All rather than earning a chip.
+- *Archived as a separate page* — reuse the existing `ArchiveView` behind the chip. Rejected on
+  reflection: making Archived the one chip that navigates rather than filters was an inconsistency,
+  and inlining it is barely more code — the model already loads the archive, and a small
+  `ArchivedListRow` carries the restore/delete a live row does not. `ArchiveView`/`ArchiveModel`
+  are now unused by the app (kept in the package for now).
+- *Search across the archive* — `ArchiveView` had a search field the inline filter drops. Deferred:
+  the filtered list is enough for now, and search can return as a field above the archived rows.
+
+**Consequences.** Every chip now filters in place, so the page never leaves itself. The model loads
+both the live list and the archive on each `load()`, so switching to the Archived filter is instant;
+the extra query is cheap at this scale. The masthead becomes the single home for the review entry,
+which used to be a row inside the list.
+
+---
+
+## ADR-0027 · The opened thought is the action hub, and it absorbs Sharpen
+
+**Status:** Accepted · Thoughts redesign
+
+**Context.** Actions were scattered across the row: a kind-correction menu, and swipe actions for
+done, keep, sharpen, snooze, archive and delete. The redesign asked for a simple list where the row
+carries only what is needed at a glance, and opening a thought offers everything else.
+
+**Decision.** Tapping a row **pushes a detail screen** that is the hub: edit the raw text, change
+the type, set a custom expiry, keep it (mark a to-do done / continue a habit's streak), snooze,
+archive or delete — every action a round chip, consistent with capture. The row keeps only a single
+inline button (done / continue streak, for to-dos and habits) and two swipes (delete, archive), plus
+snooze on the leading swipe. **Enhance** (Sharpen) moves into the detail; because a feature may not
+import another feature (ADR-0012), the detail exposes an `onEnhance` callback that the app layer
+routes on to the Sharpen screen.
+
+**Alternatives.**
+- *Keep editing behaviour on the row (menus, many swipes)* — rejected: it is the busyness the
+  redesign set out to remove, and swipe actions are undiscoverable.
+- *Embed the Sharpen flow inside the detail* — rejected twice over: `SharpenView` is a full screen
+  with its own scroll, and `InboxFeature` cannot import `SharpenFeature`. Routing Enhance out to the
+  existing Sharpen screen reuses all of that work and respects the dependency rule.
+- *A sheet rather than a push* — rejected: the detail is a place you go to work on a thought, and a
+  push with a back button matches that better than a modal.
+
+**Consequences.** `ThoughtEditor` (text-only) is replaced by `ThoughtDetailView` + a
+`ThoughtDetailModel` that writes to the repository and announces changes, so the list behind it
+refreshes through the same change signal the inbox already watches. Editing a thought's expiry after
+capture is now possible, which is why `ExpirationUnit` moved to `Core` and `Thought` gained
+`setCustomLifetime(_:)` (the stored column already existed, ADR-0024). Text is committed when the
+detail is left, so an edit is never lost by tapping back.

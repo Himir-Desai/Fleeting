@@ -80,7 +80,7 @@ Fleeting/
 │   ├── Intents/
 │   │   └── CaptureThoughtIntent.swift ← Siri and Shortcuts capture without opening the app
 │   ├── Navigation/
-│   │   └── RootView.swift           ← capture is the root; everything else is a push or sheet
+│   │   └── RootView.swift           ← three tabs: new thought · thoughts · settings
 │   └── Resources/
 │       ├── Assets.xcassets/         ← the app icon; generated, see docs/ASSETS.md
 │       └── PrivacyInfo.xcprivacy    ← nothing collected, nothing tracked (docs/PRIVACY.md)
@@ -94,6 +94,7 @@ Fleeting/
 │   │       ├── Model/
 │   │       │   ├── Thought.swift            ← the single domain entity
 │   │       │   ├── ThoughtKind.swift        ← idea · todo · habit · unsorted
+│   │       │   ├── ExpirationUnit.swift      ← days · weeks · months; a hand-set lifetime's unit
 │   │       │   ├── ThoughtState.swift       ← inbox · active · snoozed · archived · done
 │   │       │   ├── KindSource.swift          ← unclassified · inferred · confirmed
 │   │       │   ├── ThoughtScope.swift        ← live · archived · all
@@ -130,10 +131,11 @@ Fleeting/
 │   │   └── Sources/Persistence/
 │   │       ├── PersistenceError.swift    ← failures the store reports to the domain
 │   │       ├── Schema/
-│   │       │   ├── ThoughtEntity.swift      ← typealias naming the version in use; nothing else does
+│   │       │   ├── ThoughtEntity.swift      ← typealias naming the version in use (V3); nothing else does
 │   │       │   ├── ThoughtSchemaV1.swift    ← the store as Phase 6 shipped it; migration source
-│   │       │   ├── ThoughtSchemaV2.swift    ← @Model in use; lifecycle values in single columns
-│   │       │   ├── ThoughtMigrationPlan.swift ← custom v1 → v2 stage (ADR-0019)
+│   │       │   ├── ThoughtSchemaV2.swift    ← lifecycle values in single columns
+│   │       │   ├── ThoughtSchemaV3.swift    ← @Model in use; adds the per-thought lifetime column
+│   │       │   ├── ThoughtMigrationPlan.swift ← custom v1→v2 stage (ADR-0019); lightweight v2→v3
 │   │       │   └── StoredSharpening.swift   ← Codable DTO for the interview, stored as JSON
 │   │       ├── Mapping/
 │   │       │   ├── ThoughtEntity+Domain.swift ← entity ⇄ Core.Thought, both directions
@@ -207,15 +209,21 @@ Fleeting/
 │   │   └── Sources/
 │   │       ├── CaptureFeature/      ← the sacred path: launch → cursor → save → clear
 │   │       │   ├── CaptureModel.swift   ← @Observable; the rules, unit-tested without a simulator
-│   │       │   ├── CaptureView.swift    ← the field, autofocused; save sits in a safeAreaInset
-│   │       │   └── FirstRunHint.swift   ← one line under the field, never a screen (ADR-0021)
-│   │       ├── InboxFeature/        ← the living list, sorted and faded by freshness
-│   │       │   ├── InboxModel.swift     ← @Observable; load, revise, delete
-│   │       │   ├── InboxView.swift      ← plain list; swipe to delete, tap to edit
-│   │       │   ├── InboxListRow.swift   ← one row: kind control, link, swipe actions
-│   │       │   ├── ThoughtRow.swift     ← lives here, not DesignSystem (ADR-0012)
+│   │       │   ├── CaptureView.swift    ← the field; one card holds advanced · types · save + expiry
+│   │       │   ├── CaptureTypeIcon.swift ← one thought-type icon in the controls row
+│   │       │   └── ExpiryWheels.swift    ← the number + unit wheels for a capture's lifetime
+│   │       ├── InboxFeature/        ← the living list: kind filters, weight-faded rows, detail
+│   │       │   ├── InboxModel.swift     ← @Observable; load, filter by kind, counts, row actions
+│   │       │   ├── InboxView.swift      ← masthead + filter chips + list; no top bar (ADR-0026)
+│   │       │   ├── InboxFilter.swift    ← all · kind · archived; the chip selection
+│   │       │   ├── FilterChip.swift     ← one kind/archived pill in the filter row
+│   │       │   ├── InboxListRow.swift   ← a live row: kind glyph, tap-to-open, inline done/streak
+│   │       │   ├── ArchivedListRow.swift ← an archived row: words + captured date, restore/delete
+│   │       │   ├── ThoughtRow.swift     ← freshness as weight not a meter (ADR-0025); ADR-0012
 │   │       │   ├── KindGlyph.swift      ← the symbol and label for each kind
-│   │       │   └── ThoughtEditor.swift  ← edits raw text; commits only on save
+│   │       │   ├── ThoughtDetailModel.swift ← @Observable; edit · retype · keep · snooze · archive · delete
+│   │       │   ├── ThoughtDetailView.swift  ← the opened thought: the action hub (ADR-0027)
+│   │       │   └── ExpiryWheels.swift   ← number + unit wheels; a copy of capture's (ADR-0012)
 │   │       ├── SharpenFeature/      ← interview → write-up → escalate
 │   │       │   ├── SharpenModel.swift   ← phases; every answer persisted as it is given
 │   │       │   └── SharpenView.swift    ← one question at a time; raw note always visible

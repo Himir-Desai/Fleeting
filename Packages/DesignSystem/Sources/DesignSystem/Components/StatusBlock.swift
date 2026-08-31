@@ -20,9 +20,9 @@ public struct StatusBlock: View {
     /// Creates the block.
     /// - Parameters:
     ///   - headline: The answer, in one short sentence.
-    ///   - detail: Why, or what follows from it.
+    ///   - detail: Why, or what follows from it. Omit for a headline on its own.
     ///   - tone: Whether this is the expected state. Defaults to ``Tone/normal``.
-    public init(headline: String, detail: String, tone: Tone = .normal) {
+    public init(headline: String, detail: String = "", tone: Tone = .normal) {
         self.headline = headline
         self.detail = detail
         self.tone = tone
@@ -33,10 +33,12 @@ public struct StatusBlock: View {
             Text(headline)
                 .font(Typography.subtitle)
                 .foregroundStyle(tone == .warning ? Palette.fading : Palette.ink)
-            Text(detail)
-                .font(Typography.caption)
-                .foregroundStyle(Palette.inkMuted)
-                .fixedSize(horizontal: false, vertical: true)
+            if !detail.isEmpty {
+                Text(detail)
+                    .font(Typography.caption)
+                    .foregroundStyle(Palette.inkMuted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)

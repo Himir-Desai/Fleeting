@@ -15,10 +15,16 @@ public struct DecayEngine: Sendable {
     }
 
     /// The policy governing a particular thought.
+    ///
+    /// A capture-time lifetime override wins over the kind's rate: the whole chosen span is the
+    /// decay ramp, with no grace, so "expires in two weeks" falls to zero at exactly two weeks.
     /// - Parameter thought: The thought to look up.
-    /// - Returns: The policy for that thought's kind.
+    /// - Returns: The policy for that thought's custom lifetime, or its kind.
     public func policy(for thought: Thought) -> FreshnessPolicy {
-        profiles.policy(for: thought.kind)
+        if let custom = thought.customLifetime {
+            return FreshnessPolicy(grace: 0, lifetime: custom)
+        }
+        return profiles.policy(for: thought.kind)
     }
 
     /// How fresh a thought is at a given moment.

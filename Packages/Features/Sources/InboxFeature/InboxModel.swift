@@ -18,6 +18,61 @@ public final class InboxModel {
     /// How many thoughts a review session would contain right now.
     public private(set) var reviewCount = 0
 
+    /// Archived thoughts, loaded so the Archived filter can show them inline. Never mixed into the
+    /// live list — they appear only when that filter is chosen.
+    public private(set) var archivedThoughts: [Thought] = []
+
+    /// Which filter the list is showing.
+    public var filter: InboxFilter = .all
+
+    /// Whether the current filter is the archive, so callers can pick restore/delete row actions.
+    public var isShowingArchive: Bool {
+        filter == .archived
+    }
+
+    /// The thoughts to show for the current filter, newest first.
+    ///
+    /// "All" and each kind draw from the live list only; "Archived" draws from the archive.
+    /// Unsorted thoughts have no chip of their own — they appear under All.
+    public var filteredThoughts: [Thought] {
+        switch filter {
+        case .all: thoughts
+        case let .kind(kind): thoughts.filter { $0.kind == kind }
+        case .archived: archivedThoughts
+        }
+    }
+
+    /// How many live thoughts there are in total, across every kind.
+    public var liveCount: Int {
+        thoughts.count
+    }
+
+    /// How many archived thoughts there are, for the Archived chip's count.
+    public var archivedCount: Int {
+        archivedThoughts.count
+    }
+
+    /// How many live thoughts are in the fading or expiring bands, for the masthead.
+    public var fadingCount: Int {
+        thoughts.reduce(into: 0) { total, thought in
+            switch freshness(of: thought).band {
+            case .fading, .expiring: total += 1
+            default: break
+            }
+        }
+    }
+
+    /// How many live thoughts are of a given kind, for a filter chip's count.
+    /// - Parameter kind: The kind to count.
+    /// - Returns: The number of live thoughts of that kind.
+    public func count(of kind: ThoughtKind) -> Int {
+        thoughts.reduce(into: 0) { total, thought in
+            if thought.kind == kind {
+                total += 1
+            }
+        }
+    }
+
     private let repository: any ThoughtRepository
     private let sweeper: any ArchiveSweeping
     private let engine: DecayEngine
@@ -45,11 +100,15 @@ public final class InboxModel {
         self.clock = clock
     }
 
-    /// Sweeps expired thoughts into the archive, then reloads what is still live.
+    /// Sweeps expired thoughts into the archive, then reloads both the live list and the archive.
+    ///
+    /// The archive is loaded here too so switching to its filter is instant; it is only shown when
+    /// that filter is chosen.
     public func load() async {
         do {
             try await sweeper.sweep()
             thoughts = try await repository.thoughts(in: .live)
+            archivedThoughts = try await repository.thoughts(in: .archived)
             reviewCount = selector.count(from: thoughts, at: clock.now)
             lastError = nil
         } catch {
@@ -125,6 +184,23 @@ public final class InboxModel {
         do {
             try await repository.delete(id: thought.id)
             thoughts.removeAll { $0.id == thought.id }
+            archivedThoughts.removeAll { $0.id == thought.id }
+            lastError = nil
+        } catch {
+            lastError = error
+        }
+    }
+
+    /// Brings an archived thought back to the inbox at full freshness.
+    /// - Parameter thought: The archived thought to revive.
+    public func restore(_ thought: Thought) async {
+        var restored = thought
+        restored.restore(at: clock.now)
+        do {
+            try await repository.update(restored)
+            archivedThoughts.removeAll { $0.id == thought.id }
+            thoughts.insert(restored, at: 0)
+            reviewCount = selector.count(from: thoughts, at: clock.now)
             lastError = nil
         } catch {
             lastError = error

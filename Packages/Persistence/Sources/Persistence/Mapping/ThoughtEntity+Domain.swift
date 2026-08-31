@@ -23,7 +23,8 @@ extension ThoughtEntity {
             dueAt: dueAt,
             streak: StoredStreak.streak(code: streakCode),
             sharpening: StoredSharpening.decode(sharpeningJSON),
-            snoozeCount: snoozeCount
+            snoozeCount: snoozeCount,
+            customLifetime: customLifetime
         )
     }
 
@@ -41,6 +42,7 @@ extension ThoughtEntity {
         dueAt = thought.dueAt
         sharpeningJSON = StoredSharpening.encode(thought.sharpening)
         snoozeCount = thought.snoozeCount
+        customLifetime = thought.customLifetime
 
         stateCode = StoredState.code(for: thought.state)
         streakCode = StoredStreak.code(for: thought.streak)

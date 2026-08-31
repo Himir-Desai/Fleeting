@@ -45,6 +45,13 @@ public struct Thought: Identifiable, Equatable, Hashable, Sendable {
     /// When the thought was last deliberately acted on. Drives decay.
     public private(set) var lastActedAt: Date
 
+    /// A lifetime chosen at capture that overrides the kind's decay rate, in seconds, or `nil` to
+    /// decay at the kind's normal rate.
+    ///
+    /// Set once when the thought is written and never changed by classification, so choosing "keep
+    /// this for three months" survives the app deciding what the thought is.
+    public private(set) var customLifetime: TimeInterval?
+
     /// Creates a thought.
     /// - Parameters:
     ///   - id: Stable identity. Defaults to a fresh identifier.
@@ -60,6 +67,8 @@ public struct Thought: Identifiable, Equatable, Hashable, Sendable {
     ///   - streak: A habit's run of consecutive days, if any.
     ///   - sharpening: An interview already in progress or finished, if any.
     ///   - snoozeCount: How many times it has already been set aside.
+    ///   - customLifetime: A capture-time lifetime override, in seconds, or `nil` to decay at the
+    ///     kind's rate.
     public init(
         id: UUID = UUID(),
         body: String,
@@ -72,13 +81,15 @@ public struct Thought: Identifiable, Equatable, Hashable, Sendable {
         dueAt: Date? = nil,
         streak: Streak? = nil,
         sharpening: Sharpening? = nil,
-        snoozeCount: Int = 0
+        snoozeCount: Int = 0,
+        customLifetime: TimeInterval? = nil
     ) {
         self.kindSource = kindSource
         self.dueAt = dueAt
         self.streak = streak
         self.sharpening = sharpening
         self.snoozeCount = max(snoozeCount, 0)
+        self.customLifetime = customLifetime.map { max($0, 0) }
         self.id = id
         self.body = body
         self.capturedAt = capturedAt
@@ -130,6 +141,15 @@ public struct Thought: Identifiable, Equatable, Hashable, Sendable {
         self.kind = kind
         kindSource = .confirmed
         markActed(at: date)
+    }
+
+    /// Replaces the capture-time lifetime override, or clears it to decay at the kind's rate.
+    ///
+    /// Not deliberate action: changing how long a thought is allowed to last is a setting, not
+    /// attending to the thought itself, so it does not reset freshness.
+    /// - Parameter seconds: The new lifetime in seconds, or `nil` to follow the kind.
+    public mutating func setCustomLifetime(_ seconds: TimeInterval?) {
+        customLifetime = seconds.map { max($0, 0) }
     }
 
     /// Marks a todo complete.
