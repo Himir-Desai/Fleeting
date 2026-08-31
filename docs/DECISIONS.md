@@ -890,3 +890,32 @@ it and features never import each other. Test navigation is centralised in `Test
 TabNavigation.swift`, so the next navigation change is one edit and not thirty scattered taps that
 each invite a quiet rewrite. The full UI suite has to be green before a redesign is called done —
 it was 22 tests red when this pass began.
+
+---
+
+## ADR-0029 · Migration tests run in their own process
+
+**Status:** Accepted · Thoughts redesign
+
+**Context.** `PersistenceTests` failed intermittently, and worse, sometimes *passed* while lying.
+SwiftData binds an entity name to one class per process. The migration tests are the only ones that
+open containers at old schema versions, and version 1's `ThoughtEntity` has neither `isLive` nor
+`stateCode`. Sharing a process, whichever class registered first answered everyone's queries — so
+archived thoughts came back live, and a snoozed thought round-tripped as `inbox`. When the
+mismatch was a cast rather than a missing column, SwiftData trapped and took the whole test process
+down, which is what hid the wrong answers: the run died before it could report them.
+
+**Decision.** `SchemaMigrationTests` is its **own test target**, run as its **own `swift test`
+invocation**. Within it, a container is opened at the version of whatever entity class the test then
+uses — never at an old version with the current `ThoughtEntity`, which is the cast that traps.
+
+**Alternatives.**
+- *`--no-parallel`* — what CI was already doing, and it never worked: ordering is not the problem,
+  a shared process is. It only made the failure rarer, which is worse.
+- *`.serialized` on the suite* — same flaw, and it left the fault looking addressed.
+- *One entity class shared across versions* — that is what a versioned schema exists to prevent; the
+  old columns are the point of the migration test.
+
+**Consequences.** `swift test` on the Persistence package alone is no longer the whole story, so CI
+runs two invocations and the suite's doc comment says so. A version 4 schema adds its cases to this
+target, and never to `PersistenceTests`.

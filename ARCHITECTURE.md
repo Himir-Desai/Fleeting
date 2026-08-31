@@ -153,6 +153,9 @@ Fleeting/
 │   │           ├── ModelContainerFactory.swift ← production, in-memory, and preview containers
 │   │           ├── OpenedStore.swift        ← the container + what opening it gave up
 │   │           └── CloudAttachment.swift    ← whether iCloud was attached, and why not
+│   │       └── (Tests: PersistenceTests, and SchemaMigrationTests as a SEPARATE target — it
+│   │           opens old-version containers, and SwiftData binds an entity name to one class
+│   │           per process, so it must run as its own `swift test` invocation)
 │   │
 │   ├── Intelligence/                ← Everything AI. Swappable, testable, optional at runtime.
 │   │   └── Sources/Intelligence/
@@ -283,7 +286,7 @@ Fleeting/
 | A rule about when things expire | `Core/Decay/FreshnessPolicy.swift` | it's pure — cover it in `CoreTests` |
 | A change to what the weekly review shows | `Core/Review/ReviewSelector.swift` | it's pure — cover it in `CoreTests` |
 | Anything that touches the database | `Persistence/Repositories/` | expose it through the protocol in `Core`, never leak SwiftData types upward |
-| A new stored column | `Persistence/Schema/ThoughtSchemaV*.swift` | add a version + a stage to `ThoughtMigrationPlan`; if it only means something paired with another column, store the pair as one value (ADR-0019) |
+| A new stored column | `Persistence/Schema/ThoughtSchemaV*.swift` | add a version + a stage to `ThoughtMigrationPlan`; if it only means something paired with another column, store the pair as one value (ADR-0019); test it in `SchemaMigrationTests`, which runs in its own process |
 
 ## 5. Conventions
 

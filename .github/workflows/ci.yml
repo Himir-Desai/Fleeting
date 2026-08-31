@@ -22,11 +22,16 @@ jobs:
             swift test --package-path "Packages/$package"
             echo "::endgroup::"
           done
-      # Serialised on purpose. The migration tests open a store at the previous schema version,
-      # and SwiftData resolves a model by name once per process, so a version 1 container built
-      # alongside a version 2 one makes both read the wrong columns.
+      # Two runs, on purpose, because this needs two processes rather than one ordering.
+      # SwiftData binds an entity name to a class once per process, so a version 1 container —
+      # which has no isLive or stateCode column — can answer the current version's queries and
+      # quietly hand back archived thoughts as live. --no-parallel does not help: the classes
+      # are still registered in the same process. The migration tests therefore live in their
+      # own bundle and run on their own.
       - name: Test Persistence
-        run: swift test --package-path Packages/Persistence --no-parallel
+        run: swift test --package-path Packages/Persistence --filter PersistenceTests
+      - name: Test Persistence — schema migration, in its own process
+        run: swift test --package-path Packages/Persistence --filter SchemaMigrationTests
 
   lint:
     name: Lint and format

@@ -4,6 +4,19 @@ import Foundation
 import SwiftData
 import Testing
 
+/// The only suite that stands up containers for *old* schema versions.
+///
+/// **Run this bundle on its own**: `swift test --filter SchemaMigrationTests`. SwiftData binds an
+/// entity name to one class per process, so a version 1 container — which has neither `isLive` nor
+/// `stateCode` — can answer the current version's queries in any other suite sharing the process,
+/// and archived thoughts silently come back live. `--no-parallel` does not help; the classes are
+/// registered either way. That is why this is a separate test target, and why CI runs it as a
+/// second `swift test` invocation.
+///
+/// Within a test, a container is opened at the version of whatever entity class the test then
+/// uses: `ThoughtEntity` names the current version, so opening at an older one hands back rows
+/// SwiftData cannot cast, and that failure is a trap that kills the process rather than failing
+/// one case.
 @Suite("Schema migration")
 struct SchemaMigrationTests {
     private let epoch = Date(timeIntervalSince1970: 1_700_000_000)
@@ -33,8 +46,12 @@ struct SchemaMigrationTests {
     }
 
     /// Opens an existing store at the current version, running the migration plan.
-    private func openVersion2Store(at url: URL) throws -> [Thought] {
-        let schema = Schema(versionedSchema: ThoughtSchemaV2.self)
+    ///
+    /// The container is opened at the version `ThoughtEntity` actually names. Opening at V2 and
+    /// fetching the current entity asked SwiftData to cast a V2 row to a V3 class, which is a
+    /// trap rather than an error and took the whole test process down with it.
+    private func openCurrentStore(at url: URL) throws -> [Thought] {
+        let schema = Schema(versionedSchema: ThoughtSchemaV3.self)
         let container = try ModelContainer(
             for: schema,
             migrationPlan: ThoughtMigrationPlan.self,
@@ -77,7 +94,7 @@ struct SchemaMigrationTests {
                 version1Row(body: "learn to sail", stateRaw: "archived", stateDate: archivedAt)
             ])
 
-            let migrated = try openVersion2Store(at: url)
+            let migrated = try openCurrentStore(at: url)
             #expect(migrated.count == 1)
             #expect(migrated[0].state == .archived(at: archivedAt))
         }
@@ -103,7 +120,7 @@ struct SchemaMigrationTests {
                 )
             })
 
-            for thought in try openVersion2Store(at: url) {
+            for thought in try openCurrentStore(at: url) {
                 #expect(thought.state == expected[thought.body])
             }
         }
@@ -123,7 +140,7 @@ struct SchemaMigrationTests {
                 )
             ])
 
-            let migrated = try openVersion2Store(at: url)
+            let migrated = try openCurrentStore(at: url)
             #expect(migrated[0].streak == Streak(count: 6, lastMarkedAt: marked))
         }
     }
@@ -135,7 +152,7 @@ struct SchemaMigrationTests {
                 version1Row(body: "pay the parking fine", stateRaw: "inbox", stateDate: nil)
             ])
 
-            #expect(try openVersion2Store(at: url)[0].streak == nil)
+            #expect(try openCurrentStore(at: url)[0].streak == nil)
         }
     }
 
@@ -147,7 +164,9 @@ struct SchemaMigrationTests {
                 version1Row(body: "old thought", stateRaw: "archived", stateDate: archivedAt)
             ])
 
-            let schema = Schema(versionedSchema: ThoughtSchemaV2.self)
+            // At the current version, because `ThoughtEntity` is the current entity: opening at
+            // V2 and inserting one asks SwiftData to cast across versions, which traps.
+            let schema = Schema(versionedSchema: ThoughtSchemaV3.self)
             let container = try ModelContainer(
                 for: schema,
                 migrationPlan: ThoughtMigrationPlan.self,
@@ -166,7 +185,7 @@ struct SchemaMigrationTests {
             }()
 
             #expect(live.map(\.body) == ["new thought"])
-            #expect(try openVersion2Store(at: url).count == 2)
+            #expect(try openCurrentStore(at: url).count == 2)
             _ = repository
         }
     }
