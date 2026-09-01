@@ -131,6 +131,10 @@ public struct ReviewView: View {
                 .font(Typography.body)
                 .foregroundStyle(Palette.ink)
                 .tint(Palette.accentText)
+                // A vertical field inside a fixed-height card is offered less height than its
+                // line needs, so the placeholder is sliced through the middle of its glyphs.
+                // Taking the ideal height back stops the card cropping the field.
+                .fixedSize(horizontal: false, vertical: true)
                 .focused($isAnswerFocused)
                 .accessibilityIdentifier("review.answer")
 
