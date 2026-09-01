@@ -11,6 +11,10 @@ public struct ReviewView: View {
     @FocusState private var isAnswerFocused: Bool
     @Environment(\.dismiss) private var dismiss
 
+    /// How tall the card's scroll view is, so the card can be centred in it while it fits and
+    /// scroll from the top once it does not.
+    @State private var cardArea: CGFloat = 0
+
     /// Creates the review.
     /// - Parameter model: State for the session, built by the composition root.
     public init(model: ReviewModel) {
@@ -60,36 +64,45 @@ public struct ReviewView: View {
             VStack(alignment: .leading, spacing: Spacing.loose) {
                 progress
 
-                // The card sits between the progress and the decisions rather than at the top:
-                // one card alone against a screen of empty page reads as a loading state.
-                Spacer(minLength: Spacing.loose)
+                // The card scrolls and the decisions do not. At the largest type sizes the card
+                // grows taller than the screen, and in a plain stack it pushed "Let go" off the
+                // bottom edge — the decisions are the point of the screen, so they stay put and
+                // the card gives way instead.
+                ScrollView {
+                    Card(elevation: .floating) {
+                        VStack(alignment: .leading, spacing: Spacing.regular) {
+                            Text(thought.body)
+                                .font(Typography.capture)
+                                .foregroundStyle(Palette.ink)
+                                .accessibilityIdentifier("review.card")
 
-                Card(elevation: .floating) {
-                    VStack(alignment: .leading, spacing: Spacing.regular) {
-                        Text(thought.body)
-                            .font(Typography.capture)
-                            .foregroundStyle(Palette.ink)
-                            .accessibilityIdentifier("review.card")
-
-                        if let expiry = model.currentExpiry {
-                            Label {
-                                Text("archives \(expiry, format: .relative(presentation: .named))")
-                            } icon: {
-                                Image(systemName: "clock")
+                            if let expiry = model.currentExpiry {
+                                Label {
+                                    Text(
+                                        "archives \(expiry, format: .relative(presentation: .named))"
+                                    )
+                                } icon: {
+                                    Image(systemName: "clock")
+                                }
+                                .font(Typography.caption)
+                                .foregroundStyle(Palette.fading)
+                                .accessibilityIdentifier("review.expiry")
                             }
-                            .font(Typography.caption)
-                            .foregroundStyle(Palette.fading)
-                            .accessibilityIdentifier("review.expiry")
-                        }
 
-                        if let question = model.ambientQuestion {
-                            Divider().overlay(Palette.separator)
-                            ambientPrompt(question)
+                            if let question = model.ambientQuestion {
+                                Divider().overlay(Palette.separator)
+                                ambientPrompt(question)
+                            }
                         }
                     }
+                    // Centred while it fits and scrolled from the top once it does not: one card
+                    // pinned to the top of an empty page reads as a loading state, but a card
+                    // taller than the screen must start at its first line.
+                    .frame(maxWidth: .infinity, minHeight: cardArea, alignment: .center)
                 }
+                .scrollBounceBehavior(.basedOnSize)
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { cardArea = $0 }
 
-                Spacer(minLength: Spacing.loose)
                 decisions
             }
             .padding(Spacing.loose)

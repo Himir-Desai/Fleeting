@@ -22,8 +22,9 @@ final class SyncTests: XCTestCase {
     func testSettingsSaysWhetherThoughtsAreSyncing() {
         let app = launchAndOpenSettings()
 
-        // The row is a stack of two labels, so it matches more than once.
-        let row = app.descendants(matching: .any)["settings.sync"].firstMatch
+        // Syncing is one of the About facts now, not a row of its own: the Settings rewrite
+        // folded it in beside storage and widgets, so the identifier moved with it.
+        let row = app.descendants(matching: .any)["settings.fact.syncing"].firstMatch
         if !row.waitForExistence(timeout: 5) {
             app.swipeUp()
         }
