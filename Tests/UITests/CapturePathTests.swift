@@ -396,9 +396,8 @@ final class ClassificationTests: XCTestCase {
         XCTAssertTrue(app.goToSettings())
 
         XCTAssertTrue(
-            app.otherElements["settings.intelligence"].waitForExistence(timeout: 5)
-                || app.staticTexts["On-device model"].exists
-                || app.staticTexts["Rules"].exists,
+            app.descendants(matching: .any)["settings.sorting.reality"]
+                .waitForExistence(timeout: 5),
             "Settings must state which implementation is answering."
         )
     }

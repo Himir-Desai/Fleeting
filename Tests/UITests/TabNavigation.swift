@@ -43,11 +43,16 @@ extension XCUIApplication {
         return buttons["inbox.filter.all"].waitForExistence(timeout: timeout)
     }
 
-    /// Switches to the settings tab and waits for the first thing it reports.
+    /// Switches to the settings tab and waits for the first control it offers.
+    ///
+    /// Waits on the sorting reality line rather than the old `settings.intelligence` element,
+    /// which the Settings rewrite removed — leaving this helper returning false forever while
+    /// every caller ignored the result.
     @discardableResult
     func goToSettings(timeout: TimeInterval = 10) -> Bool {
         switchToTab("Settings")
-        return descendants(matching: .any)["settings.intelligence"].waitForExistence(timeout: timeout)
+        return descendants(matching: .any)["settings.sorting.reality"]
+            .waitForExistence(timeout: timeout)
     }
 }
 
