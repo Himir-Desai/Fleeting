@@ -1047,3 +1047,38 @@ found this asserts a **reload**, not just the optimistic in-memory removal — t
 stopped one line early, which is precisely why the bug survived. A companion test asserts a lapsed
 snooze returns the thought to the list, because a snooze that hid something forever would be an
 archive under another name.
+
+---
+
+## ADR-0034 · The review's card gives way; its decisions do not
+
+**Status:** Accepted · Design-pass review
+
+**Context.** `testTheReviewIsOperableAtTheLargestTypeSize` had been failing on `review.drop must be
+tappable` since before the design pass. The session was one unscrolling `VStack`: progress, a
+spacer, the card, a spacer, the decisions. At accessibility type sizes the card — which carries the
+thought's full text, an expiry line and sometimes an interview question and its field — grew taller
+than the screen and pushed "Let go" off the bottom edge, where nothing could reach it.
+
+The screen has two kinds of content and only one of them is the point. The card is what you are
+being asked about; the three decisions are the asking. A review you cannot answer is not a review.
+
+**Decision.** The card scrolls and the decisions stay put. The card moves into a `ScrollView` whose
+content carries a `minHeight` equal to the scroll view's own height, so the card is **centred while
+it fits and scrolls from the top once it does not**. The decisions sit outside that scroll view and
+are therefore always on screen at every type size.
+
+**Alternatives.**
+- *Wrap the whole session in a `ScrollView`* — rejected: the decisions would scroll too, so at the
+  largest sizes you would have to scroll past the thought to answer it, and the finite-feeling
+  session ADR-0007 argues for would read as a page.
+- *Shrink or truncate the card's text at large type* — rejected: the raw captured words are the
+  thing being decided about. Truncating them to fit the decision buttons inverts which content the
+  screen exists to show.
+- *Let the decisions wrap into a column and hope it fits* — rejected: `ViewThatFits` already does
+  this and it was not enough. Three capsule buttons stacked vertically are taller than the row they
+  replace, so the overflow got worse rather than better.
+
+**Consequences.** The screen keeps its centred single-card look at default type, which is what
+stops one card against an empty page reading as a loading state. The `minHeight` needs the scroll
+view's measured height, so `ReviewView` tracks it in a `cardArea` state via `onGeometryChange`.
