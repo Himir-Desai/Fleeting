@@ -277,6 +277,7 @@ Fleeting/
                                      ← CapturePathTests: launch → typing is unobstructed
                                        InboxTests: browse, edit, delete, survive a force-quit
                                        ArchiveTests: archive, restore, never destroy
+                                       SnoozeTests: a snooze survives a relaunch (ADR-0033)
                                        SyncTests: a store that cannot reach iCloud is still whole
                                        AccessibilityTests: operable at the largest type size
                                        FirstRunTests: the explanation blocks nothing and never returns

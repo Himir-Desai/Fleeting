@@ -741,3 +741,64 @@ final class NudgeTests: XCTestCase {
         )
     }
 }
+
+/// Covers invariant 7: a thought set aside stays aside across a reload (ADR-0033).
+///
+/// The unit tests for this run against a spy repository. This one runs against the real SwiftData
+/// store, because the bug it guards was a disagreement between the store's idea of "live" and the
+/// list's, and a fake repository cannot disagree with itself.
+@MainActor
+final class SnoozeTests: XCTestCase {
+    override func setUp() {
+        continueAfterFailure = false
+    }
+
+    private func capture(_ text: String, in app: XCUIApplication) {
+        let field = app.descendants(matching: .any)["capture.field"]
+        XCTAssertTrue(field.waitForExistence(timeout: 10))
+        field.tap()
+        field.typeText(text)
+        app.buttons["capture.save"].tap()
+    }
+
+    func testASnoozedThoughtIsStillGoneAfterARelaunch() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--reset-store"]
+        app.launch()
+
+        capture("water the plants", in: app)
+        XCTAssertTrue(app.goToThoughts())
+
+        let row = app.staticTexts["water the plants"]
+        XCTAssertTrue(row.waitForExistence(timeout: 10))
+        row.tap()
+
+        let snooze = app.buttons["detail.action.snooze"]
+        XCTAssertTrue(snooze.waitForExistence(timeout: 10))
+        snooze.tap()
+
+        XCTAssertTrue(
+            row.waitForNonExistence(timeout: 10),
+            "snoozing must take the thought out of the list"
+        )
+
+        // The part that regressed. The list reloads on every appearance, and `.live` still
+        // contains a running snooze, so an unfiltered load put the thought straight back.
+        app.terminate()
+        app.launchArguments = []
+        app.launch()
+        XCTAssertTrue(app.goToThoughts())
+
+        XCTAssertFalse(
+            row.waitForExistence(timeout: 5),
+            "a snoozed thought must not come back when the app is reopened"
+        )
+
+        // And it is not in the archive either: a snooze is not an archive.
+        app.buttons["inbox.filter.archived"].tap()
+        XCTAssertFalse(
+            row.waitForExistence(timeout: 5),
+            "a snoozed thought must not have been archived"
+        )
+    }
+}
