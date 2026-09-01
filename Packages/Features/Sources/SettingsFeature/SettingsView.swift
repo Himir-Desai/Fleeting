@@ -27,11 +27,6 @@ public struct SettingsView: View {
             }
             .padding(.horizontal, Spacing.loose)
             .padding(.vertical, Spacing.loose)
-            // The floating tab bar overlays the scroll view rather than insetting it, so the
-            // last section scrolls underneath it and cannot be read or tapped. The gap is part
-            // of the content rather than a scroll inset, because the tab bar's own height is
-            // not published and a content margin left the final row still covered.
-            .padding(.bottom, Spacing.section * 3)
         }
         .background(Palette.surface)
         .navigationTitle("Settings")
