@@ -36,11 +36,48 @@ extension XCUIApplication {
         return descendants(matching: .any)["capture.field"].waitForExistence(timeout: timeout)
     }
 
-    /// Switches to the thoughts tab and waits for its filter row.
+    /// Switches to the thoughts tab and waits for its summary line.
+    ///
+    /// Waits on the masthead rather than the old `inbox.filter.all` chip: kind moved into a
+    /// toolbar menu when urgency became the list's axis (ADR-0036), so the chip row no longer
+    /// exists to wait on.
     @discardableResult
     func goToThoughts(timeout: TimeInterval = 10) -> Bool {
         switchToTab("Thoughts")
-        return buttons["inbox.filter.all"].waitForExistence(timeout: timeout)
+        return descendants(matching: .any)["inbox.summary"].waitForExistence(timeout: timeout)
+    }
+
+    /// Switches to the review tab and waits for it to settle on a card or an empty state.
+    @discardableResult
+    func goToReview(timeout: TimeInterval = 15) -> Bool {
+        switchToTab("Review")
+        let card = staticTexts["review.card"]
+        let empty = descendants(matching: .any)["review.empty"]
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if card.exists || empty.exists {
+                return true
+            }
+            usleep(200_000)
+        }
+        return false
+    }
+
+    /// Chooses a kind filter, or the archive, from the inbox's toolbar menu.
+    ///
+    /// The chips this replaces were tapped directly; a menu has to be opened first. Centralised
+    /// here so the next change to the filter's shape is one edit (ADR-0036).
+    /// - Parameter name: The menu item's label: "All", "Ideas", "To-dos", "Habits", "Archived".
+    @discardableResult
+    func chooseFilter(_ name: String, timeout: TimeInterval = 10) -> Bool {
+        let menu = descendants(matching: .any)["inbox.filterMenu"].firstMatch
+        guard menu.waitForExistence(timeout: timeout) else { return false }
+        menu.tap()
+
+        let item = buttons[name]
+        guard item.waitForExistence(timeout: timeout) else { return false }
+        item.tap()
+        return true
     }
 
     /// Switches to the settings tab and waits for the first control it offers.

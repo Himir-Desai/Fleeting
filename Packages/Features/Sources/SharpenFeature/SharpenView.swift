@@ -43,7 +43,7 @@ public struct SharpenView: View {
         VStack(alignment: .leading, spacing: Spacing.snug) {
             SectionLabel("What you wrote")
             Text(model.thought.body)
-                .font(Typography.emphasis)
+                .font(Typography.quoted)
                 .foregroundStyle(Palette.ink)
                 .accessibilityIdentifier("sharpen.original")
         }
@@ -82,7 +82,8 @@ public struct SharpenView: View {
                     )
 
                 Text(question.prompt)
-                    .font(Typography.capture)
+                    // The app asking, not the user speaking, so it stays in the sans (ADR-0037).
+                    .font(Typography.subtitle)
                     .foregroundStyle(Palette.ink)
                     .accessibilityIdentifier("sharpen.question")
 
@@ -129,7 +130,7 @@ public struct SharpenView: View {
                         SectionLabel("Sharpened")
 
                         Text(writeUp.title)
-                            .font(Typography.title)
+                            .font(Typography.writtenTitle)
                             .foregroundStyle(Palette.ink)
                             .accessibilityIdentifier("sharpen.title")
 

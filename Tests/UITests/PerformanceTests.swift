@@ -69,9 +69,14 @@ final class PerformanceTests: XCTestCase {
         _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 60)
         app.goToThoughts()
 
+        // Any seeded row will do. Which one leads is a question for the list's ordering, and the
+        // list is grouped by urgency now rather than by capture order (ADR-0036) — this test is
+        // about whether four hundred thoughts render and scroll at all.
+        let anyRow = app.staticTexts.matching(
+            NSPredicate(format: "label BEGINSWITH 'thought number '")
+        ).firstMatch
         XCTAssertTrue(
-            app.staticTexts["thought number 0 about something worth remembering"]
-                .waitForExistence(timeout: 30),
+            anyRow.waitForExistence(timeout: 30),
             "a large inbox must still render"
         )
 

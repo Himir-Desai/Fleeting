@@ -48,11 +48,18 @@ struct InboxListRow: View {
             EdgeInsets(top: 0, leading: Spacing.loose, bottom: 0, trailing: Spacing.loose)
         )
         .listRowSeparator(.hidden)
-        // A plain card — freshness is the text's weight now, so there is no rail to draw.
+        // The card carries the freshness: it loses its fill and its lift together, so a thought
+        // about to be archived has visually almost rejoined the page (ADR-0035). The rail is the
+        // same number read on a second axis, and only asserts itself near the end.
         .listRowBackground(
-            CardSurface()
-                .padding(.horizontal, Spacing.snug)
-                .padding(.vertical, Spacing.tight)
+            CardSurface(
+                freshness: freshness.value,
+                rail: FreshnessStyle.tint(for: freshness.value),
+                railOpacity: FreshnessStyle.railOpacity(for: freshness.value)
+            )
+            .padding(.horizontal, Spacing.snug)
+            .padding(.vertical, Spacing.tight)
+            .motion(Motion.decay, value: freshness.value)
         )
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
             Button(action: onSnooze) {

@@ -80,7 +80,7 @@ Fleeting/
 │   ├── Intents/
 │   │   └── CaptureThoughtIntent.swift ← Siri and Shortcuts capture without opening the app
 │   ├── Navigation/
-│   │   └── RootView.swift           ← three tabs: new thought · thoughts · settings
+│   │   └── RootView.swift           ← four tabs: new thought · thoughts · review · settings (ADR-0040)
 │   └── Resources/
 │       ├── Assets.xcassets/         ← the app icon; generated, see docs/ASSETS.md
 │       └── PrivacyInfo.xcprivacy    ← nothing collected, nothing tracked (docs/PRIVACY.md)
@@ -98,7 +98,7 @@ Fleeting/
 │   │       │   ├── ThoughtState.swift       ← inbox · active · snoozed · archived · done; isLive vs isAwake(at:)
 │   │       │   ├── KindSource.swift          ← unclassified · inferred · confirmed
 │   │       │   ├── ThoughtScope.swift        ← live · archived · all; a storage question (ADR-0033)
-│   │       │   ├── KindGlyph.swift           ← the symbol and label for each kind (ADR-0012)
+│   │       │   ├── KindGlyph.swift           ← the symbol, label and plural for each kind (ADR-0012)
 │   │       │   ├── SortingPreference.swift   ← automatic · rules only; the choice (ADR-0030)
 │   │       │   └── Streak.swift             ← habit-specific payload
 │   │       ├── Decay/
@@ -106,6 +106,7 @@ Fleeting/
 │   │       │   ├── FreshnessPolicy.swift    ← grace + lifetime, linear decay (ADR-0013)
 │   │       │   ├── DecayProfiles.swift      ← per-kind rates: todo 14d · habit 7d · idea 90d
 │   │       │   ├── DecayEngine.swift        ← pure: (Thought, Date) → Freshness; reads rates live
+│   │       │   ├── UrgencyBand.swift        ← going soon · this month · plenty of time (ADR-0036)
 │   │       │   └── DecayProfilesStoring.swift ← where the editable rates live (ADR-0031)
 │   │       ├── Sharpen/
 │   │       │   ├── Sharpening.swift         ← the interview: questions, answers, write-up
@@ -194,17 +195,17 @@ Fleeting/
 │   │   │   │   ├── Palette.swift        ← the colour vocabulary; paper and ink (ADR-0022).
 │   │   │   │   │                          three surfaces (page · well · card), accent (fill) vs
 │   │   │   │   │                          accentText, and one separator instead of three literals
-│   │   │   │   ├── Typography.swift     ← eight styles, every one on a Dynamic Type text style;
-│   │   │   │   │                          display is the only serif (ADR-0022)
+│   │   │   │   ├── Typography.swift     ← eleven styles, every one on a Dynamic Type text style;
+│   │   │   │   │                          the serif is the user's voice, sans is the app's (ADR-0037)
 │   │   │   │   ├── Spacing.swift        ← the layout steps; features never use raw numbers
 │   │   │   │   ├── Radius.swift         ← control · card · well; the app's roundness, once
 │   │   │   │   ├── Elevation.swift      ← a level, not a shadow: dark mode gets a hairline instead
 │   │   │   │   ├── Motion.swift         ← timings by intent; applied only via .motion (ADR-0020)
 │   │   │   │   └── FreshnessStyle.swift ← takes a Double, never a Thought (ADR-0012). the fade,
-│   │   │   │                              the meter's three stops, and the rail (ADR-0023)
+│   │   │   │                              the rail, and the card's sink + elevation (ADR-0035)
 │   │   │   ├── Components/          ← domain-AGNOSTIC only (ADR-0012): parameterised by
 │   │   │   │   ├── FreshnessMeter.swift  primitives, never by a Thought
-│   │   │   │   ├── CardSurface.swift    ← a card's ground + its freshness rail; also a listRowBackground
+│   │   │   │   ├── CardSurface.swift    ← a card's ground, sinking with freshness (ADR-0035)
 │   │   │   │   ├── Card.swift           ← content on a card, for cards outside a List
 │   │   │   │   ├── StatusBlock.swift    ← an answer and its explanation; every Settings row
 │   │   │   │   ├── SectionLabel.swift   ← a section's name, small and wide
@@ -219,22 +220,20 @@ Fleeting/
 │   │   └── Sources/
 │   │       ├── CaptureFeature/      ← the sacred path: launch → cursor → save → clear
 │   │       │   ├── CaptureModel.swift   ← @Observable; the rules, unit-tested without a simulator
-│   │       │   ├── CaptureView.swift    ← the field; one card holds advanced · types · save + expiry
-│   │       │   ├── CaptureTypeIcon.swift ← one thought-type icon in the controls row
-│   │       │   ├── FirstRunHint.swift    ← the one-line explanation of decay (ADR-0021)
-│   │       │   └── ExpiryWheels.swift    ← the number + unit wheels for a capture's lifetime
-│   │       ├── InboxFeature/        ← the living list: kind filters, weight-faded rows, detail
-│   │       │   ├── InboxModel.swift     ← @Observable; load, filter by kind, counts, row actions
-│   │       │   ├── InboxView.swift      ← masthead + filter chips + list; no top bar (ADR-0026)
-│   │       │   ├── InboxFilter.swift    ← all · kind · archived; the chip selection
-│   │       │   ├── FilterChip.swift     ← one kind/archived pill in the filter row
-│   │       │   ├── FilterChipRow.swift  ← the whole filter row; reads and writes one selection
+│   │       │   ├── CaptureView.swift    ← a full-bleed page; save rides the keyboard (ADR-0039)
+│   │       │   ├── CaptureReceipt.swift ← what a save filed: words · kind · lifetime (ADR-0038)
+│   │       │   ├── CaptureReceiptCard.swift ← the card the saved text collapses into (ADR-0038)
+│   │       │   └── FirstRunHint.swift    ← the one-line explanation of decay (ADR-0021)
+│   │       ├── InboxFeature/        ← the living list: urgency sections, sinking cards, detail
+│   │       │   ├── InboxModel.swift     ← @Observable; load, urgency sections, counts, row actions
+│   │       │   ├── InboxView.swift      ← masthead + urgency sections; kind is a menu (ADR-0036)
+│   │       │   ├── InboxFilter.swift    ← all · kind · archived; the menu selection
 │   │       │   ├── InboxListRow.swift   ← a live row: kind glyph, tap-to-open, inline done/streak
 │   │       │   ├── ArchivedListRow.swift ← an archived row: words + captured date, restore/delete
-│   │       │   ├── ThoughtRow.swift     ← freshness as weight not a meter (ADR-0025); ADR-0012
+│   │       │   ├── ThoughtRow.swift     ← the thought's words in the serif (ADR-0037); ADR-0012
 │   │       │   ├── ThoughtDetailModel.swift ← @Observable; edit · retype · keep · snooze · archive · delete
 │   │       │   ├── ThoughtDetailView.swift  ← the opened thought: the action hub (ADR-0027)
-│   │       │   └── ExpiryWheels.swift   ← number + unit wheels; a copy of capture's (ADR-0012)
+│   │       │   └── ExpiryWheels.swift   ← number + unit wheels; the only copy now (ADR-0039)
 │   │       ├── SharpenFeature/      ← interview → write-up → escalate
 │   │       │   ├── SharpenModel.swift   ← phases; every answer persisted as it is given
 │   │       │   └── SharpenView.swift    ← one question at a time; raw note always visible

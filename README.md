@@ -86,21 +86,27 @@ flowchart LR
 
 ### ✎ Capture — the only screen that matters
 
-<img src="docs/screenshots/capture.png" width="260" align="right" alt="The capture screen on cold launch: a large recessed writing area reading What's on your mind? with the cursor already blinking in it, a single line of first-run text below saying thoughts fade as they age and file themselves away, nothing is ever deleted, with a Got it control, and a quiet browse chip and a Save capsule along the bottom." />
+<img src="docs/screenshots/capture.png" width="260" align="right" alt="The capture screen on cold launch: a full-bleed page with What's on your mind? set in a serif at the top margin and the cursor already blinking in it, no box and no border, a single line of first-run text below saying thoughts fade as they age and file themselves away, nothing is ever deleted, with a Got it control, and a four-tab bar along the bottom." />
 
-Cold launch lands on a cursor. Type, hit save, the field clears and waits for the next one. No
-navigation, no decisions, no confirmation. Also reachable without unlocking, from a lock-screen
-widget, a Control Center control, and an App Intent so Siri can take dictation into it.
+Cold launch lands on a cursor. The page *is* the field: no well, no border, no options. Type, hit
+save, and the words collapse into a one-line receipt telling you what they were filed as and how
+long they have — `idea · 3 months` — before it retires itself. No navigation, no decisions, no
+confirmation to dismiss. Also reachable without unlocking, from a lock-screen widget, a Control
+Center control, and an App Intent so Siri can take dictation into it.
 
 ### 🕯 Decay — the anti-hoarding mechanic
 
-<img src="docs/screenshots/inbox.png" width="260" align="right" alt="The inbox: a tinted card inviting a review, reading 2 need a decision, then five thoughts as white cards on warm paper. Each card carries a coloured rail down its leading edge, a tinted chip holding its kind glyph, and a freshness meter that shrinks and warms from purple to amber, with labels reading archives in 2 months through archives tomorrow." />
+<img src="docs/screenshots/inbox.png" width="260" align="right" alt="The inbox: a summary line reading 5 thoughts, 2 fading, with a 2 to decide link, then three urgency sections headed GOING SOON, THIS MONTH and PLENTY OF TIME. The two thoughts going soon sit flush with the warm paper with amber rails down their leading edges; the fresher ones below sit on raised white cards with purple rails. Each card carries a tinted chip holding its kind glyph, and the thoughts themselves are set in a serif." />
 
-Every thought has a **freshness** value that falls over time, rendered as a quiet visual fade in the
-list. Different kinds of thought rot at different speeds: a todo you ignored for two weeks is dead,
-a business idea deserves three months. Freshness resets when you *do* something with a thought —
-not merely when you look at it. When it reaches zero the thought archives itself, silently. Nothing
-is ever deleted; the archive is a filter on the same list, one chip away, where a thought can be
+Every thought has a **freshness** value that falls over time, and the card is what shows it: as a
+thought fades its surface blends toward the page and its shadow drops away, so one about to be
+archived has visually almost rejoined the paper it is printed on. Different kinds rot at different
+speeds: a todo you ignored for two weeks is dead, a business idea deserves three months.
+
+The list is sorted by what you are about to lose, not by what you captured last — **Going soon**,
+**This month**, **Plenty of time**. Freshness resets when you *do* something with a thought, not
+merely when you look at it. When it reaches zero the thought archives itself, silently. Nothing is
+ever deleted; the archive is a filter on the same list, one menu away, where a thought can be
 restored to full freshness.
 
 ### ✦ Sharpen — half-baked in, fully-baked out
@@ -120,12 +126,17 @@ affordance has the local model compose a rich, context-loaded prompt and hand it
 
 ### ↻ Review — a ritual you'll actually finish
 
-<img src="docs/screenshots/review.png" width="260" align="right" alt="The review screen: a progress label reading 1 of 2 above a progress bar, a single raised card holding the thought's text and an amber clock line saying it archives tomorrow, and three capsule decisions along the bottom — Let go, Snooze, and an emphasised Keep." />
+<img src="docs/screenshots/review.png" width="260" align="right" alt="The review screen, reached from its own tab: a progress label reading 1 of 2 above a progress bar, a single raised card holding the thought's text in a serif and an amber clock line saying it archives tomorrow, and three equal-weight capsule decisions along the bottom — Let go, Snooze and Keep, the last tinted purple." />
 
 Once a week, Fleeting picks **at most seven** thoughts that genuinely need a decision — about to
-expire, or snoozed one too many times — and deals them as a card stack. Act, Snooze, or Drop. A short
-session you finish beats a complete one you abandon. Idea cards arrive with one ambient sharpening
-question attached, so the ritual quietly does double duty.
+expire, or snoozed one too many times — and deals them as a card stack. Keep, Snooze, or Let go,
+by button or by swipe: left lets go, right keeps, up snoozes. All three are real decisions, so all
+three carry the same visual weight; the screen does not lean on your arm.
+
+It is a **tab**, not a link buried in the list — this is the half of the deal where the app comes
+back and makes you decide, so it is a place you can go. Never presented on launch, never blocking.
+A short session you finish beats a complete one you abandon. Idea cards arrive with one ambient
+sharpening question attached, so the ritual quietly does double duty.
 
 ### 🔔 Nudges — one a day, never in the way
 

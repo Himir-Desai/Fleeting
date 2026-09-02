@@ -18,7 +18,8 @@ struct ThoughtRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.snug) {
             Text(thought.body)
-                .font(Typography.body)
+                // The user's own words, so the serif (ADR-0037).
+                .font(Typography.serifBody)
                 .fontWeight(FreshnessStyle.weight(for: freshness.value))
                 .foregroundStyle(Palette.ink)
                 .lineLimit(typeSize.isAccessibilitySize ? 6 : 3)

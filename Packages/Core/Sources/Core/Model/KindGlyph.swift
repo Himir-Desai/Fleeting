@@ -28,4 +28,19 @@ public enum KindGlyph {
         case .habit: "Habit"
         }
     }
+
+    /// A kind's plural label, for a filter that names a group rather than one thought.
+    ///
+    /// Spelled out rather than suffixed, because "To-dos" is not what appending an "s" to
+    /// "To-do" would reliably produce in every locale this is later translated into.
+    /// - Parameter kind: The kind to describe.
+    /// - Returns: A capitalised plural label.
+    public static func pluralLabel(for kind: ThoughtKind) -> String {
+        switch kind {
+        case .unsorted: "Unsorted"
+        case .idea: "Ideas"
+        case .todo: "To-dos"
+        case .habit: "Habits"
+        }
+    }
 }

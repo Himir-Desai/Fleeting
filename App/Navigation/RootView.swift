@@ -18,6 +18,7 @@ struct RootView: View {
     private enum AppTab: Hashable {
         case newThought
         case thoughts
+        case review
         case settings
     }
 
@@ -41,6 +42,15 @@ struct RootView: View {
 
             Tab("Thoughts", systemImage: "tray.full", value: AppTab.thoughts) {
                 thoughtsTab
+            }
+
+            // Review is where the app's value is actually realised, so it is a place rather than
+            // a link buried in the inbox's header (ADR-0040). Still never presented on launch and
+            // still never blocking: it is a tab you choose, like any other.
+            Tab("Review", systemImage: "checkmark.circle", value: AppTab.review) {
+                NavigationStack {
+                    review
+                }
             }
 
             Tab("Settings", systemImage: "gearshape", value: AppTab.settings) {
@@ -88,16 +98,7 @@ struct RootView: View {
                 )
             }
             .navigationDestination(isPresented: $isReviewing) {
-                ReviewView(
-                    model: ReviewModel(
-                        repository: environment.thoughts,
-                        selector: ReviewSelector(engine: environment.engine),
-                        engine: environment.engine,
-                        intelligence: environment.intelligence,
-                        changes: environment.changes,
-                        clock: environment.clock
-                    )
-                )
+                review
             }
             .navigationDestination(item: $sharpening) { thought in
                 SharpenView(
@@ -111,6 +112,21 @@ struct RootView: View {
                 )
             }
         }
+    }
+
+    /// The review session, reachable both as its own tab and as a push from the inbox's
+    /// "N to decide" line, so the two entry points cannot drift apart.
+    private var review: some View {
+        ReviewView(
+            model: ReviewModel(
+                repository: environment.thoughts,
+                selector: ReviewSelector(engine: environment.engine),
+                engine: environment.engine,
+                intelligence: environment.intelligence,
+                changes: environment.changes,
+                clock: environment.clock
+            )
+        )
     }
 
     /// The settings tab.

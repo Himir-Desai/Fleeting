@@ -47,6 +47,25 @@ public final class InboxModel {
         thoughts.count
     }
 
+    /// The current filter's thoughts grouped into urgency sections, most urgent first.
+    ///
+    /// The list's primary axis (ADR-0036): someone opens this app asking what they are about to
+    /// lose, not which of their thoughts are habits. Empty bands are omitted, so the list never
+    /// shows a heading with nothing under it.
+    ///
+    /// The archive is deliberately ungrouped — an archived thought has no time left to run, so
+    /// urgency is a question that no longer applies to it.
+    public var sections: [(band: UrgencyBand, thoughts: [Thought])] {
+        guard !isShowingArchive else { return [] }
+        let grouped = Dictionary(grouping: filteredThoughts) {
+            UrgencyBand.band(forFreshness: freshness(of: $0).value)
+        }
+        return UrgencyBand.allCases.compactMap { band in
+            guard let inBand = grouped[band], !inBand.isEmpty else { return nil }
+            return (band, inBand)
+        }
+    }
+
     /// How many archived thoughts there are, for the Archived chip's count.
     public var archivedCount: Int {
         archivedThoughts.count

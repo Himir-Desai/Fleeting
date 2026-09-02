@@ -97,4 +97,55 @@ public enum FreshnessStyle {
     private static func clamp(_ freshness: Double) -> Double {
         min(max(freshness, 0), 1)
     }
+
+    /// How far a card has sunk toward the page, within 0...1.
+    ///
+    /// The inverse of freshness, held at zero while a thought is healthy so that only the back
+    /// half of a thought's life is spent visibly sinking. A fresh thought should look no different
+    /// from a settling one; the signal is for the end of the slope, not the whole of it.
+    /// - Parameter freshness: A value within 0...1.
+    /// - Returns: 0 while fresh, rising to 1 as freshness reaches zero.
+    public static func sink(for freshness: Double) -> Double {
+        let clamped = clamp(freshness)
+        guard clamped < fadingBelow else { return 0 }
+        return (fadingBelow - clamped) / fadingBelow
+    }
+
+    /// The fill for a thought's card at the given freshness.
+    ///
+    /// A fresh card is ``Palette/raised`` and sits plainly on the page. As it fades the fill is
+    /// blended toward ``Palette/surface``, so an expiring thought has visually almost rejoined the
+    /// paper before decay archives it. This is the primary reading of freshness: weight and colour
+    /// alone put the whole signal in the text, where a caption already said it in words.
+    ///
+    /// Never reaches the page colour exactly, so a card is always still a card.
+    /// - Parameters:
+    ///   - freshness: A value within 0...1.
+    ///   - increasedContrast: When `true`, the card stays fully raised. A surface that has faded
+    ///     into its background is the opposite of what increased contrast asks for, and the meter
+    ///     and the "archives in" label still carry the signal.
+    /// - Returns: The card's fill.
+    public static func cardFill(for freshness: Double, increasedContrast: Bool = false) -> Color {
+        guard !increasedContrast else { return Palette.raised }
+        return Palette.raisedValues
+            .mixed(with: Palette.surfaceValues, by: sink(for: freshness) * maximumSink)
+            .color
+    }
+
+    /// How far a card is allowed to blend into the page.
+    ///
+    /// Short of 1: a card that reached the page colour would stop reading as an object, and the
+    /// row would lose the edge that separates one thought from the next.
+    public static let maximumSink = 0.85
+
+    /// How far off the page a thought's card sits at the given freshness.
+    ///
+    /// The second half of the sinking: a fresh thought casts a shadow, and a thought about to be
+    /// archived lies flush with the paper. Paired with ``cardFill(for:increasedContrast:)`` so the
+    /// card loses its fill and its lift together.
+    /// - Parameter freshness: A value within 0...1.
+    /// - Returns: `.card` while there is life left, `.flat` once the thought is expiring.
+    public static func elevation(for freshness: Double) -> Elevation {
+        clamp(freshness) < expiringBelow ? .flat : .card
+    }
 }

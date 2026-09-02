@@ -1082,3 +1082,181 @@ are therefore always on screen at every type size.
 **Consequences.** The screen keeps its centred single-card look at default type, which is what
 stops one card against an empty page reading as a loading state. The `minHeight` needs the scroll
 view's measured height, so `ReviewView` tracks it in a `cardArea` state via `onGeometryChange`.
+
+---
+
+## ADR-0035 · Decay is the card's material, not a caption on it
+
+**Status:** Accepted · Design overhaul
+
+**Context.** Everything decays is one of the app's two load-bearing ideas, and it reached the user
+as the words "archives in 2 months". ADR-0025 had replaced the meter and rail with font weight, and
+weight alone turned out to be too quiet a channel: in the inbox a thought with two months left and
+one with six days looked nearly identical. `FreshnessMeter` stayed in `DesignSystem` with zero
+callers — the design system still described a product the app had stopped being.
+
+A caption is the app *telling* you something decays. The thesis deserves to be *shown*.
+
+**Decision.** A thought's card expresses its own freshness. As freshness falls the fill blends from
+``Palette/raised`` toward ``Palette/surface`` and the elevation drops from `.card` to `.flat`, so a
+thought about to be archived has visually almost rejoined the paper it is printed on. The rail
+returns as a second reading of the same number. Three channels agree instead of one whispering.
+
+The slope starts at the fading threshold rather than at full freshness: only the back half of a
+thought's life is spent visibly sinking, so a fresh thought and a settling one look alike and the
+signal means something when it appears.
+
+**Alternatives.**
+- *Bring back the meter from ADR-0025* — rejected: a meter is a gauge to read, and a list of five
+  gauges is a dashboard. The card itself changing needs no reading at all.
+- *Fade the card's opacity* — rejected: opacity fades the text with the surface, and the row's
+  content already fades on its own axis. Compounding them would push an old thought under the
+  contrast floor ADR-0020 set.
+- *Blend all the way to the page colour* — rejected: a card that reached the page stops reading as
+  an object and the list loses its edges. `maximumSink` stops at 0.85.
+
+**Consequences.** `CardSurface` gains a `freshness:` initialiser; the plain one still serves cards
+that are not thoughts. Increased contrast suppresses the blend entirely, because a surface fading
+into its background is the opposite of what that setting asks for.
+
+---
+
+## ADR-0036 · The list is sorted by what you are about to lose
+
+**Status:** Accepted · Design overhaul
+
+**Context.** The inbox was a flat newest-first list under a permanent row of kind chips. Kind
+answers "what is this?", which is not the question anyone opens this app with. Nobody launches
+Fleeting thinking "show me my habits"; they launch it wondering what is about to disappear. The
+chips also ran off the trailing edge on every device narrower than their combined labels.
+
+**Decision.** Urgency is the list's primary axis. Live thoughts group into **Going soon**, **This
+month** and **Plenty of time**, most urgent first, with empty bands omitted. Kind and the archive
+move into a toolbar menu — a secondary axis deserves a secondary affordance.
+
+`UrgencyBand` lives in `Core` and derives its thresholds from the same numbers the surface
+treatment uses, so the section a thought sits in and the way its card is drawn can never disagree.
+
+**Alternatives.**
+- *Keep the chips and add sections* — rejected: the screen would ask two organising questions at
+  once, and the chips argue for the axis the sections just replaced.
+- *Sort by urgency without sections* — rejected: a continuous slope with no headings gives the user
+  nothing to stop at, and the point is to make "going soon" a place you can look.
+- *Group the archive too* — rejected: an archived thought has no time left to run, so urgency is a
+  question that no longer applies to it. It stays one flat run.
+
+**Consequences.** `goToThoughts()` waits on the masthead rather than the deleted `inbox.filter.all`
+chip, and tests that assumed newest-first ordering now assert the most urgent thought instead —
+they had encoded the old axis.
+
+---
+
+## ADR-0037 · The serif is the user's voice
+
+**Status:** Accepted · Design overhaul
+
+**Context.** ADR-0022 made ``Typography/display`` a serif and used it only where the app speaks: an
+empty state, the end of a review. That put the app's distinctive voice on the two screens a user
+sees least, and left the thing the app actually exists to hold — their own words — in the same
+system sans as every button and label around it.
+
+**Decision.** Invert the rule. **The serif is for the user's own words; the sans is for everything
+the app says.** The capture field, a thought in the list, the review's card and the raw note in
+Sharpen are all set in the serif. Questions the model asks, section labels, buttons and status
+lines stay sans.
+
+A write-up's title is serif too: it was built from the user's answers, so it is their idea written
+out, not the app talking.
+
+**Alternatives.**
+- *Set everything in the serif* — rejected: that is a magazine, and the interface would compete
+  with the content it is meant to be furniture around.
+- *Leave the rule as ADR-0022 had it* — rejected: it spends the app's one typographic gesture on
+  its least-seen screens.
+
+**Consequences.** ``Typography`` gains `quoted`, `serifBody` and `writtenTitle`. The Sharpen
+question moves from `capture` to `subtitle`, because it is the app asking rather than the user
+speaking.
+
+---
+
+## ADR-0038 · A save says where the thought went
+
+**Status:** Accepted · Design overhaul
+
+**Context.** Saving cleared the field and fired a haptic. That confirms *something* happened but
+says nothing about where the thought went, what it was filed as, or that it has already started
+decaying. The decay model was therefore something a user had to discover by opening another tab.
+
+**Decision.** On save the text collapses into a one-line receipt card standing where the words
+were, showing the thought, its kind and its lifetime — `idea · 3 months`. It retires itself after
+two and a half seconds.
+
+An unsorted capture says "sorting…" rather than naming a kind, because classification has not run
+yet and claiming a kind the next screen contradicts would be a lie.
+
+**Alternatives.**
+- *A toast or banner* — rejected: it appears beside the work rather than out of it, and the point
+  is that the thought the user just typed is the thing that transforms.
+- *Leave it on screen until dismissed* — rejected: that is a thing to dismiss standing between the
+  user and their next thought, which principle 1 forbids.
+
+**Consequences.** `CaptureModel` gains `receipt` and `clearReceipt()`. Nothing waits on it: the
+field is empty and focused the instant the write succeeds, receipt or no receipt.
+
+---
+
+## ADR-0039 · Capture is a page, not a form
+
+**Status:** Accepted · Design overhaul
+
+**Context.** The capture screen — the reason the app exists — drew its field as a rounded recess
+with a save button and an advanced-options toggle in a card beneath it. Opening advanced revealed
+type icons and two expiry wheels. The metaphor is paper, and paper does not have a well cut into
+it; the recess made the most important thing in the app look like one field on a form.
+
+The advanced panel was worse than cosmetic. Principle 1 forbids anything standing between a cold
+launch and a captured thought, and expiry wheels at the moment of capture are exactly the "which
+folder? what type?" tax the app was built to remove.
+
+**Decision.** The field is the page: no recess, no border, text starting at the top margin. Save
+moves to a bar pinned above the keyboard, so it is always under the thumb and never moves as the
+thought grows. The advanced panel is deleted outright.
+
+**Alternatives.**
+- *Keep advanced but collapse it further* — rejected: a form that is one tap away is still a form
+  at the moment of capture, and the wheels duplicated controls the thought's detail already has.
+- *Keep the well and move only the save* — rejected: the well is what makes the screen read as a
+  form. Moving the button around it does not change what it looks like.
+
+**Consequences.** `CaptureTypeIcon` and capture's copy of `ExpiryWheels` are deleted; the detail
+view keeps its own wheels, which is where a decision about an existing thought belongs. A capture
+is always automatic now, so classification governs both kind and timing.
+
+---
+
+## ADR-0040 · Review is a place
+
+**Status:** Accepted · Design overhaul
+
+**Context.** Review is where the product's value is actually realised — it is the half of the deal
+where the app comes back and makes you decide. It was reachable only as a small tinted text link in
+the inbox's header, which made the app's second pillar look like a footnote to its list.
+
+The screen itself leaned on the user: two quiet bordered buttons and one filled prominent one, so
+the layout argued for keeping. And a card stack answered only to buttons, never to the thumb.
+
+**Decision.** Review becomes a tab. The three decisions become one equal-weight row — same shape,
+same size, differing only in tint — because all three are real decisions and the screen should not
+lean. The card takes swipe gestures: left lets go, right keeps, up snoozes.
+
+**Alternatives.**
+- *Badge the inbox link with a count* — rejected: it makes the link louder without making review a
+  place, and it is still a footnote to a list.
+- *Present review on launch when thoughts are waiting* — rejected outright: principle 1 and ADR-0008
+  forbid anything between a cold launch and the capture field.
+- *Gestures only, dropping the buttons* — rejected: a gesture is a shortcut, never the only way.
+  Every decision a swipe can reach is also a button.
+
+**Consequences.** The inbox's "N to decide" link stays, pushing the same view, so the two entry
+points cannot drift apart. `Keep` loses `.borderedProminent` and keeps only its accent tint.

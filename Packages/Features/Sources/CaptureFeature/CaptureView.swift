@@ -9,27 +9,13 @@ import SwiftUI
 /// save — appear once you have started typing, directly beneath the box.
 public struct CaptureView: View {
     @State private var model: CaptureModel
-    @State private var isAdvancedExpanded = false
 
     /// Whether the first-run explanation has been dismissed by hand. Cleared by `--reset-store`.
     @AppStorage("capture.hintDismissed") private var hintDismissed = false
     @FocusState private var isFieldFocused: Bool
-    @Environment(\.dynamicTypeSize) private var typeSize
 
-    /// The diameter of the two round controls in the card, grown to stay a 44pt target.
+    /// The diameter of the save control, grown to stay a 44pt target.
     @ScaledMetric(relativeTo: .body) private var controlSize: CGFloat = 52
-
-    /// The diameter of a type icon, a little smaller so four of them fit between the two controls.
-    @ScaledMetric(relativeTo: .body) private var typeIconSize: CGFloat = 40
-
-    /// The type choices in the row, automatic first, then the three kinds a person picks between.
-    private let types: [ThoughtKind?] = [nil, .idea, .todo, .habit]
-
-    /// How tall the writing recess is before any text is in it. Dropped at accessibility sizes,
-    /// where the field is already tall enough on its own.
-    private var wellHeight: CGFloat {
-        typeSize.isAccessibilitySize ? 0 : 132
-    }
 
     /// Creates the capture screen.
     /// - Parameter model: State and rules for capture, built by the composition root.
@@ -51,10 +37,16 @@ public struct CaptureView: View {
                     .accessibilityIdentifier("capture.error")
             }
 
-            // The controls appear once there is something to act on — nothing shows under an
-            // empty field, so a cold, untouched capture screen is just the box.
-            if model.canSave {
-                controls
+            // What the last save filed, standing where the words were until it retires itself
+            // (ADR-0038). Never a control: it cannot be tapped and nothing waits on it.
+            if let receipt = model.receipt {
+                CaptureReceiptCard(receipt: receipt)
+                    .transition(.asymmetric(
+                        insertion: .scale(scale: 0.96, anchor: .top)
+                            .combined(with: .opacity),
+                        removal: .move(edge: .bottom).combined(with: .opacity)
+                    ))
+                    .id(receipt.id)
             }
 
             // A line, never a screen: the field stays focused and the keyboard stays up
@@ -76,10 +68,18 @@ public struct CaptureView: View {
                 .contentShape(.rect)
                 .onTapGesture { dismissField() }
         }
+        // Save sits on the keyboard rather than in the page, so it is always under the thumb and
+        // never moves as the thought grows (ADR-0039).
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if model.canSave {
+                controls
+            }
+        }
         // ADR-0008, the highest-priority constraint in the project: a cold launch lands on a
         // focused field with the keyboard already up. Capture must cost zero taps.
         .task { isFieldFocused = true }
         .motion(Motion.commit, value: model.canSave)
+        .motion(Motion.commit, value: model.receipt)
         // The save is the one moment worth confirming, and a haptic does it without taking focus.
         .sensoryFeedback(.success, trigger: model.savedCount)
         .sensoryFeedback(.error, trigger: model.failedCount)
@@ -87,6 +87,14 @@ public struct CaptureView: View {
         // field empty itself.
         .onChange(of: model.savedCount) { _, _ in
             AccessibilityNotification.Announcement("Saved").post()
+        }
+        // The receipt is a moment, not a state: it retires itself so the screen returns to being
+        // nothing but a field, which is what the next thought needs.
+        .task(id: model.receipt) {
+            guard model.receipt != nil else { return }
+            try? await Task.sleep(for: .seconds(2.5))
+            guard !Task.isCancelled else { return }
+            model.clearReceipt()
         }
     }
 
@@ -99,6 +107,11 @@ public struct CaptureView: View {
         !hintDismissed && model.savedCount == 0
     }
 
+    /// The field: the page itself, not a box drawn on it.
+    ///
+    /// No recess and no border. The metaphor is paper, and paper does not have a well cut into it
+    /// — the well made the largest thing on the most important screen look like one field on a
+    /// form (ADR-0039).
     private var well: some View {
         TextField("What's on your mind?", text: $model.text, axis: .vertical)
             .font(Typography.capture)
@@ -107,91 +120,25 @@ public struct CaptureView: View {
             .focused($isFieldFocused)
             .accessibilityIdentifier("capture.field")
             .accessibilityLabel("Capture a thought")
-            .padding(Spacing.inset)
-            .frame(maxWidth: .infinity, minHeight: wellHeight, alignment: .topLeading)
-            // A background rather than a sibling in a ZStack: a shape has no size of its own, so
-            // as a sibling it takes every point offered and the well swallows the screen.
-            .background {
-                RoundedRectangle(cornerRadius: Radius.well, style: .continuous)
-                    .fill(Palette.surfaceSunken)
-            }
-            // The whole recess is the tap target, not just the line of text in it.
-            .contentShape(.rect(cornerRadius: Radius.well, style: .continuous))
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+            // The whole page is the tap target, not just the line of text on it.
+            .contentShape(.rect)
             .onTapGesture { isFieldFocused = true }
     }
 
-    /// The controls under the box, all inside one card: the advanced toggle and save stay put, and
-    /// opening advanced reveals the type icons between them and the expiry wheels below — in the
-    /// same card, so the keyboard never leaves and the field stays focused.
-    private var controls: some View {
-        VStack(alignment: .leading, spacing: Spacing.regular) {
-            HStack(spacing: Spacing.snug) {
-                advancedButton
-                Spacer(minLength: 0)
-
-                if isAdvancedExpanded {
-                    ForEach(Array(types.enumerated()), id: \.offset) { _, kind in
-                        CaptureTypeIcon(
-                            kind: kind,
-                            isSelected: model.chosenKind == kind,
-                            size: typeIconSize
-                        ) { model.chooseKind(kind) }
-                    }
-                    Spacer(minLength: 0)
-                }
-
-                saveButton
-            }
-
-            // No wheels for an automatic capture: the app decides the timing too, so only a
-            // chosen type shows an expiry.
-            if isAdvancedExpanded, model.chosenKind != nil {
-                ExpiryWheels(
-                    count: Binding(
-                        get: { model.expirationCount },
-                        set: { model.setExpirationCount($0) }
-                    ),
-                    unit: Binding(
-                        get: { model.expirationUnit },
-                        set: { model.setExpirationUnit($0) }
-                    )
-                )
-            }
-        }
-        .padding(Spacing.inset)
-        // A fixed full width, so opening advanced grows the card downward rather than sideways.
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background {
-            RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
-                .fill(Palette.raised)
-        }
-        // Animate the expansion, and the wheels sliding in when a type is chosen, here on the
-        // card alone, so the height change never ripples out to the field above it.
-        .motion(Motion.commit, value: isAdvancedExpanded)
-        .motion(Motion.commit, value: model.chosenKind)
-    }
-
-    /// The round toggle that opens and closes the advanced panel.
+    /// The save control, sitting on the keyboard rather than in the page.
     ///
-    /// Tinted while open or while a type has been chosen, so it is clear the next save will not be
-    /// sorted automatically.
-    private var advancedButton: some View {
-        let isActive = isAdvancedExpanded || model.chosenKind != nil
-        return Button {
-            isAdvancedExpanded.toggle()
-        } label: {
-            Image(systemName: "slider.horizontal.3")
-                .font(Typography.title)
-                .foregroundStyle(isActive ? Palette.accentText : Palette.inkMuted)
-                .frame(width: controlSize, height: controlSize)
-                .background {
-                    Circle().fill(isActive ? Palette.accentSoft : Palette.surfaceSunken)
-                }
+    /// Advanced options are gone: expiry wheels at the moment of capture are a form, and a form is
+    /// exactly what principle 1 forbids. Kind and lifetime are both editable in the thought's
+    /// detail, which is where a decision about a thought belongs (ADR-0039).
+    private var controls: some View {
+        HStack(spacing: Spacing.snug) {
+            Spacer(minLength: 0)
+            saveButton
         }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier("capture.advanced")
-        .accessibilityLabel("Advanced options")
-        .accessibilityAddTraits(isAdvancedExpanded ? .isSelected : [])
+        .padding(.horizontal, Spacing.loose)
+        .padding(.vertical, Spacing.regular)
+        .background(.bar)
     }
 
     /// The round save control: a tick that commits the thought and clears the field.
@@ -213,10 +160,9 @@ public struct CaptureView: View {
         .accessibilityLabel("Save")
     }
 
-    /// Puts the keyboard away and closes the advanced panel with it.
+    /// Puts the keyboard away.
     private func dismissField() {
         isFieldFocused = false
-        isAdvancedExpanded = false
     }
 }
 

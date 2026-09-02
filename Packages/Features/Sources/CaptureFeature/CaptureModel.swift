@@ -95,6 +95,18 @@ public final class CaptureModel {
     /// How many saves have failed. Drives the failure haptic.
     public private(set) var failedCount = 0
 
+    /// What the last save filed, or `nil` once the receipt has been shown.
+    ///
+    /// The field empties the instant a thought is stored, which confirms the save but says nothing
+    /// about where it went or that it has started decaying. This is what the screen shows in its
+    /// place for a moment (ADR-0038).
+    public private(set) var receipt: CaptureReceipt?
+
+    /// Retires the receipt once it has had its moment on screen.
+    public func clearReceipt() {
+        receipt = nil
+    }
+
     /// The classification started by the most recent save.
     ///
     /// Exposed so tests can await work that is deliberately not awaited in production.
@@ -152,6 +164,14 @@ public final class CaptureModel {
 
         do {
             try await repository.add(thought)
+            // Built before the field is cleared, because the receipt is the text that was just
+            // in it (ADR-0038).
+            receipt = CaptureReceipt(
+                id: thought.id,
+                body: thought.body,
+                kind: picked,
+                lifetime: lifetimeDescription()
+            )
             text = ""
             chosenKind = nil
             usesCustomExpiration = false
@@ -169,6 +189,31 @@ public final class CaptureModel {
             lastError = error
             failedCount += 1
         }
+    }
+
+    /// How long a thought will last, in the words the receipt shows.
+    ///
+    /// Reads the wheels when the user set them, and otherwise names the period the chosen type
+    /// normally decays over — the same table the wheels default to, so the receipt and the
+    /// advanced panel can never quote different numbers for the same capture.
+    ///
+    /// An unsorted capture is described by the unsorted period. Classification may later move it
+    /// to a different rate, which is exactly why the receipt says "sorting…" rather than naming a
+    /// kind it does not yet have.
+    /// - Returns: A phrase such as "3 months" or "2 weeks".
+    private func lifetimeDescription() -> String {
+        let count: Int
+        let unit: ExpirationUnit
+        if usesCustomExpiration {
+            count = max(expirationCount, 1)
+            unit = expirationUnit
+        } else {
+            let expiry = Self.defaultExpiry(for: chosenKind)
+            count = expiry.count
+            unit = expiry.unit
+        }
+        let name = count == 1 ? String(unit.label.dropLast()) : unit.label
+        return "\(count) \(name.lowercased())"
     }
 
     /// Sorts a stored thought without making anyone wait for it.

@@ -47,6 +47,11 @@ public struct InboxView: View {
         #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
         #endif
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    InboxFilterMenu(filter: $model.filter)
+                }
+            }
             .task { await model.load() }
             .task {
                 // Classification finishes after capture has moved on; without this the list
@@ -57,15 +62,16 @@ public struct InboxView: View {
             }
     }
 
-    /// The summary line and the filter chips, pinned above the scrolling list.
+    /// The summary line, pinned above the scrolling list.
+    ///
+    /// The kind chips that used to live here have moved into the toolbar (ADR-0036): urgency is
+    /// the list's axis now, and a permanent row of chips arguing for a different one made the
+    /// screen ask two questions at once.
     private var header: some View {
-        VStack(alignment: .leading, spacing: Spacing.regular) {
-            masthead
-            chips
-        }
-        .padding(.horizontal, Spacing.loose)
-        .padding(.top, Spacing.snug)
-        .padding(.bottom, Spacing.regular)
+        masthead
+            .padding(.horizontal, Spacing.loose)
+            .padding(.top, Spacing.snug)
+            .padding(.bottom, Spacing.regular)
     }
 
     /// One honest line about the state of the pile, with the review entry on the end.
@@ -102,43 +108,44 @@ public struct InboxView: View {
         return model.fadingCount > 0 ? "\(thoughts) · \(model.fadingCount) fading" : thoughts
     }
 
-    /// The kind filters, plus a trailing Archived chip that swaps the list to the archive.
-    private var chips: some View {
-        FilterChipRow(
-            filter: $model.filter,
-            liveCount: model.liveCount,
-            archivedCount: model.archivedCount,
-            countOfKind: { model.count(of: $0) }
-        )
-    }
-
-    /// The scrolling list: the storage warning if any, then the filtered thoughts. Archived
-    /// thoughts get restore/delete rows; live thoughts get the full row.
+    /// The scrolling list: the storage warning if any, then the thoughts.
+    ///
+    /// Live thoughts are grouped into urgency sections so the list answers "what am I about to
+    /// lose?" (ADR-0036). The archive stays one flat run, because a thought with no time left to
+    /// run cannot be sorted by how much time it has left.
     private var list: some View {
         List {
             if storageIsDegraded {
                 storageWarning
             }
 
-            ForEach(model.filteredThoughts) { thought in
-                if model.isShowingArchive {
+            if model.isShowingArchive {
+                ForEach(model.filteredThoughts) { thought in
                     ArchivedListRow(
                         thought: thought,
                         onRestore: { Task { await model.restore(thought) } },
                         onDelete: { Task { await model.delete(thought) } }
                     )
-                } else {
-                    InboxListRow(
-                        thought: thought,
-                        freshness: model.freshness(of: thought),
-                        expiresAt: model.expiryDate(of: thought),
-                        onOpen: { onOpen(thought) },
-                        onSnooze: { Task { await model.snooze(thought, forDays: 7) } },
-                        onArchive: { Task { await model.archive(thought) } },
-                        onDelete: { Task { await model.delete(thought) } },
-                        onComplete: { Task { await model.complete(thought) } },
-                        onMarkHabitKept: { Task { await model.markHabitKept(thought) } }
-                    )
+                }
+            } else {
+                ForEach(model.sections, id: \.band) { section in
+                    Section {
+                        ForEach(section.thoughts) { thought in
+                            liveRow(for: thought)
+                        }
+                    } header: {
+                        SectionLabel(section.band.title)
+                            .textCase(nil)
+                            .listRowInsets(
+                                EdgeInsets(
+                                    top: Spacing.regular,
+                                    leading: Spacing.loose,
+                                    bottom: Spacing.tight,
+                                    trailing: Spacing.loose
+                                )
+                            )
+                            .accessibilityIdentifier("inbox.section.\(section.band.rawValue)")
+                    }
                 }
             }
         }
@@ -152,6 +159,23 @@ public struct InboxView: View {
             }
         }
         .refreshable { await model.load() }
+    }
+
+    /// One live thought's row, with every action it offers.
+    /// - Parameter thought: The thought to draw.
+    /// - Returns: The row.
+    private func liveRow(for thought: Thought) -> some View {
+        InboxListRow(
+            thought: thought,
+            freshness: model.freshness(of: thought),
+            expiresAt: model.expiryDate(of: thought),
+            onOpen: { onOpen(thought) },
+            onSnooze: { Task { await model.snooze(thought, forDays: 7) } },
+            onArchive: { Task { await model.archive(thought) } },
+            onDelete: { Task { await model.delete(thought) } },
+            onComplete: { Task { await model.complete(thought) } },
+            onMarkHabitKept: { Task { await model.markHabitKept(thought) } }
+        )
     }
 
     /// Shown when the current view has nothing to show — a cleared inbox, an empty kind, or an

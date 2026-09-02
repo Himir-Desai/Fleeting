@@ -185,8 +185,7 @@ final class ArchiveTests: XCTestCase {
         _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 5)
 
         app.goToThoughts()
-        XCTAssertTrue(app.buttons["inbox.filter.archived"].waitForExistence(timeout: 5))
-        app.buttons["inbox.filter.archived"].tap()
+        XCTAssertTrue(app.chooseFilter("Archived"))
 
         XCTAssertTrue(app.staticTexts["inbox.empty"].waitForExistence(timeout: 5))
     }
@@ -208,7 +207,7 @@ final class ArchiveTests: XCTestCase {
             "An archived thought must leave the inbox."
         )
 
-        app.buttons["inbox.filter.archived"].tap()
+        app.chooseFilter("Archived")
         XCTAssertTrue(
             app.staticTexts[thought].waitForExistence(timeout: 5),
             "Archiving must never destroy the thought."
@@ -226,14 +225,14 @@ final class ArchiveTests: XCTestCase {
         app.buttons["Archive"].tap()
         XCTAssertTrue(app.staticTexts["inbox.empty"].waitForExistence(timeout: 5))
 
-        app.buttons["inbox.filter.archived"].tap()
+        app.chooseFilter("Archived")
         XCTAssertTrue(app.staticTexts[thought].waitForExistence(timeout: 5))
         app.staticTexts[thought].swipeRight()
         XCTAssertTrue(app.buttons["Restore"].waitForExistence(timeout: 5))
         app.buttons["Restore"].tap()
 
         XCTAssertTrue(app.staticTexts["inbox.empty"].waitForExistence(timeout: 5))
-        app.buttons["inbox.filter.all"].tap()
+        app.chooseFilter("All")
         XCTAssertTrue(
             app.staticTexts[thought].waitForExistence(timeout: 5),
             "A restored thought must return to the inbox."
@@ -688,8 +687,7 @@ final class ReviewTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["review.summary"].waitForExistence(timeout: 15))
         app.buttons["review.finish"].tap()
 
-        XCTAssertTrue(app.buttons["inbox.filter.archived"].waitForExistence(timeout: 10))
-        app.buttons["inbox.filter.archived"].tap()
+        XCTAssertTrue(app.chooseFilter("Archived"))
         XCTAssertTrue(
             app.staticTexts[dropped].waitForExistence(timeout: 10),
             "letting go must archive the thought, never destroy it"
@@ -794,7 +792,7 @@ final class SnoozeTests: XCTestCase {
         )
 
         // And it is not in the archive either: a snooze is not an archive.
-        app.buttons["inbox.filter.archived"].tap()
+        app.chooseFilter("Archived")
         XCTAssertFalse(
             row.waitForExistence(timeout: 5),
             "a snoozed thought must not have been archived"

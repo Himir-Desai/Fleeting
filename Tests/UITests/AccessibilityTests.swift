@@ -47,10 +47,11 @@ final class AccessibilityTests: XCTestCase {
         _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 10)
         app.goToThoughts()
 
-        // The newest thought, so it is the one on screen: at this type size barely one row fits,
-        // and a lazy list does not build the ones below it.
+        // The most urgent thought, so it is the one on screen: the list leads with what is about
+        // to be lost rather than what was captured last (ADR-0036), and at this type size barely
+        // one row fits because a lazy list does not build the ones below it.
         XCTAssertTrue(
-            app.staticTexts["ship the decay engine before it decays"].waitForExistence(timeout: 15),
+            app.staticTexts["pay the parking fine"].waitForExistence(timeout: 15),
             "rows must still render their text at the largest type size"
         )
         XCTAssertTrue(
@@ -94,13 +95,16 @@ final class AccessibilityTests: XCTestCase {
             XCTAssertTrue(app.tabButton(tab).exists, "the \(tab) tab must be named")
         }
 
-        // The inbox is a tab now, so its old top bar is gone: what has to be named is the
-        // filter row that replaced it (ADR-0026).
+        // Kind is a toolbar menu now rather than a row of chips (ADR-0036), so what has to be
+        // named is the control that opens it. A menu reports as more than one element, so this
+        // takes the first rather than asserting a single match.
         app.goToThoughts()
-        _ = app.buttons["inbox.filter.all"].waitForExistence(timeout: 10)
-        XCTAssertEqual(app.buttons["inbox.filter.all"].label, "All, 0")
-        XCTAssertEqual(app.buttons["inbox.filter.archived"].label, "Archived, 0")
-        XCTAssertEqual(app.buttons["inbox.filter.idea"].label, "Ideas, 0")
+        let filter = app.descendants(matching: .any)["inbox.filterMenu"].firstMatch
+        XCTAssertTrue(
+            filter.waitForExistence(timeout: 10),
+            "the filter control must be addressable"
+        )
+        XCTAssertEqual(filter.label, "Filter thoughts")
     }
 
     func testAThoughtRowSaysWhatItIsAndHowMuchLifeItHasLeft() {

@@ -1,3 +1,4 @@
+import DesignSystem
 import SwiftUI
 
 /// The application entry point.
@@ -13,6 +14,11 @@ struct FleetingApp: App {
             // No `preferredColorScheme`: the palette adapts, so the app looks the way the user
             // has asked their phone to look rather than overriding it (ADR-0020).
             RootView(environment: environment)
+                // Without this the tab bar — the most persistent chrome in the app — draws its
+                // selection in the system blue, because no tint was ever set. Every other accent
+                // on screen is the palette's purple, so the one control always visible was the
+                // one control off-palette.
+                .tint(Palette.accentText)
         }
     }
 }

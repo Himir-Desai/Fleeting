@@ -15,6 +15,33 @@ public struct ReviewView: View {
     /// scroll from the top once it does not.
     @State private var cardArea: CGFloat = 0
 
+    /// How far the card has been dragged, so it follows the thumb before a decision commits.
+    @State private var dragOffset: CGSize = .zero
+
+    /// How far a drag must travel before it counts as a decision rather than a fidget.
+    private let decisionThreshold: CGFloat = 96
+
+    /// Left lets go, right keeps, up snoozes.
+    ///
+    /// A gesture is a shortcut, never the only way: every decision it can reach is also a button
+    /// in the row below (ADR-0040). Anything short of the threshold springs back and decides
+    /// nothing.
+    private var decisionDrag: some Gesture {
+        DragGesture()
+            .onChanged { dragOffset = $0.translation }
+            .onEnded { value in
+                let horizontal = value.translation.width
+                let vertical = value.translation.height
+                dragOffset = .zero
+
+                if abs(horizontal) > abs(vertical), abs(horizontal) > decisionThreshold {
+                    Task { horizontal > 0 ? await model.act() : await model.drop() }
+                } else if -vertical > decisionThreshold {
+                    Task { await model.snooze() }
+                }
+            }
+    }
+
     /// Creates the review.
     /// - Parameter model: State for the session, built by the composition root.
     public init(model: ReviewModel) {
@@ -72,7 +99,7 @@ public struct ReviewView: View {
                     Card(elevation: .floating) {
                         VStack(alignment: .leading, spacing: Spacing.regular) {
                             Text(thought.body)
-                                .font(Typography.capture)
+                                .font(Typography.quoted)
                                 .foregroundStyle(Palette.ink)
                                 .accessibilityIdentifier("review.card")
 
@@ -99,11 +126,20 @@ public struct ReviewView: View {
                     // pinned to the top of an empty page reads as a loading state, but a card
                     // taller than the screen must start at its first line.
                     .frame(maxWidth: .infinity, minHeight: cardArea, alignment: .center)
+                    // A card stack should answer to the thumb. Left lets go, right keeps, up
+                    // snoozes — the same three decisions as the row below, so nothing is reachable
+                    // only by gesture (ADR-0040).
+                    .offset(dragOffset)
+                    .gesture(decisionDrag)
                 }
                 .scrollBounceBehavior(.basedOnSize)
                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { cardArea = $0 }
 
-                decisions
+                ReviewDecisions(
+                    onLetGo: { Task { await model.drop() } },
+                    onSnooze: { Task { await model.snooze() } },
+                    onKeep: { Task { await model.act() } }
+                )
             }
             .padding(Spacing.loose)
         }
@@ -161,61 +197,6 @@ public struct ReviewView: View {
             .disabled(model.ambientAnswer.trimmingCharacters(in: .whitespaces).isEmpty)
             .accessibilityIdentifier("review.answerSubmit")
         }
-    }
-
-    /// Act, snooze, or let go.
-    ///
-    /// Three buttons side by side stop fitting well before the largest type size, so the row
-    /// becomes a column when it has to.
-    private var decisions: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: Spacing.regular) {
-                letGoButton
-                snoozeButton
-                Spacer()
-                keepButton
-            }
-            VStack(alignment: .leading, spacing: Spacing.snug) {
-                keepButton
-                snoozeButton
-                letGoButton
-            }
-        }
-        .font(Typography.body)
-    }
-
-    /// Archives the thought. All three are real decisions, so all three read as buttons; only the
-    /// emphasis differs, because keeping is the one that costs nothing.
-    private var letGoButton: some View {
-        Button("Let go") { Task { await model.drop() } }
-            .buttonStyle(.bordered)
-            .buttonBorderShape(.capsule)
-            .controlSize(.large)
-            .tint(Palette.inkMuted)
-            .accessibilityIdentifier("review.drop")
-            .accessibilityHint("Moves this to the archive. Nothing is deleted.")
-    }
-
-    /// Holds the thought at full freshness for a week.
-    private var snoozeButton: some View {
-        Button("Snooze") { Task { await model.snooze() } }
-            .buttonStyle(.bordered)
-            .buttonBorderShape(.capsule)
-            .controlSize(.large)
-            .tint(Palette.inkMuted)
-            .accessibilityIdentifier("review.snooze")
-            .accessibilityHint("Holds this at full freshness for a week")
-    }
-
-    /// Resets the thought's freshness.
-    private var keepButton: some View {
-        Button("Keep") { Task { await model.act() } }
-            .buttonStyle(.borderedProminent)
-            .buttonBorderShape(.capsule)
-            .controlSize(.large)
-            .tint(Palette.accent)
-            .accessibilityIdentifier("review.act")
-            .accessibilityHint("Resets how fresh this thought is")
     }
 
     /// What the session decided, and a way out.
