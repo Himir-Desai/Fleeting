@@ -167,6 +167,18 @@ public struct Thought: Identifiable, Equatable, Hashable, Sendable {
         markActed(at: date)
     }
 
+    /// Takes back the most recent habit mark.
+    ///
+    /// Freshness is deliberately left where marking put it. Undoing an accidental tap should not
+    /// also age the thought, and the alternative — restoring the previous `lastActedAt` — would
+    /// need a history this model does not keep (ADR-0044).
+    /// - Parameter previous: When the habit was marked before the one being undone, if known.
+    public mutating func undoHabitKept(previous: Date? = nil) {
+        guard var updated = streak else { return }
+        updated.unmark(previous: previous)
+        streak = updated.hasStarted ? updated : nil
+    }
+
     /// Sets the thought aside until a chosen date, which counts as deliberate action.
     ///
     /// A snoozed thought is held at full freshness until the snooze ends, so setting something

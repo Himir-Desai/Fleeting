@@ -148,6 +148,48 @@ struct StreakTests {
         #expect(streak.count == 1)
     }
 
+    @Test("undoing a mark takes the run back one")
+    func undoTakesBackOne() {
+        var streak = Streak()
+        streak.mark(at: epoch)
+        let second = epoch.addingTimeInterval(1.1 * .day)
+        streak.mark(at: second)
+        #expect(streak.count == 2)
+
+        streak.unmark(previous: epoch)
+        #expect(streak.count == 1)
+        #expect(streak.lastMarkedAt == epoch)
+    }
+
+    @Test("undoing the only mark leaves the habit untouched")
+    func undoingTheOnlyMarkClearsTheDate() {
+        var streak = Streak()
+        streak.mark(at: epoch)
+
+        streak.unmark()
+        #expect(!streak.hasStarted)
+        // The date has to go too, or the next mark would see a gap and the habit would look
+        // like it had been kept and broken rather than never started.
+        #expect(streak.lastMarkedAt == nil)
+    }
+
+    @Test("undoing a run that never started does nothing")
+    func undoOnEmptyIsSafe() {
+        var streak = Streak()
+        streak.unmark()
+        #expect(!streak.hasStarted)
+        #expect(streak.lastMarkedAt == nil)
+    }
+
+    @Test("undo then mark again returns the same count")
+    func undoIsReversible() {
+        var streak = Streak()
+        streak.mark(at: epoch)
+        streak.unmark()
+        streak.mark(at: epoch)
+        #expect(streak.count == 1)
+    }
+
     @Test("marking a habit counts as deliberate action and restores freshness")
     func markingIsAnAction() {
         var thought = Thought(body: "stretch every morning", capturedAt: epoch)

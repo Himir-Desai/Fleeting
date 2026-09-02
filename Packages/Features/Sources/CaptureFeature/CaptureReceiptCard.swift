@@ -11,11 +11,13 @@ struct CaptureReceiptCard: View {
     let receipt: CaptureReceipt
 
     var body: some View {
-        HStack(spacing: Spacing.regular) {
+        HStack(alignment: .top, spacing: Spacing.regular) {
             // A sprout rather than the kind's glyph: the receipt's moment is the thought taking
-            // root, and the kind is already named in the line below (ADR-0042).
-            GrowingSprout(size: 34)
-                .frame(width: 34, height: 34)
+            // root, and the kind is already named in the line below (ADR-0042). It sits directly
+            // on the card with no chip behind it, so it reads as drawn on the page rather than
+            // stuck to it (ADR-0045).
+            GrowingSprout(size: 30)
+                .frame(width: 30, height: 30)
 
             VStack(alignment: .leading, spacing: Spacing.tight) {
                 Text(receipt.body)

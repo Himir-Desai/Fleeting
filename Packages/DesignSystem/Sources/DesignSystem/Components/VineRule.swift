@@ -8,25 +8,42 @@ import SwiftUI
 public struct VineRule: View {
     private let leaves: Int
     private let tint: Color
+    private let growsOnAppear: Bool
 
     @State private var progress: Double = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    /// Creates the rule.
+    /// Creates a rule that draws itself once, when it appears.
     /// - Parameters:
     ///   - leaves: How many leaves sit along it.
     ///   - tint: The stroke colour.
     public init(leaves: Int = 3, tint: Color = Palette.accentText) {
         self.leaves = max(leaves, 1)
         self.tint = tint
+        growsOnAppear = true
+    }
+
+    /// Creates a fully drawn rule, for a caller that animates its own extent.
+    ///
+    /// Used where the vine's *width* is what changes — a session's progress, say — so the drawing
+    /// should be complete and the growth should come from the frame around it.
+    /// - Parameters:
+    ///   - leaves: How many leaves sit along it.
+    ///   - tint: The stroke colour.
+    ///   - drawn: Ignored; distinguishes this initialiser.
+    public init(leaves: Int, tint: Color, drawn _: Bool) {
+        self.leaves = max(leaves, 1)
+        self.tint = tint
+        growsOnAppear = false
     }
 
     public var body: some View {
         Vine(leaves: leaves)
-            .trim(from: 0, to: progress)
+            .trim(from: 0, to: growsOnAppear ? progress : 1)
             .stroke(tint.opacity(0.55), style: StrokeStyle(lineWidth: 1, lineCap: .round))
             .frame(height: 18)
             .onAppear {
+                guard growsOnAppear else { return }
                 guard !reduceMotion else {
                     progress = 1
                     return

@@ -209,6 +209,8 @@ Fleeting/
 │   │   │   │   ├── CardSurface.swift    ← a card's ground, sinking with freshness (ADR-0035)
 │   │   │   │   ├── SproutMark.swift     ← a stem and two leaves, drawn by trim (ADR-0042)
 │   │   │   │   ├── GrowingSprout.swift  ← the mark, growing itself once on appear (ADR-0042)
+│   │   │   │   ├── VineRule.swift       ← a stem of leaves; a thing that has grown a while
+│   │   │   │   ├── GrowthProgress.swift ← a vine that gains a leaf per decision (ADR-0045)
 │   │   │   │   ├── Card.swift           ← content on a card, for cards outside a List
 │   │   │   │   ├── StatusBlock.swift    ← an answer and its explanation; every Settings row
 │   │   │   │   ├── SectionLabel.swift   ← a section's name, small and wide
@@ -236,6 +238,8 @@ Fleeting/
 │   │       │   ├── ThoughtRow.swift     ← the thought's words in the serif (ADR-0037); ADR-0012
 │   │       │   ├── ThoughtDetailModel.swift ← @Observable; edit · retype · keep · snooze · archive · delete
 │   │       │   ├── ThoughtDetailView.swift  ← the opened thought: the action hub (ADR-0027)
+│   │       │   ├── KindActionButton.swift   ← mark done · continue streak; sprout for a habit
+│   │       │   ├── StreakSection.swift      ← the streak's vine, and Undo (ADR-0044)
 │   │       │   └── ExpiryWheels.swift   ← number + unit wheels; the only copy now (ADR-0039)
 │   │       ├── SharpenFeature/      ← interview → write-up → escalate
 │   │       │   ├── SharpenModel.swift   ← phases; every answer persisted as it is given

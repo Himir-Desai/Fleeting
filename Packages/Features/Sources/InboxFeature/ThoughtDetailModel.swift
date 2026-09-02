@@ -102,6 +102,21 @@ public final class ThoughtDetailModel {
         await persist(kept)
     }
 
+    /// Takes back the most recent habit mark.
+    ///
+    /// Marking is one tap in a list, so it is a tap people make by accident. Without this the only
+    /// way back was to let the whole streak lapse (ADR-0044).
+    public func undoHabitKept() async {
+        var undone = thought
+        undone.undoHabitKept()
+        await persist(undone)
+    }
+
+    /// Whether there is a habit mark to take back.
+    public var canUndoHabitKept: Bool {
+        thought.kind == .habit && (thought.streak?.hasStarted ?? false)
+    }
+
     /// Sets the thought aside for a number of days, held at full freshness until then.
     /// - Parameter days: How long to snooze for.
     public func snooze(forDays days: Double) async {

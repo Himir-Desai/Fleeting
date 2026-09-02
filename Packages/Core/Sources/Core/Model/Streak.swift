@@ -47,4 +47,18 @@ public struct Streak: Equatable, Sendable {
         default: count = 1
         }
     }
+
+    /// Takes back the most recent mark.
+    ///
+    /// Marking a habit is a one-tap action sitting in a list, so it is a tap people make by
+    /// accident; without this the only way back was to let the whole streak lapse. Undoing the
+    /// only mark returns the streak to never-started rather than to zero-with-a-date, so the
+    /// habit looks untouched again (ADR-0044).
+    /// - Parameter previous: When the habit was marked before the mark being undone, or `nil` if
+    ///   the mark being undone was the first.
+    public mutating func unmark(previous: Date? = nil) {
+        guard hasStarted else { return }
+        count -= 1
+        lastMarkedAt = hasStarted ? previous : nil
+    }
 }

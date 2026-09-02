@@ -156,12 +156,14 @@ public struct ReviewView: View {
                     "Thought \(model.progress.position) of \(model.progress.total)"
                 )
 
-            ProgressView(
-                value: Double(model.progress.position),
-                total: Double(max(model.progress.total, 1))
+            // The bar is a vine that gains a leaf per decision. It is on screen from the first
+            // card, before anything has been pressed, which is what stops the botanical language
+            // reading as a reward sticker (ADR-0045). The count above it is what VoiceOver reads,
+            // so the vine itself is hidden from accessibility.
+            GrowthProgress(
+                position: model.progress.position,
+                total: model.progress.total
             )
-            .tint(Palette.accentText)
-            .accessibilityHidden(true)
         }
     }
 

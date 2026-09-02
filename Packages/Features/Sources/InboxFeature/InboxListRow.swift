@@ -103,10 +103,13 @@ struct InboxListRow: View {
         case .habit:
             // A sprout, not a flame. A streak is a thing you have grown by tending it; fire is
             // what happens to a thing you neglect (ADR-0042).
+            //
+            // Unboxed, unlike the to-do's tick: a drawn plant inside a filled circle reads as a
+            // sticker applied to the app rather than as part of its language (ADR-0045).
             Button(action: onMarkHabitKept) {
-                GrowingSprout(size: 22)
+                GrowingSprout(size: 26)
                     .frame(width: controlSize, height: controlSize)
-                    .background { Circle().fill(Palette.accentSoft) }
+                    .contentShape(.rect)
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Continue streak")

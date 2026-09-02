@@ -32,8 +32,22 @@ public struct ThoughtDetailView: View {
             VStack(alignment: .leading, spacing: Spacing.section) {
                 textWell
                 typeSection
-                if kindAction != nil {
-                    kindActionButton
+                if let kindAction {
+                    KindActionButton(
+                        label: kindAction.label,
+                        symbol: kindAction.symbol,
+                        isHabit: model.thought.kind == .habit
+                    ) {
+                        Task {
+                            await kindAction.perform()
+                            dismiss()
+                        }
+                    }
+                }
+                if model.canUndoHabitKept, let streak = model.thought.streak {
+                    StreakSection(streak: streak) {
+                        Task { await model.undoHabitKept() }
+                    }
                 }
                 expirySection
                 actions
@@ -98,29 +112,6 @@ public struct ThoughtDetailView: View {
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
-    /// The primary kind action — mark a to-do done, or keep a habit's streak — if the kind has one.
-    private var kindActionButton: some View {
-        Button {
-            Task {
-                await kindAction?.perform()
-                dismiss()
-            }
-        } label: {
-            Label(kindAction?.label ?? "", systemImage: kindAction?.symbol ?? "")
-                .font(Typography.title)
-                .foregroundStyle(Palette.raised)
-                .padding(.horizontal, Spacing.loose)
-                .padding(.vertical, Spacing.regular)
-                .frame(maxWidth: .infinity)
-                .background {
-                    RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
-                        .fill(Palette.accent)
-                }
-        }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier("detail.kindAction")
-    }
-
     /// A kind's primary action: its label, icon, and what it does.
     private struct KindAction {
         let label: String
@@ -133,7 +124,7 @@ public struct ThoughtDetailView: View {
         switch model.thought.kind {
         case .todo: KindAction(label: "Mark done", symbol: "checkmark") { await model.complete() }
         case .habit:
-            KindAction(label: "Continue streak", symbol: "flame") { await model.markHabitKept() }
+            KindAction(label: "Continue streak", symbol: "leaf") { await model.markHabitKept() }
         case .idea, .unsorted: nil
         }
     }

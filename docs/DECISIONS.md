@@ -1351,3 +1351,61 @@ of screen height — a magic point chosen when capture had a well, which two lay
 was landing on whatever had moved there. `SchemaMigrationTests` is `.serialized` in the same
 commit: its cases each register a different schema version for one entity name, and running them
 in parallel crashed the process on roughly one run in three.
+
+---
+
+## ADR-0044 · A habit mark can be taken back
+
+**Status:** Accepted · Bug fix
+
+**Context.** Marking a habit kept was a single tap on a control sitting in a list, next to the row
+that opens the thought. It is a tap people make by accident. There was no way back: `Streak` could
+only ever count up, so an accidental mark could only be undone by abandoning the habit for two days
+and letting the whole run lapse. An accidental tap cost a run the user had actually earned.
+
+Worse, the app's whole promise is that nothing is ever destroyed without an explicit decision. A
+streak the user could not correct broke that promise in the one place the app asks for a daily
+commitment.
+
+**Decision.** `Streak.unmark(previous:)` takes the count back one. Undoing the only mark clears
+`lastMarkedAt` as well as the count, so the habit returns to never-started rather than to
+zero-with-a-date — otherwise the next mark would see a gap and the habit would read as kept and
+broken rather than untouched.
+
+Freshness is deliberately *not* rolled back. Undoing an accidental tap should not also age the
+thought, and restoring the previous `lastActedAt` would need a history the model does not keep.
+
+The control lives in the thought's detail beside the streak, not in the list. Undo is a correction,
+and a correction belongs where you go to look at the thing, not next to the button that caused it.
+
+**Alternatives.**
+- *A confirmation on the mark button* — rejected: it makes the common case slower to protect
+  against the rare one, which is the trade this app exists to refuse.
+- *An undo toast after marking* — rejected: it expires, and the mistake is usually noticed later.
+
+---
+
+## ADR-0045 · The botanical marks are drawn on the page, not stuck to it
+
+**Status:** Accepted · Aesthetic pass
+
+**Context.** The first pass at the botanical language put every sprout inside a filled circle or a
+tinted chip. That is how an icon is treated, and it made the drawings read as stickers applied on
+top of the interface rather than as part of its vocabulary. The marks also only ever appeared as a
+consequence of pressing something, which reinforced the reading: a reward badge, not a language.
+
+**Decision.** Two rules.
+
+**No containers.** A drawn mark sits directly on the surface it belongs to, with no fill behind it.
+The to-do's tick keeps its chip, because a tick is an icon; the sprout does not, because it is a
+drawing.
+
+**Ambient before triggered.** At least one botanical mark is on screen before the user does
+anything. The review's progress bar is now a vine that gains a leaf per decision — present from the
+first card, growing as the session does. A habit's streak in the detail shows its vine on arrival.
+
+**Alternatives.**
+- *Keep the chips for tap-target legibility* — rejected: the target is the frame, not the fill, and
+  a 44pt `contentShape` gives the same target without the sticker.
+- *Put a vine in the tab bar or the filter menu* — rejected: chrome stays silent (ADR-0042), and a
+  decoration everywhere is a decoration nowhere.
