@@ -12,14 +12,10 @@ struct CaptureReceiptCard: View {
 
     var body: some View {
         HStack(spacing: Spacing.regular) {
-            Image(systemName: KindGlyph.name(for: receipt.kind ?? .unsorted))
-                .font(Typography.caption)
-                .foregroundStyle(Palette.accentText)
+            // A sprout rather than the kind's glyph: the receipt's moment is the thought taking
+            // root, and the kind is already named in the line below (ADR-0042).
+            GrowingSprout(size: 34)
                 .frame(width: 34, height: 34)
-                .background {
-                    RoundedRectangle(cornerRadius: Radius.control, style: .continuous)
-                        .fill(Palette.accentSoft)
-                }
 
             VStack(alignment: .leading, spacing: Spacing.tight) {
                 Text(receipt.body)

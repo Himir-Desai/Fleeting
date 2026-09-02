@@ -28,6 +28,12 @@ public struct CaptureView: View {
         // it. A ZStack over an ignoresSafeArea colour proposed an unstable width, which let the
         // widest row size the whole column — so opening advanced grew the field and card sideways.
         VStack(alignment: .leading, spacing: Spacing.regular) {
+            // The text block sits a little down the page rather than jammed against the top
+            // margin. With the well gone the placeholder was floating alone at the very top of an
+            // otherwise empty screen, which read as a page that had failed to load (ADR-0041).
+            Spacer(minLength: 0)
+                .frame(height: Spacing.section)
+
             well
 
             if model.lastError != nil {

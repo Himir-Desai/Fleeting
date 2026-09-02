@@ -201,11 +201,14 @@ Fleeting/
 │   │   │   │   ├── Radius.swift         ← control · card · well; the app's roundness, once
 │   │   │   │   ├── Elevation.swift      ← a level, not a shadow: dark mode gets a hairline instead
 │   │   │   │   ├── Motion.swift         ← timings by intent; applied only via .motion (ADR-0020)
+│   │   │   │   │                          decay · commit · card · growth
 │   │   │   │   └── FreshnessStyle.swift ← takes a Double, never a Thought (ADR-0012). the fade,
 │   │   │   │                              the rail, and the card's sink + elevation (ADR-0035)
 │   │   │   ├── Components/          ← domain-AGNOSTIC only (ADR-0012): parameterised by
 │   │   │   │   ├── FreshnessMeter.swift  primitives, never by a Thought
 │   │   │   │   ├── CardSurface.swift    ← a card's ground, sinking with freshness (ADR-0035)
+│   │   │   │   ├── SproutMark.swift     ← a stem and two leaves, drawn by trim (ADR-0042)
+│   │   │   │   ├── GrowingSprout.swift  ← the mark, growing itself once on appear (ADR-0042)
 │   │   │   │   ├── Card.swift           ← content on a card, for cards outside a List
 │   │   │   │   ├── StatusBlock.swift    ← an answer and its explanation; every Settings row
 │   │   │   │   ├── SectionLabel.swift   ← a section's name, small and wide

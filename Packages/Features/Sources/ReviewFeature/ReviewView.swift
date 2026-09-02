@@ -77,7 +77,6 @@ public struct ReviewView: View {
     /// Shown when nothing is fading or repeatedly deferred.
     private var emptyState: some View {
         EmptyState(
-            symbol: "checkmark.seal",
             title: "Nothing needs a decision",
             message: "Everything is either fresh or already dealt with."
         )
@@ -97,7 +96,7 @@ public struct ReviewView: View {
                 // the card gives way instead.
                 ScrollView {
                     Card(elevation: .floating) {
-                        VStack(alignment: .leading, spacing: Spacing.regular) {
+                        VStack(alignment: .leading, spacing: Spacing.loose) {
                             Text(thought.body)
                                 .font(Typography.quoted)
                                 .foregroundStyle(Palette.ink)
@@ -203,10 +202,9 @@ public struct ReviewView: View {
     private var summary: some View {
         VStack(spacing: Spacing.loose) {
             VStack(spacing: Spacing.regular) {
-                Image(systemName: "checkmark.seal.fill")
-                    .font(Typography.symbol)
-                    .foregroundStyle(Palette.accentText)
-                    .accessibilityHidden(true)
+                // The session grew something: every kept thought is a thought still alive
+                // (ADR-0042).
+                GrowingSprout(size: 52)
 
                 Text("That's the lot")
                     .font(Typography.display)

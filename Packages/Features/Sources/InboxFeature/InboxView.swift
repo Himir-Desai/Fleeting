@@ -134,17 +134,7 @@ public struct InboxView: View {
                             liveRow(for: thought)
                         }
                     } header: {
-                        SectionLabel(section.band.title)
-                            .textCase(nil)
-                            .listRowInsets(
-                                EdgeInsets(
-                                    top: Spacing.regular,
-                                    leading: Spacing.loose,
-                                    bottom: Spacing.tight,
-                                    trailing: Spacing.loose
-                                )
-                            )
-                            .accessibilityIdentifier("inbox.section.\(section.band.rawValue)")
+                        sectionHeader(for: section.band)
                     }
                 }
             }
@@ -159,6 +149,34 @@ public struct InboxView: View {
             }
         }
         .refreshable { await model.load() }
+    }
+
+    /// One urgency section's heading.
+    ///
+    /// The most urgent band is warmed and weighted; the others stay quiet. Three identically grey
+    /// headings said the sections differ without saying that one of them matters (ADR-0041). The
+    /// generous top inset is what separates one group from the next — inside a section the cards
+    /// sit close, between sections the page breathes.
+    /// - Parameter band: The band being introduced.
+    /// - Returns: The header row.
+    private func sectionHeader(for band: UrgencyBand) -> some View {
+        Group {
+            if band == .goingSoon {
+                SectionLabel(band.title, tint: Palette.fading, weight: .bold)
+            } else {
+                SectionLabel(band.title)
+            }
+        }
+        .textCase(nil)
+        .listRowInsets(
+            EdgeInsets(
+                top: Spacing.section,
+                leading: Spacing.loose,
+                bottom: Spacing.snug,
+                trailing: Spacing.loose
+            )
+        )
+        .accessibilityIdentifier("inbox.section.\(band.rawValue)")
     }
 
     /// One live thought's row, with every action it offers.
@@ -194,7 +212,6 @@ public struct InboxView: View {
                 )
             case .all:
                 EmptyState(
-                    symbol: "wind",
                     title: "Nothing live right now",
                     message: """
                     Everything you captured has been dealt with or filed away. The archive still \

@@ -1260,3 +1260,61 @@ lean. The card takes swipe gestures: left lets go, right keeps, up snoozes.
 
 **Consequences.** The inbox's "N to decide" link stays, pushing the same view, so the two entry
 points cannot drift apart. `Keep` loses `.borderedProminent` and keeps only its accent tint.
+
+---
+
+## ADR-0041 · The accent marks time and action, never identity
+
+**Status:** Accepted · Aesthetic pass
+
+**Context.** After the overhaul the accent purple marked six unrelated things: the freshness rail, a
+kind glyph's chip, streak text, the inline action circle, the tab bar, and the review's Keep. A
+colour used for everything signals nothing, and the list read as busy in a way that competed with
+the thoughts themselves. Two of those uses sat side by side in every row — a tinted chip beside a
+tinted rail — so a thought's identity argued with its urgency for the same attention.
+
+**Decision.** One job for the accent: **time and action.** The rail keeps it, the tab bar and the
+decisions keep it. Kind glyphs lose their chip and go to muted ink; streak text goes muted; the
+inline action circle becomes a soft tint rather than a solid disc, because a filled 44pt accent
+puck was the loudest thing on a screen whose subject is the words beside it.
+
+The one urgency heading is warmed and weighted to match. Three identically grey section labels said
+the sections differ without saying that one of them matters.
+
+**Alternatives.**
+- *Give each kind its own hue* — rejected: four colours to learn, and it would make identity the
+  loudest signal on a screen sorted by time.
+- *Keep the chips and drop the rail* — rejected: the rail is the freshness reading, which is the
+  thesis. The chip is decoration around an icon that was already legible.
+
+**Consequences.** `SectionLabel` gains a tinted initialiser. Capture's text block floats off the
+top margin, since with the well gone the placeholder alone at the very top read as a page that had
+failed to load.
+
+---
+
+## ADR-0042 · One growing thing
+
+**Status:** Accepted · Aesthetic pass
+
+**Context.** The app is about things that grow if tended and fade if not. Nothing in the interface
+said so except colour and elevation, both of which are quiet. The habit streak in particular used a
+flame — the wrong metaphor entirely, since fire is what happens to a thing you neglect, not what
+you get for tending it.
+
+**Decision.** A line-drawn seedling, `SproutMark`, drawn with `Path.trim` so it grows rather than
+appears. It marks the four moments where a thought gains life: a save that reached storage, a habit
+kept, a review finished, and a list cleared.
+
+Two leaves, not one — a single leaf read unmistakably as the bowl of a lowercase "p" when it
+shipped, which the first screenshot caught. The stem draws first, then the leaves unfurl from it in
+sequence.
+
+**Alternatives.**
+- *Put it in the chrome too — tab bar, filters, settings* — rejected: chrome should be silent, and
+  a decoration that appears everywhere stops being a moment.
+- *An SF Symbol of a leaf* — rejected: it cannot be grown, and the growth is the whole point.
+
+**Consequences.** `GrowingSprout` wraps the animation so no call site owns a phase, and Reduce
+Motion renders the mark fully grown rather than not at all — it is decoration, so the answer to
+"no motion" is the end state. Nothing waits on it: capture is committed before it draws (ADR-0008).

@@ -13,4 +13,8 @@ public enum Motion {
 
     /// Dismissing a review card.
     public static let card = Animation.spring(response: 0.34, dampingFraction: 0.82)
+
+    /// A sprout drawing itself: slow enough to read as growth rather than a flicker, and slower
+    /// at the end than the start, the way a thing that grows actually behaves (ADR-0042).
+    public static let growth = Animation.easeOut(duration: 0.85)
 }

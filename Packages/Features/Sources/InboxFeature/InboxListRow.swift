@@ -22,9 +22,6 @@ struct InboxListRow: View {
     /// type size rather than staying a fixed square.
     @ScaledMetric(relativeTo: .body) private var controlSize: CGFloat = 44
 
-    /// The glyph chip drawn inside the leading tap target.
-    @ScaledMetric(relativeTo: .body) private var chipSize: CGFloat = 34
-
     var body: some View {
         HStack(spacing: Spacing.regular) {
             Button(action: onOpen) {
@@ -80,15 +77,15 @@ struct InboxListRow: View {
 
     /// The leading glyph saying what kind the thought is. An indicator, not a control — changing
     /// the kind lives inside the opened thought.
+    ///
+    /// Drawn as a bare glyph in muted ink rather than a tinted chip: the accent is reserved for
+    /// time and action, and kind is neither (ADR-0041). The rail beside it already carries a
+    /// colour, and two tinted decorations side by side made the row's identity compete with its
+    /// urgency.
     private var kindGlyph: some View {
         Image(systemName: KindGlyph.name(for: thought.kind))
-            .font(Typography.caption)
-            .foregroundStyle(thought.kind == .unsorted ? Palette.inkMuted : Palette.accentText)
-            .frame(width: chipSize, height: chipSize)
-            .background {
-                RoundedRectangle(cornerRadius: Radius.control, style: .continuous)
-                    .fill(thought.kind == .unsorted ? Palette.surfaceSunken : Palette.accentSoft)
-            }
+            .font(Typography.body)
+            .foregroundStyle(Palette.inkMuted)
             .frame(width: controlSize, height: controlSize)
             // An indicator, not a control (ADR-0027) — but still the one place the list says
             // what a thought was sorted as, so it stays addressable.
@@ -104,13 +101,24 @@ struct InboxListRow: View {
         case .todo:
             actionChip(symbol: "checkmark", label: "Mark done", action: onComplete)
         case .habit:
-            actionChip(symbol: "flame", label: "Continue streak", action: onMarkHabitKept)
+            // A sprout, not a flame. A streak is a thing you have grown by tending it; fire is
+            // what happens to a thing you neglect (ADR-0042).
+            Button(action: onMarkHabitKept) {
+                GrowingSprout(size: 22)
+                    .frame(width: controlSize, height: controlSize)
+                    .background { Circle().fill(Palette.accentSoft) }
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Continue streak")
         case .idea, .unsorted:
             EmptyView()
         }
     }
 
-    /// A round accent chip for the inline action, matching the capture screen's save control.
+    /// A round chip for the inline action.
+    ///
+    /// Tinted rather than filled: a solid accent disc was the loudest thing in the list, louder
+    /// than the thoughts it sat beside (ADR-0041).
     private func actionChip(
         symbol: String,
         label: String,
@@ -119,9 +127,9 @@ struct InboxListRow: View {
         Button(action: action) {
             Image(systemName: symbol)
                 .font(Typography.body)
-                .foregroundStyle(Palette.raised)
+                .foregroundStyle(Palette.accentText)
                 .frame(width: controlSize, height: controlSize)
-                .background { Circle().fill(Palette.accent) }
+                .background { Circle().fill(Palette.accentSoft) }
         }
         .buttonStyle(.plain)
         .accessibilityLabel(label)

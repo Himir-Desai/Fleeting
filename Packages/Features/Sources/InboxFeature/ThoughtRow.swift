@@ -43,7 +43,9 @@ struct ThoughtRow: View {
             if let streak = thought.streak, streak.hasStarted {
                 Text("\(streak.count) day streak")
                     .font(Typography.caption)
-                    .foregroundStyle(Palette.accentText)
+                    // Muted, not accent: a streak is a fact about the thought, and the accent is
+                    // reserved for time and action (ADR-0041).
+                    .foregroundStyle(Palette.inkMuted)
             }
 
             if let expiresAt {
