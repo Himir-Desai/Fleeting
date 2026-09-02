@@ -19,6 +19,9 @@ final class PerformanceTests: XCTestCase {
     }
 
     /// Launches and returns how long the capture field took to appear.
+    ///
+    /// Existence only. Whether the field is *focused* is asserted separately, because these two
+    /// tests care about elapsed time and a keyboard animation would be measured as launch cost.
     private func timeToField(
         arguments: [String],
         file: StaticString = #filePath,
@@ -42,6 +45,30 @@ final class PerformanceTests: XCTestCase {
         XCTAssertLessThan(
             elapsed, launchCeiling,
             "cold launch to a usable field took \(String(format: "%.2f", elapsed))s"
+        )
+    }
+
+    /// That a cold launch lands on a field that is actually ready to be typed into.
+    ///
+    /// ADR-0008 is the highest-priority constraint in the project, and until now nothing guarded
+    /// the half of it that matters. The ceiling test above waits only for the field to *exist*, so
+    /// it would pass just as happily against a screen you had to tap before you could write —
+    /// which is exactly the two-second tax the app was built to remove.
+    func testColdLaunchLandsOnAFocusedFieldWithTheKeyboardUp() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--reset-store"]
+        app.launch()
+
+        let field = app.descendants(matching: .any)["capture.field"]
+        XCTAssertTrue(field.waitForExistence(timeout: 30), "the capture field never appeared")
+
+        XCTAssertTrue(
+            app.keyboards.element.waitForExistence(timeout: 10),
+            "a cold launch must land with the keyboard already up (ADR-0008)"
+        )
+        XCTAssertEqual(
+            field.value(forKey: "hasKeyboardFocus") as? Bool, true,
+            "the capture field must hold keyboard focus without being tapped (ADR-0008)"
         )
     }
 
