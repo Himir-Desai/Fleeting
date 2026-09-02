@@ -66,6 +66,14 @@ public struct CaptureView: View {
         .padding(.horizontal, Spacing.loose)
         .padding(.top, Spacing.loose)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        // Something growing on the page, so an almost-empty screen reads as paper rather than as
+        // one that failed to load (ADR-0046). Behind the text and out of the way of it: the vine
+        // is the page's texture, never a control, and never in front of the field.
+        .background(alignment: .bottomTrailing) {
+            ClimbingVine(height: 240)
+                .padding(.trailing, Spacing.snug)
+                .padding(.bottom, Spacing.section)
+        }
         // Tapping anywhere off the box puts the keyboard away. This is the only way down on a
         // simulator with no touch, and the expected one on device.
         .background {
@@ -81,7 +89,12 @@ public struct CaptureView: View {
         // Save sits on the keyboard rather than in the page, so it is always under the thumb and
         // never moves as the thought grows (ADR-0039).
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            controls
+            // Only while the keyboard is up. The bar exists to sit on the keyboard, and with the
+            // keyboard down its dismiss control pointed at nothing while stranding a grey slab in
+            // the middle of an otherwise quiet page.
+            if isFieldFocused {
+                controls
+            }
         }
         // ADR-0008, the highest-priority constraint in the project: a cold launch lands on a
         // focused field with the keyboard already up. Capture must cost zero taps.

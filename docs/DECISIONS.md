@@ -1409,3 +1409,38 @@ first card, growing as the session does. A habit's streak in the detail shows it
   a 44pt `contentShape` gives the same target without the sticker.
 - *Put a vine in the tab bar or the filter menu* — rejected: chrome stays silent (ADR-0042), and a
   decoration everywhere is a decoration nowhere.
+
+---
+
+## ADR-0046 · The capture page has something growing on it
+
+**Status:** Accepted · Aesthetic pass
+
+**Context.** Capture became a full-bleed page in ADR-0039, which was right, but it left a screen
+that is one line of placeholder text on an otherwise blank field of colour. It read less like paper
+than like a screen that had failed to load. The botanical language existed by then but appeared
+only in response to an action, so the emptiest screen in the app was also the one with none of it.
+
+**Decision.** A `ClimbingVine` grows up the trailing edge, drawn at 16% opacity behind everything
+else and never interactive. It is page texture, not a control: it carries no information, cannot be
+tapped, and is hidden from accessibility. It grows once on appear and then simply stays.
+
+The save bar is also hidden while the keyboard is down. It exists to sit on the keyboard, and with
+the keyboard away its dismiss control pointed at nothing while leaving a grey slab across an
+otherwise quiet page.
+
+**Alternatives.**
+- *Fill the space with recent thoughts or a count* — rejected: capture is the one screen that shows
+  you nothing, so the moment costs nothing. A preview of the list is the list's job.
+- *A static illustration* — rejected: the point of the language is that things grow. A drawing that
+  was simply placed would be the sticker problem ADR-0045 just removed.
+- *Put it behind the text at full opacity* — rejected: it competed with the placeholder, which is
+  the only thing on that screen that matters.
+
+**Consequences.** `GrowthProgress` no longer sizes a `VineRule` to a fraction of its width. Doing
+so scaled the whole drawing, so the leaves slid apart as a review advanced and the vine read as a
+line being stretched. It now draws the vine once at full width with one leaf per card and reveals
+it with a mask, so the leaves stay where they are and only more of the plant becomes visible.
+
+The demo seed grew from five thoughts to seventeen, spread across every urgency band, every kind,
+and both live and archived, so a hand test can reach each state without waiting for real time.

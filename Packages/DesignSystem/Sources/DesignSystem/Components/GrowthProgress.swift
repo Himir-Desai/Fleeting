@@ -29,9 +29,19 @@ public struct GrowthProgress: View {
                 .frame(height: 1)
 
             GeometryReader { proxy in
-                VineRule(leaves: max(position, 1), tint: Palette.accentText, drawn: true)
-                    .frame(width: max(proxy.size.width * fraction, 1))
-                    .opacity(position == 0 ? 0 : 1)
+                // The vine is always drawn at full width with one leaf per card in the session,
+                // and a mask reveals as much of it as has been decided. Sizing the vine itself to
+                // the fraction made the whole drawing scale — the leaves slid apart as the bar
+                // advanced, which read as the line stretching rather than a plant growing.
+                Vine(leaves: total)
+                    .stroke(
+                        Palette.accentText.opacity(0.55),
+                        style: StrokeStyle(lineWidth: 1, lineCap: .round)
+                    )
+                    .mask(alignment: .leading) {
+                        Rectangle()
+                            .frame(width: proxy.size.width * fraction)
+                    }
             }
         }
         .frame(height: 18)

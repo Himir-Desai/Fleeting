@@ -20,19 +20,22 @@ import Foundation
             let kind: ThoughtKind
             let streak: Int
             let sharpened: Bool
+            let archived: Bool
 
             init(
                 _ body: String,
                 age: Double,
                 kind: ThoughtKind,
                 streak: Int = 0,
-                sharpened: Bool = false
+                sharpened: Bool = false,
+                archived: Bool = false
             ) {
                 self.body = body
                 self.age = age
                 self.kind = kind
                 self.streak = streak
                 self.sharpened = sharpened
+                self.archived = archived
             }
         }
 
@@ -99,6 +102,59 @@ import Foundation
             }
         }
 
+        /// Spread deliberately across every urgency band, every kind, and every state, so a
+        /// hand test can reach each of them without waiting for real time to pass.
+        private static let demoThoughts: [DemoThought] = [
+            // Plenty of time — fresh, raised cards.
+            DemoThought("ship the decay engine before it decays", age: 0.2, kind: .todo),
+            DemoThought(
+                "stretch every morning before coffee",
+                age: 1.5,
+                kind: .habit,
+                streak: 6
+            ),
+            DemoThought("call mum on sunday", age: 0.5, kind: .todo),
+            DemoThought("a podcast where nobody is an expert", age: 3, kind: .idea),
+            DemoThought(
+                "read ten pages before the phone",
+                age: 0.8,
+                kind: .habit,
+                streak: 2
+            ),
+            DemoThought("something I have not sorted yet", age: 0.1, kind: .unsorted),
+
+            // This month — settling, still raised but quieter.
+            DemoThought(
+                "newsletter about tools that do one thing",
+                age: 40,
+                kind: .idea,
+                sharpened: true
+            ),
+            DemoThought("a shop that only sells one good knife", age: 45, kind: .idea),
+            DemoThought("book the dentist", age: 6, kind: .todo),
+            DemoThought(
+                "walk after lunch, every day",
+                age: 3.2,
+                kind: .habit,
+                streak: 11
+            ),
+
+            // Going soon — sunk into the page, amber rails.
+            DemoThought("pay the parking fine", age: 13, kind: .todo),
+            DemoThought(
+                "learn to sail? or a boat-shaped midlife crisis",
+                age: 80,
+                kind: .idea
+            ),
+            DemoThought("renew the passport before spring", age: 12.4, kind: .todo),
+            DemoThought("an essay about why nothing finishes", age: 78, kind: .idea),
+            DemoThought("floss, apparently", age: 6.4, kind: .habit, streak: 1),
+
+            // Already archived — reachable from the filter menu, restorable.
+            DemoThought("that startup idea about socks", age: 120, kind: .idea, archived: true),
+            DemoThought("fix the squeaking door", age: 95, kind: .todo, archived: true)
+        ]
+
         /// Inserts demo thoughts if asked and the store is empty.
         func seedDemoDataIfRequested() async {
             guard ProcessInfo.processInfo.arguments.contains(Self.seedDemoArgument),
@@ -106,29 +162,7 @@ import Foundation
             else { return }
 
             let now = clock.now
-            let demo = [
-                DemoThought("ship the decay engine before it decays", age: 0.2, kind: .todo),
-                DemoThought(
-                    "stretch every morning before coffee",
-                    age: 1.5,
-                    kind: .habit,
-                    streak: 6
-                ),
-                DemoThought(
-                    "newsletter about tools that do one thing",
-                    age: 40,
-                    kind: .idea,
-                    sharpened: true
-                ),
-                DemoThought("pay the parking fine", age: 13, kind: .todo),
-                DemoThought(
-                    "learn to sail? or a boat-shaped midlife crisis",
-                    age: 80,
-                    kind: .idea
-                )
-            ]
-
-            for entry in demo {
+            for entry in Self.demoThoughts {
                 let captured = now.addingTimeInterval(-entry.age * .day)
                 var thought = Thought(
                     body: entry.body,
@@ -137,9 +171,14 @@ import Foundation
                         ? Streak(count: entry.streak, lastMarkedAt: captured)
                         : nil
                 )
-                thought.applyClassification(kind: entry.kind, title: nil)
+                if entry.kind != .unsorted {
+                    thought.applyClassification(kind: entry.kind, title: nil)
+                }
                 if entry.sharpened {
                     Self.attachDemoSharpening(to: &thought, at: captured)
+                }
+                if entry.archived {
+                    thought.archive(at: captured)
                 }
                 try? await thoughts.add(thought)
             }

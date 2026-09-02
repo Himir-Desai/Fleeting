@@ -47,12 +47,17 @@ final class AccessibilityTests: XCTestCase {
         _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 10)
         app.goToThoughts()
 
-        // The most urgent thought, so it is the one on screen: the list leads with what is about
-        // to be lost rather than what was captured last (ADR-0036), and at this type size barely
-        // one row fits because a lazy list does not build the ones below it.
+        // Whichever thought the list leads with. At this type size barely one row fits and a lazy
+        // list does not build the ones below it, so naming a specific thought would tie the test
+        // to the demo data's ordering — which is exactly what broke it last time.
+        let firstRow = app.descendants(matching: .any)["row.open"].firstMatch
         XCTAssertTrue(
-            app.staticTexts["pay the parking fine"].waitForExistence(timeout: 15),
+            firstRow.waitForExistence(timeout: 15),
             "rows must still render their text at the largest type size"
+        )
+        XCTAssertFalse(
+            firstRow.label.isEmpty,
+            "a row that renders no words is a row that says nothing"
         )
         XCTAssertTrue(
             app.tabButton("New thought").isHittable,

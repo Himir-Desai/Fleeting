@@ -211,6 +211,7 @@ Fleeting/
 │   │   │   │   ├── GrowingSprout.swift  ← the mark, growing itself once on appear (ADR-0042)
 │   │   │   │   ├── VineRule.swift       ← a stem of leaves; a thing that has grown a while
 │   │   │   │   ├── GrowthProgress.swift ← a vine that gains a leaf per decision (ADR-0045)
+│   │   │   │   ├── ClimbingVine.swift   ← page texture for the capture screen (ADR-0046)
 │   │   │   │   ├── Card.swift           ← content on a card, for cards outside a List
 │   │   │   │   ├── StatusBlock.swift    ← an answer and its explanation; every Settings row
 │   │   │   │   ├── SectionLabel.swift   ← a section's name, small and wide
