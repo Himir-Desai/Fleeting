@@ -17,13 +17,18 @@ extension XCUIApplication {
     /// Taps a tab, getting the keyboard out of the way first.
     ///
     /// Capture keeps the keyboard up, and on this device it covers the tab bar exactly — a tap
-    /// aimed at a tab lands on a key instead. Dismissing first is what makes tab navigation
-    /// reliable straight after typing.
+    /// aimed at a tab lands on a key instead.
     private func switchToTab(_ name: String) {
         if keyboards.element.exists {
-            // Capture puts the keyboard away when the background is tapped, and that is the only
-            // way down without touch. Never types, so the field's contents are untouched.
-            coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.55)).tap()
+            // The capture bar's own dismiss control. Tapping background does not reliably put the
+            // keyboard down at the accessibility sizes, and a tap at a guessed fraction of the
+            // screen lands on whatever the layout moved there since (ADR-0043).
+            let hide = descendants(matching: .any)["capture.dismissKeyboard"].firstMatch
+            if hide.exists {
+                hide.tap()
+            } else {
+                descendants(matching: .any)["capture.background"].firstMatch.tap()
+            }
             _ = keyboards.element.waitForNonExistence(timeout: 3)
         }
         tabButton(name).tap()

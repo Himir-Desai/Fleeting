@@ -73,13 +73,15 @@ public struct CaptureView: View {
                 .ignoresSafeArea()
                 .contentShape(.rect)
                 .onTapGesture { dismissField() }
+                // Named so a test can put the keyboard away deterministically. The alternative
+                // was a tap at a guessed fraction of the screen, which is a point that happens to
+                // be background today and lands on a control after the next layout change.
+                .accessibilityIdentifier("capture.background")
         }
         // Save sits on the keyboard rather than in the page, so it is always under the thumb and
         // never moves as the thought grows (ADR-0039).
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            if model.canSave {
-                controls
-            }
+            controls
         }
         // ADR-0008, the highest-priority constraint in the project: a cold launch lands on a
         // focused field with the keyboard already up. Capture must cost zero taps.
@@ -137,14 +139,37 @@ public struct CaptureView: View {
     /// Advanced options are gone: expiry wheels at the moment of capture are a form, and a form is
     /// exactly what principle 1 forbids. Kind and lifetime are both editable in the thought's
     /// detail, which is where a decision about a thought belongs (ADR-0039).
+    ///
+    /// The bar is always present, even with nothing to save, because it carries the only way to
+    /// put the keyboard down. At the accessibility type sizes the keyboard covers the tab bar
+    /// completely, and without this the capture screen had no exit at all (ADR-0043).
     private var controls: some View {
         HStack(spacing: Spacing.snug) {
+            dismissButton
             Spacer(minLength: 0)
-            saveButton
+            if model.canSave {
+                saveButton
+            }
         }
         .padding(.horizontal, Spacing.loose)
         .padding(.vertical, Spacing.regular)
         .background(.bar)
+        .motion(Motion.commit, value: model.canSave)
+    }
+
+    /// Puts the keyboard away, which is the only way off this screen when the keyboard covers the
+    /// tab bar.
+    private var dismissButton: some View {
+        Button(action: dismissField) {
+            Image(systemName: "keyboard.chevron.compact.down")
+                .font(Typography.title)
+                .foregroundStyle(Palette.inkMuted)
+                .frame(width: controlSize, height: controlSize)
+                .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("capture.dismissKeyboard")
+        .accessibilityLabel("Hide keyboard")
     }
 
     /// The round save control: a tick that commits the thought and clears the field.

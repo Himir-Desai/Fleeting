@@ -20,6 +20,10 @@ struct FirstRunHint: View {
                 .font(Typography.caption)
                 .foregroundStyle(Palette.inkMuted)
                 .fixedSize(horizontal: false, vertical: true)
+                // Capped, because at the accessibility sizes this line grew to fill the whole
+                // page: with the keyboard over the tab bar there was then no way off the capture
+                // screen at all. An explanation that traps you is worse than no explanation.
+                .lineLimit(4)
                 .accessibilityIdentifier("capture.hint")
 
             Button("Got it", action: onDismiss)

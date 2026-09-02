@@ -17,7 +17,13 @@ import Testing
 /// uses: `ThoughtEntity` names the current version, so opening at an older one hands back rows
 /// SwiftData cannot cast, and that failure is a trap that kills the process rather than failing
 /// one case.
-@Suite("Schema migration")
+///
+/// The suite is `.serialized` for the same reason. Its cases each stand up a container at a
+/// different schema version, and swift-testing runs cases in parallel by default — so two
+/// versions of the same entity name could be registered at once, which crashed the process with
+/// a signal 11 on roughly one run in three. Separate stores are not enough; the registration is
+/// per-process, not per-store.
+@Suite("Schema migration", .serialized)
 struct SchemaMigrationTests {
     private let epoch = Date(timeIntervalSince1970: 1_700_000_000)
 

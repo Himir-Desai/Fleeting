@@ -134,6 +134,10 @@ public struct SharpenView: View {
                             .foregroundStyle(Palette.ink)
                             .accessibilityIdentifier("sharpen.title")
 
+                        // A fragment that has been developed into prose has been growing a while,
+                        // so it gets the vine rather than the seedling (ADR-0042).
+                        VineRule(leaves: 3)
+
                         Text(writeUp.detail)
                             .font(Typography.body)
                             .foregroundStyle(Palette.ink)

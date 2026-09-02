@@ -41,6 +41,9 @@ struct ThoughtRow: View {
 
         layout {
             if let streak = thought.streak, streak.hasStarted {
+                // No vine here. It was tried at 34pt beside this label and read as a scribble
+                // rather than a plant — a line drawing needs room, and a list row has none. The
+                // habit's growth is carried by the sprout in its action chip instead (ADR-0042).
                 Text("\(streak.count) day streak")
                     .font(Typography.caption)
                     // Muted, not accent: a streak is a fact about the thought, and the accent is

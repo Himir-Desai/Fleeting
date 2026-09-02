@@ -1318,3 +1318,36 @@ sequence.
 **Consequences.** `GrowingSprout` wraps the animation so no call site owns a phase, and Reduce
 Motion renders the mark fully grown rather than not at all — it is decoration, so the answer to
 "no motion" is the end state. Nothing waits on it: capture is committed before it draws (ADR-0008).
+
+---
+
+## ADR-0043 · The capture bar always offers a way down
+
+**Status:** Accepted · Bug fix
+
+**Context.** At the accessibility type sizes the capture screen had no exit. The keyboard covers
+the tab bar completely on this device, the save bar only appeared once there was text to save, and
+the first-run hint expanded to fill the page — so a user at those sizes could reach capture and
+never leave it. `AccessibilityTests` had been failing on this since the design overhaul made
+capture full-bleed.
+
+Tapping the background is supposed to dismiss the keyboard, and does on a normal type size. It is
+not a reliable escape when the hint has consumed the page.
+
+**Decision.** The bar is always present, and carries a keyboard-dismiss control on its leading
+edge. Save still appears only when there is something to save; the dismiss control does not depend
+on state, because the one thing that must never be conditional is the way out. The hint is capped
+at four lines.
+
+**Alternatives.**
+- *Cap the hint alone* — rejected: it was tried and did not fix it. The hint made the trap worse,
+  but the keyboard covering the tab bar is what made it a trap.
+- *Move the tab bar above the keyboard* — rejected: the tab bar is the system's, and fighting it
+  would cost more than a 44pt button.
+- *Dismiss on scroll* — rejected: capture has nothing to scroll.
+
+**Consequences.** `switchToTab` in the UI tests taps this control rather than a coordinate at 55%
+of screen height — a magic point chosen when capture had a well, which two layout changes later
+was landing on whatever had moved there. `SchemaMigrationTests` is `.serialized` in the same
+commit: its cases each register a different schema version for one entity name, and running them
+in parallel crashed the process on roughly one run in three.
