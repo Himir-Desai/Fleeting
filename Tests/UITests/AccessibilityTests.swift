@@ -28,6 +28,7 @@ final class AccessibilityTests: XCTestCase {
 
         let field = app.descendants(matching: .any)["capture.field"]
         XCTAssertTrue(field.waitForExistence(timeout: 10))
+        field.tap()
         XCTAssertTrue(app.keyboards.element.waitForExistence(timeout: 10))
 
         field.typeText("rent split idea")
@@ -60,7 +61,7 @@ final class AccessibilityTests: XCTestCase {
             "a row that renders no words is a row that says nothing"
         )
         XCTAssertTrue(
-            app.tabButton("New thought").isHittable,
+            app.tabButton("Home").isHittable,
             "the way back to capture must survive the largest type size"
         )
         XCTAssertTrue(
@@ -96,7 +97,7 @@ final class AccessibilityTests: XCTestCase {
         _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 10)
 
         // Every tab is named, because a glyph on its own is a button VoiceOver calls "button".
-        for tab in ["New thought", "Thoughts", "Settings"] {
+        for tab in ["Home", "Thoughts", "Settings"] {
             XCTAssertTrue(app.tabButton(tab).exists, "the \(tab) tab must be named")
         }
 

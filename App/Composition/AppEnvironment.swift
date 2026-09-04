@@ -121,6 +121,10 @@ final class AppEnvironment {
         #endif
         await sweep()
         await refreshNudges()
+        // Seeding and the sweep both happen after the home screen has already drawn, so anything
+        // reading the store on appear — the habit strip especially — has to be told the store
+        // moved underneath it (ADR-0047).
+        changes.notify()
     }
 
     /// Archives anything that expired while the app was closed.

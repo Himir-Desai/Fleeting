@@ -1444,3 +1444,54 @@ it with a mask, so the leaves stay where they are and only more of the plant bec
 
 The demo seed grew from five thoughts to seventeen, spread across every urgency band, every kind,
 and both live and archived, so a hand test can reach each state without waiting for real time.
+
+---
+
+## ADR-0047 · Habits live on the home screen, and leave the moment you write
+
+**Status:** Accepted · Design pass
+
+**Context.** A habit is the only kind of thought in the app that has to be touched *every day*, and
+it was buried three taps deep: open the Thoughts tab, find the row among everything else, tap the
+sprout. Nothing about the daily cadence was reflected in where the habit lived. Meanwhile the home
+screen — the tab a cold launch lands on — showed one field and a vine, and had space for exactly
+the thing that needs daily attention.
+
+**Decision.** Today's habits appear as a horizontal run of cards beneath the capture field on the
+home screen, and *stay* in the Thoughts tab as well: one is a daily prompt, the other is the
+complete list, and neither replaces the other. Each card carries the habit, its streak, and one tap
+to keep it, marking through the same `Thought.markHabitKept` the list calls, so a mark made in
+either place is the same event. A habit already kept within the last day shows a tick instead of a
+sprout and stops being tappable, because a second tap would change nothing.
+
+The cards leave the instant the field takes focus, and stay away while there is text to save.
+Writing down a thought is not a screen you share: the moment someone starts, the only thing that
+matters is what is in their head.
+
+**The cost, stated plainly.** The keyboard no longer rises on its own at launch. ADR-0008's promise
+is that nothing may stand between a cold launch and capture, and that is intact — the field is
+still the first thing on screen, still needs no navigation, and is one tap from writing. But the
+keyboard covers the bottom two thirds of the phone, so an auto-raised keyboard and a habit strip
+cannot both exist. Capture now costs one tap where it cost none.
+
+The ambient surfaces are not made to pay that tax. The widget, the lock screen control, Control
+Center and Siri all promise a field with the cursor already in it, so `fleeting://capture` selects
+the home tab and raises the keyboard through `CaptureFocus`. The tap is only charged to someone who
+opened the app by hand, which is exactly the person who might have opened it to keep a habit.
+
+**Alternatives.**
+- *A habits tab of its own* — rejected: a fifth tab for one kind of thought, and a place you still
+  have to choose to visit. The point is that it is in front of you without being asked for.
+- *Keep the keyboard up and put the habits above the field* — rejected: at the accessibility type
+  sizes the keyboard already covers the tab bar (ADR-0043), so anything below the field is
+  unreachable and anything above it pushes the field off the top.
+- *Show habits in the receipt's place after a save* — rejected: the receipt is a moment about the
+  thought just filed (ADR-0038), and a daily prompt is not a response to a capture.
+- *Move habits out of the Thoughts tab* — rejected explicitly, and by the request: the list is
+  where a habit is edited, snoozed, archived and undone. The home screen offers one action.
+
+**Consequences.** `CaptureView` takes an optional `DailyHabitsModel` and an optional `CaptureFocus`,
+both defaulted to `nil`, so a preview or a test can still build the bare capture screen. The
+`New thought` tab is now `Home`, since it holds two things. The UI tests that asserted a keyboard at
+launch now assert a hittable field that focuses on one tap, and two new ones cover the strip
+appearing, disappearing on focus, and marking a habit without opening anything.

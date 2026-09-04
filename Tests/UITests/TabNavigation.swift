@@ -37,7 +37,7 @@ extension XCUIApplication {
     /// Switches to the capture tab and waits for its field.
     @discardableResult
     func goToCapture(timeout: TimeInterval = 10) -> Bool {
-        switchToTab("New thought")
+        switchToTab("Home")
         return descendants(matching: .any)["capture.field"].waitForExistence(timeout: timeout)
     }
 

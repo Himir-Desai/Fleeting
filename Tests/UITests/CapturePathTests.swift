@@ -18,16 +18,65 @@ final class CapturePathTests: XCTestCase {
         return app
     }
 
-    func testColdLaunchLandsOnAFocusedCaptureField() {
+    func testColdLaunchLandsOnACaptureFieldOneTapFromWriting() {
         let app = launchWithEmptyStore()
 
+        let field = app.descendants(matching: .any)["capture.field"]
         XCTAssertTrue(
-            app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 5),
+            field.waitForExistence(timeout: 5),
             "The capture field must exist immediately on a cold launch."
         )
+        // The keyboard no longer comes up uninvited, because it would bury the habits sharing
+        // the home screen (ADR-0047). One tap must still be the whole cost of writing.
+        field.tap()
         XCTAssertTrue(
             app.keyboards.element.waitForExistence(timeout: 5),
-            "The keyboard must already be up. Capture must cost zero taps."
+            "One tap on the field must raise the keyboard. Capture must cost one tap."
+        )
+    }
+
+    func testTheHomeScreenShowsTodaysHabitsAndHidesThemWhileWriting() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--reset-store", "--seed-demo"]
+        app.launch()
+
+        let field = app.descendants(matching: .any)["capture.field"]
+        XCTAssertTrue(field.waitForExistence(timeout: 10))
+
+        let habits = app.descendants(matching: .any)["home.habits"]
+        XCTAssertTrue(
+            habits.waitForExistence(timeout: 10),
+            "habits need daily interaction, so they belong on the screen a launch lands on"
+        )
+
+        field.tap()
+        XCTAssertTrue(
+            habits.waitForNonExistence(timeout: 5),
+            "writing a thought is not a screen you share: the habits must leave on focus"
+        )
+
+        // And they come back once the field is put down again.
+        app.descendants(matching: .any)["capture.dismissKeyboard"].firstMatch.tap()
+        XCTAssertTrue(habits.waitForExistence(timeout: 5))
+    }
+
+    func testAHabitCanBeKeptFromTheHomeScreen() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--reset-store", "--seed-demo"]
+        app.launch()
+        _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 10)
+
+        let mark = app.buttons["home.habit.mark"].firstMatch
+        XCTAssertTrue(
+            mark.waitForExistence(timeout: 10),
+            "a habit on the home screen must be markable without opening anything"
+        )
+        mark.tap()
+
+        XCTAssertTrue(
+            app.descendants(matching: .any)["home.habit.kept"].firstMatch
+                .waitForExistence(timeout: 5),
+            "a kept habit must say so rather than inviting a tap that changes nothing"
         )
     }
 
@@ -258,7 +307,7 @@ final class ReturnToCaptureTests: XCTestCase {
         app.goToThoughts()
         _ = app.staticTexts["inbox.empty"].waitForExistence(timeout: 5)
 
-        let back = app.tabButton("New thought")
+        let back = app.tabButton("Home")
         XCTAssertTrue(
             back.waitForExistence(timeout: 5),
             "The inbox must show a visible control back to capture."
@@ -267,9 +316,15 @@ final class ReturnToCaptureTests: XCTestCase {
 
         back.tap()
 
+        let field = app.descendants(matching: .any)["capture.field"]
+        XCTAssertTrue(
+            field.waitForExistence(timeout: 5),
+            "One tap must return to the capture field."
+        )
+        field.tap()
         XCTAssertTrue(
             app.keyboards.element.waitForExistence(timeout: 5),
-            "One tap must return to a focused capture field with the keyboard up."
+            "The field must still be one tap from writing."
         )
     }
 
@@ -618,7 +673,6 @@ final class ReviewTests: XCTestCase {
             app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 5),
             "a backlog needing decisions must still not delay capture"
         )
-        XCTAssertTrue(app.keyboards.element.waitForExistence(timeout: 5))
         XCTAssertEqual(app.sheets.count, 0)
         XCTAssertFalse(app.staticTexts["review.card"].exists)
     }
@@ -663,7 +717,7 @@ final class ReviewTests: XCTestCase {
 
         app.buttons["review.finish"].tap()
         XCTAssertTrue(
-            app.tabButton("New thought").waitForExistence(timeout: 10),
+            app.tabButton("Home").waitForExistence(timeout: 10),
             "finishing a review must return to the app, not strand the user"
         )
     }
@@ -708,7 +762,6 @@ final class NudgeTests: XCTestCase {
         app.launch()
 
         XCTAssertTrue(app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.keyboards.element.waitForExistence(timeout: 5))
         XCTAssertEqual(
             app.alerts.count, 0,
             "a permission prompt at launch would be the exact thing ADR-0008 forbids"

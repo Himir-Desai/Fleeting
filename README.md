@@ -49,7 +49,7 @@ These are load-bearing. Every design decision in this repo traces back to one of
 
 | # | Principle | What it forbids |
 |---|-----------|-----------------|
-| 1 | **Capture is sacred.** The app cold-launches to a focused text field with the keyboard already up. | No launch modal, no onboarding gate, no "which folder?", no "what type is this?", no update-notes screen. Ever. |
+| 1 | **Capture is sacred.** The app cold-launches straight onto the text field, one tap from writing, with today's habits the only other thing on the page. | No launch modal, no onboarding gate, no "which folder?", no "what type is this?", no update-notes screen. Ever. |
 | 2 | **Nothing lives forever.** Every thought carries a freshness that decays on a clock, and archives itself when it runs out. | No infinite list. No manual cleanup chores. |
 | 3 | **The app does the sorting.** Titling and classification happen silently in the background after you've already left. | No required fields at capture. Corrections are one tap, never a form. |
 | 4 | **Half-baked in, fully-baked out.** The on-device model interviews you about a fragment, then writes it up from *your* answers. | No one-shot "expand this" that invents an idea you didn't have. |
@@ -88,11 +88,18 @@ flowchart LR
 
 <img src="docs/screenshots/capture.png" width="260" align="right" alt="The capture screen on cold launch: a full-bleed page with What's on your mind? set in a serif at the top margin and the cursor already blinking in it, no box and no border, a single line of first-run text below saying thoughts fade as they age and file themselves away, nothing is ever deleted, with a Got it control, and a four-tab bar along the bottom." />
 
-Cold launch lands on a cursor. The page *is* the field: no well, no border, no options. Type, hit
+Cold launch lands on the field. The page *is* the field: no well, no border, no options. Type, hit
 save, and the words collapse into a one-line receipt telling you what they were filed as and how
 long they have — `idea · 3 months` — before it retires itself. No navigation, no decisions, no
 confirmation to dismiss. Also reachable without unlocking, from a lock-screen widget, a Control
-Center control, and an App Intent so Siri can take dictation into it.
+Center control, and an App Intent so Siri can take dictation into it — and each of those still
+arrives with the cursor already blinking, because they promised as much.
+
+Underneath the field sit **today's habits**: the one kind of thought that has to be touched every
+day, so the one kind that earns a place on the screen you land on. One tap keeps a streak, and a
+habit already kept today says so instead of inviting a tap that would change nothing. They vanish
+the instant you start writing — a thought being written down is not a screen you share — and the
+full list still lives in the Thoughts tab, where a habit is edited, snoozed and undone.
 
 ### 🕯 Decay — the anti-hoarding mechanic
 

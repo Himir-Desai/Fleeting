@@ -13,7 +13,6 @@ final class FirstRunTests: XCTestCase {
 
         let field = app.descendants(matching: .any)["capture.field"]
         XCTAssertTrue(field.waitForExistence(timeout: 10))
-        XCTAssertTrue(app.keyboards.element.waitForExistence(timeout: 10))
         XCTAssertEqual(app.alerts.count, 0, "the explanation must never be a modal")
         XCTAssertEqual(app.sheets.count, 0, "the explanation must never be a sheet")
         XCTAssertTrue(
@@ -22,6 +21,7 @@ final class FirstRunTests: XCTestCase {
         )
 
         // The field is still the thing you land on.
+        field.tap()
         field.typeText("still typable")
         XCTAssertTrue(app.buttons["capture.save"].isEnabled)
     }
@@ -55,6 +55,7 @@ final class FirstRunTests: XCTestCase {
         XCTAssertTrue(field.waitForExistence(timeout: 10))
         XCTAssertTrue(app.descendants(matching: .any)["capture.hint"].waitForExistence(timeout: 5))
 
+        field.tap()
         field.typeText("first thought")
         app.buttons["capture.save"].tap()
 

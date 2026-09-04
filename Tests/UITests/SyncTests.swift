@@ -45,6 +45,7 @@ final class SyncTests: XCTestCase {
 
         let field = app.descendants(matching: .any)["capture.field"]
         XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap()
         field.typeText("rent split idea, per room not per head")
         app.buttons["capture.save"].tap()
 
@@ -62,6 +63,7 @@ final class SyncTests: XCTestCase {
 
         let field = app.descendants(matching: .any)["capture.field"]
         XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap()
         field.typeText("pay the parking fine")
         app.buttons["capture.save"].tap()
         _ = app.tabButton("Thoughts").waitForExistence(timeout: 5)
@@ -85,7 +87,6 @@ final class SyncTests: XCTestCase {
         app.launch()
 
         XCTAssertTrue(app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.keyboards.element.waitForExistence(timeout: 5))
         XCTAssertEqual(
             app.alerts.count, 0,
             "an iCloud sign-in prompt at launch would be the exact thing ADR-0008 forbids"

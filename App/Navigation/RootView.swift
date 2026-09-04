@@ -8,9 +8,11 @@ import SwiftUI
 
 /// The app's root view.
 ///
-/// Three tabs — a new thought, existing thoughts, and settings — with the new-thought tab selected
-/// on launch, so a cold launch still lands on the capture field with nothing before it (ADR-0008).
-/// This is also the only place that knows every feature exists, so it wires what each tab reaches.
+/// Four tabs — home, existing thoughts, review, and settings — with home selected on launch, so a
+/// cold launch still lands on the capture field with nothing before it (ADR-0008). Home carries
+/// today's habits under that field, because a habit is the one thing here that needs daily
+/// attention (ADR-0047). This is also the only place that knows every feature exists, so it wires
+/// what each tab reaches.
 struct RootView: View {
     let environment: AppEnvironment
 
@@ -27,16 +29,27 @@ struct RootView: View {
     @State private var sharpening: Thought?
     @State private var isReviewing = false
 
+    /// Asked by the widget, the lock screen and Control Center to put the cursor in the field.
+    /// A plain launch never asks, so a plain launch shows the habits instead (ADR-0047).
+    @State private var captureFocus = CaptureFocus()
+
     var body: some View {
         TabView(selection: $selection) {
-            Tab("New thought", systemImage: "square.and.pencil", value: AppTab.newThought) {
+            Tab("Home", systemImage: "square.and.pencil", value: AppTab.newThought) {
                 CaptureView(
                     model: CaptureModel(
                         repository: environment.thoughts,
                         intelligence: environment.intelligence,
                         changes: environment.changes,
                         clock: environment.clock
-                    )
+                    ),
+                    habits: DailyHabitsModel(
+                        repository: environment.thoughts,
+                        changes: environment.changes,
+                        clock: environment.clock
+                    ),
+                    changes: environment.changes,
+                    focus: captureFocus
                 )
             }
 
@@ -61,6 +74,13 @@ struct RootView: View {
         }
         // Runs after the field is on screen, never before it.
         .task { await environment.prepare() }
+        // The ambient surfaces open `fleeting://capture` and promise a focused field. Handled
+        // here rather than inside capture, because the request also has to select its tab.
+        .onOpenURL { url in
+            guard url.scheme == "fleeting", url.host == "capture" else { return }
+            selection = .newThought
+            captureFocus.request()
+        }
         .task {
             // Copy is written ahead of time, so the queue is rebuilt whenever the store might
             // have moved on. Never before the field is on screen.

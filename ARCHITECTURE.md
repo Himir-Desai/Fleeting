@@ -80,7 +80,7 @@ Fleeting/
 │   ├── Intents/
 │   │   └── CaptureThoughtIntent.swift ← Siri and Shortcuts capture without opening the app
 │   ├── Navigation/
-│   │   └── RootView.swift           ← four tabs: new thought · thoughts · review · settings (ADR-0040)
+│   │   └── RootView.swift           ← four tabs: home · thoughts · review · settings (ADR-0040, ADR-0047)
 │   └── Resources/
 │       ├── Assets.xcassets/         ← the app icon; generated, see docs/ASSETS.md
 │       └── PrivacyInfo.xcprivacy    ← nothing collected, nothing tracked (docs/PRIVACY.md)
@@ -224,11 +224,16 @@ Fleeting/
 │   │
 │   ├── Features/                    ← One target per feature. Features never import each other.
 │   │   └── Sources/
-│   │       ├── CaptureFeature/      ← the sacred path: launch → cursor → save → clear
+│   │       ├── CaptureFeature/      ← home: the field, today's habits, save → clear
 │   │       │   ├── CaptureModel.swift   ← @Observable; the rules, unit-tested without a simulator
 │   │       │   ├── CaptureView.swift    ← a full-bleed page; save rides the keyboard (ADR-0039)
+│   │       │   ├── CaptureViewPreview.swift ← the preview and its do-nothing collaborators
 │   │       │   ├── CaptureReceipt.swift ← what a save filed: words · kind · lifetime (ADR-0038)
 │   │       │   ├── CaptureReceiptCard.swift ← the card the saved text collapses into (ADR-0038)
+│   │       │   ├── CaptureFocus.swift    ← the ambient surfaces' request for the cursor (ADR-0047)
+│   │       │   ├── DailyHabitsModel.swift ← @Observable; today's habits, due first (ADR-0047)
+│   │       │   ├── HabitStrip.swift      ← the run of habit cards under the field (ADR-0047)
+│   │       │   ├── HabitCard.swift       ← one habit: words, streak, one tap to keep it
 │   │       │   └── FirstRunHint.swift    ← the one-line explanation of decay (ADR-0021)
 │   │       ├── InboxFeature/        ← the living list: urgency sections, sinking cards, detail
 │   │       │   ├── InboxModel.swift     ← @Observable; load, urgency sections, counts, row actions
@@ -281,7 +286,7 @@ Fleeting/
     └── UITests/                        package (Packages/Core/Tests/CoreTests, and so on), so
         ├── CapturePathTests.swift      `swift test` on one package runs its suite in isolation.
         └── TabNavigation.swift      ← the one place tests know how the tabs are reached
-                                     ← CapturePathTests: launch → typing is unobstructed
+                                     ← CapturePathTests: launch → typing is unobstructed; habits on home (ADR-0047)
                                        InboxTests: browse, edit, delete, survive a force-quit
                                        ArchiveTests: archive, restore, never destroy
                                        SnoozeTests: a snooze survives a relaunch (ADR-0033)

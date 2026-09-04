@@ -2,13 +2,20 @@ import Core
 import DesignSystem
 import SwiftUI
 
-/// The capture screen.
+/// The home screen: the capture field, with today's habits under it.
 ///
-/// The reason the app exists, and the tab a cold launch lands on. The field is focused with the
-/// keyboard up before anything else happens (ADR-0008). Its controls — advanced options and
-/// save — appear once you have started typing, directly beneath the box.
+/// The reason the app exists, and the tab a cold launch lands on. The field is on screen and one
+/// tap from writing, and the habits — the only thing in the app that needs daily attention — sit
+/// beneath it until the field takes focus, at which point they leave and the screen is nothing but
+/// capture again (ADR-0047).
 public struct CaptureView: View {
     @State private var model: CaptureModel
+
+    /// Today's habits, or `nil` on a screen that shows none.
+    @State private var habits: DailyHabitsModel?
+
+    /// Asks from outside the screen — a widget, Siri, Control Center — to focus the field.
+    private let focus: CaptureFocus?
 
     /// Whether the first-run explanation has been dismissed by hand. Cleared by `--reset-store`.
     @AppStorage("capture.hintDismissed") private var hintDismissed = false
@@ -17,10 +24,26 @@ public struct CaptureView: View {
     /// The diameter of the save control, grown to stay a 44pt target.
     @ScaledMetric(relativeTo: .body) private var controlSize: CGFloat = 52
 
-    /// Creates the capture screen.
-    /// - Parameter model: State and rules for capture, built by the composition root.
-    public init(model: CaptureModel) {
+    /// Watched so a habit marked elsewhere is reflected here without a relaunch.
+    private let changes: (any ThoughtChangeObserving)?
+
+    /// Creates the home screen.
+    /// - Parameters:
+    ///   - model: State and rules for capture, built by the composition root.
+    ///   - habits: State and rules for today's habits, or `nil` to show none.
+    ///   - changes: Watched so a habit marked or captured elsewhere refreshes the strip.
+    ///   - focus: Asked by the ambient surfaces to put the cursor in the field, or `nil` when
+    ///     nothing outside the screen can request it.
+    public init(
+        model: CaptureModel,
+        habits: DailyHabitsModel? = nil,
+        changes: (any ThoughtChangeObserving)? = nil,
+        focus: CaptureFocus? = nil
+    ) {
         _model = State(initialValue: model)
+        _habits = State(initialValue: habits)
+        self.changes = changes
+        self.focus = focus
     }
 
     public var body: some View {
@@ -61,6 +84,17 @@ public struct CaptureView: View {
                 FirstRunHint { hintDismissed = true }
             }
 
+            // Habits are the one kind of thought that needs touching every day, so they are the
+            // one kind that earns a place on the screen a launch lands on. They leave the instant
+            // the field takes focus: writing a thought is not a screen you share (ADR-0047).
+            if let habits, showsHabits, habits.hasHabits {
+                HabitStrip(model: habits)
+                    .transition(.asymmetric(
+                        insertion: .opacity.combined(with: .move(edge: .bottom)),
+                        removal: .opacity
+                    ))
+            }
+
             Spacer(minLength: 0)
         }
         .padding(.horizontal, Spacing.loose)
@@ -96,9 +130,29 @@ public struct CaptureView: View {
                 controls
             }
         }
-        // ADR-0008, the highest-priority constraint in the project: a cold launch lands on a
-        // focused field with the keyboard already up. Capture must cost zero taps.
-        .task { isFieldFocused = true }
+        // ADR-0047 revises ADR-0008's mechanism, not its promise: the field is the first thing on
+        // screen and still takes no navigation to reach, but the keyboard no longer comes up
+        // uninvited, because it would bury the habits that now share the page.
+        .task { await habits?.load() }
+        .task {
+            guard let changes else { return }
+            for await _ in changes.changes {
+                await habits?.load()
+            }
+        }
+        // A capture may be a habit, and a mark changes what the strip should say.
+        .task(id: model.savedCount) { await habits?.load() }
+        // The ambient surfaces still promise a field with the keyboard already up, so a launch
+        // that came from one of them focuses the field even though a plain launch does not.
+        .onChange(of: focus?.requests ?? 0) { _, _ in
+            isFieldFocused = true
+        }
+        .task {
+            guard let focus, focus.requests > 0 else { return }
+            isFieldFocused = true
+        }
+        .sensoryFeedback(.success, trigger: habits?.markedCount ?? 0)
+        .motion(Motion.commit, value: isFieldFocused)
         .motion(Motion.commit, value: model.canSave)
         .motion(Motion.commit, value: model.receipt)
         // The save is the one moment worth confirming, and a haptic does it without taking focus.
@@ -126,6 +180,14 @@ public struct CaptureView: View {
     /// on the first save as well as on an explicit dismissal (ADR-0021).
     private var showsHint: Bool {
         !hintDismissed && model.savedCount == 0
+    }
+
+    /// Whether the habits should be on screen.
+    ///
+    /// Only while the field is idle. Once someone is writing, the thought in their head is the
+    /// only thing that matters, and anything else on the page is competition for it (ADR-0047).
+    private var showsHabits: Bool {
+        !isFieldFocused && !model.canSave
     }
 
     /// The field: the page itself, not a box drawn on it.
@@ -208,57 +270,4 @@ public struct CaptureView: View {
     private func dismissField() {
         isFieldFocused = false
     }
-}
-
-#Preview {
-    CaptureView(
-        model: CaptureModel(
-            repository: PreviewRepository(),
-            intelligence: PreviewIntelligence(),
-            clock: PreviewClock()
-        )
-    )
-}
-
-/// Storage that discards everything, so previews need no store.
-private actor PreviewRepository: ThoughtRepository {
-    func add(_ thought: Thought) async throws {}
-    func thoughts(in _: ThoughtScope) async throws -> [Thought] {
-        []
-    }
-
-    func update(_ thought: Thought) async throws {}
-    func delete(id: Thought.ID) async throws {}
-}
-
-/// A classifier that decides nothing, so previews need no model.
-private struct PreviewIntelligence: IntelligenceService {
-    var availability: IntelligenceAvailability {
-        .heuristic(reason: .notBuiltIn)
-    }
-
-    func classify(_: String) async -> Classification {
-        .unknown
-    }
-
-    func interviewQuestions(for _: String) async -> [String] {
-        []
-    }
-
-    func writeUp(
-        for _: String,
-        answers _: [AnsweredQuestion],
-        at _: Date
-    ) async -> WriteUp? {
-        nil
-    }
-
-    func resurfacingLine(for _: String) async -> String? {
-        nil
-    }
-}
-
-/// A clock frozen at a fixed instant, so previews never depend on the system time.
-private struct PreviewClock: WallClock {
-    let now = Date(timeIntervalSince1970: 1_700_000_000)
 }

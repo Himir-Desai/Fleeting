@@ -48,27 +48,29 @@ final class PerformanceTests: XCTestCase {
         )
     }
 
-    /// That a cold launch lands on a field that is actually ready to be typed into.
+    /// That a cold launch lands on a field that is one tap from being typed into.
     ///
-    /// ADR-0008 is the highest-priority constraint in the project, and until now nothing guarded
-    /// the half of it that matters. The ceiling test above waits only for the field to *exist*, so
-    /// it would pass just as happily against a screen you had to tap before you could write —
-    /// which is exactly the two-second tax the app was built to remove.
-    func testColdLaunchLandsOnAFocusedFieldWithTheKeyboardUp() {
+    /// ADR-0008 is the highest-priority constraint in the project, and the ceiling test above
+    /// waits only for the field to *exist* — it would pass just as happily against a screen you
+    /// had to navigate before you could write. The keyboard no longer rises uninvited (ADR-0047),
+    /// so what is guarded here is that the field is present, hittable, and focuses on one tap.
+    func testColdLaunchLandsOnAFieldThatIsOneTapFromWriting() {
         let app = XCUIApplication()
         app.launchArguments = ["--reset-store"]
         app.launch()
 
         let field = app.descendants(matching: .any)["capture.field"]
         XCTAssertTrue(field.waitForExistence(timeout: 30), "the capture field never appeared")
+        XCTAssertTrue(field.isHittable, "the field must be reachable without navigating (ADR-0008)")
 
+        field.tap()
         XCTAssertTrue(
             app.keyboards.element.waitForExistence(timeout: 10),
-            "a cold launch must land with the keyboard already up (ADR-0008)"
+            "one tap on the field must raise the keyboard (ADR-0047)"
         )
         XCTAssertEqual(
             field.value(forKey: "hasKeyboardFocus") as? Bool, true,
-            "the capture field must hold keyboard focus without being tapped (ADR-0008)"
+            "the capture field must take focus on a single tap (ADR-0008)"
         )
     }
 
@@ -112,7 +114,7 @@ final class PerformanceTests: XCTestCase {
         }
 
         XCTAssertTrue(
-            app.tabButton("New thought").isHittable,
+            app.tabButton("Home").isHittable,
             "the way back to capture must survive scrolling a long list"
         )
     }
