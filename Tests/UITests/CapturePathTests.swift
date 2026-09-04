@@ -115,6 +115,37 @@ final class CapturePathTests: XCTestCase {
         )
     }
 
+    /// That capturing a thought does not bring the cards back underneath the keyboard.
+    ///
+    /// A save clears the field but leaves the keyboard up for the next thought, so the habits have
+    /// to stay away until the field is actually put down (ADR-0047).
+    func testHabitsStayAwayAfterASaveUntilTheFieldIsPutDown() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--reset-store", "--seed-demo"]
+        app.launch()
+
+        let field = app.descendants(matching: .any)["capture.field"]
+        XCTAssertTrue(field.waitForExistence(timeout: 10))
+        let habits = app.descendants(matching: .any)["home.habits"]
+        XCTAssertTrue(habits.waitForExistence(timeout: 10))
+
+        field.tap()
+        field.typeText("a thought caught mid-morning")
+        app.buttons["capture.save"].tap()
+        XCTAssertTrue(app.buttons["capture.save"].waitForNonExistence(timeout: 5))
+
+        XCTAssertFalse(
+            habits.exists,
+            "the keyboard is still up after a save, so the cards would sit underneath it"
+        )
+
+        app.descendants(matching: .any)["capture.dismissKeyboard"].firstMatch.tap()
+        XCTAssertTrue(
+            habits.waitForExistence(timeout: 5),
+            "putting the field down must return the page to the habits"
+        )
+    }
+
     /// The promise the widget, Control Center and Siri make, which is the whole reason dropping
     /// launch auto-focus was affordable (ADR-0047).
     func testALaunchFromAnAmbientSurfaceStillArrivesWithTheKeyboardUp() {
