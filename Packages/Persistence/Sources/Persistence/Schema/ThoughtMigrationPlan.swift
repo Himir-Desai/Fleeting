@@ -4,12 +4,22 @@ import SwiftData
 /// How an existing store is brought up to the current schema version.
 enum ThoughtMigrationPlan: SchemaMigrationPlan {
     static var schemas: [any VersionedSchema.Type] {
-        [ThoughtSchemaV1.self, ThoughtSchemaV2.self, ThoughtSchemaV3.self]
+        [ThoughtSchemaV1.self, ThoughtSchemaV2.self, ThoughtSchemaV3.self, ThoughtSchemaV4.self]
     }
 
     static var stages: [MigrationStage] {
-        [version1To2, version2To3]
+        [version1To2, version2To3, version3To4]
     }
+
+    /// Adds version 4's optional `cadenceRaw` column.
+    ///
+    /// Lightweight rather than custom: the new attribute is optional with a default, so existing
+    /// rows migrate to `nil` — no cadence chosen, which behaves as daily and is exactly the
+    /// previous behaviour for every habit already stored.
+    private static let version3To4 = MigrationStage.lightweight(
+        fromVersion: ThoughtSchemaV3.self,
+        toVersion: ThoughtSchemaV4.self
+    )
 
     /// Adds version 3's optional `customLifetime` column.
     ///

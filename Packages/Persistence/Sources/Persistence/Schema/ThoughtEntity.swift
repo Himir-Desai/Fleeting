@@ -4,4 +4,4 @@ import Foundation
 ///
 /// Change this typealias and add a stage to ``ThoughtMigrationPlan`` to move the store forward;
 /// nothing else in `Persistence` names a version.
-typealias ThoughtEntity = ThoughtSchemaV3.ThoughtEntity
+typealias ThoughtEntity = ThoughtSchemaV4.ThoughtEntity

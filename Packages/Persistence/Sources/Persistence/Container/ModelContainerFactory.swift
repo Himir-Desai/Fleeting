@@ -32,7 +32,7 @@ public enum ModelContainerFactory {
 
     /// The schema the app reads and writes.
     private static var schema: Schema {
-        Schema(versionedSchema: ThoughtSchemaV3.self)
+        Schema(versionedSchema: ThoughtSchemaV4.self)
     }
 
     /// The on-disk store the app uses, syncing through iCloud when it can.

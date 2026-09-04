@@ -1505,3 +1505,67 @@ thought still live under the Habits filter, which is what "the same event in bot
 `AppEnvironment.prepare` now notifies the change stream when it finishes. Seeding and the sweep both
 run *after* the home screen has drawn, and without this the strip showed an empty store it had read
 before the store was filled — caught by the new UI test rather than by inspection.
+
+---
+
+## ADR-0048 · A habit has a cadence, and the home screen shows only what is due
+
+**Status:** Accepted · Design pass
+
+**Context.** ADR-0047 put habits on the home screen, and shipping it exposed that the app had no
+concept of *how often* a habit is meant to be kept. Every habit was implicitly daily. A weekly
+habit therefore sat on the home screen six days out of seven asking to be done again, and a habit
+kept an hour ago stayed on screen wearing a tick — a card occupying the most valuable space in the
+app to tell you there was nothing to do.
+
+**Decision.** A habit carries a `HabitCadence`: daily, every few days, weekly, fortnightly, or
+monthly. It decides three things at once, which is why it is one value rather than three settings.
+
+1. **When the habit is due.** `Thought.isDue(at:)` is false for a habit kept within its current
+   period, and the home screen lists only habits that are due. A kept habit therefore leaves the
+   screen the instant it is marked, rather than turning into a tick.
+2. **What a run is counted in.** A weekly habit kept four times is a four *week* streak. Marking
+   twice in one period still does nothing, and a run still survives one miss and breaks on two —
+   the rules that were already there, now measured in the habit's own period.
+3. **How fast the habit decays.** A habit's lifetime becomes two whole periods when that is longer
+   than the configured rate.
+
+Point 3 is a bug the cadence work uncovered rather than a feature. The shipped habit rate is seven
+days, so a monthly habit would have been swept into the archive three weeks before it was ever due
+again: the app would have destroyed a habit for obeying the rhythm the app itself inferred. A test
+now asserts the lifetime exceeds the period for every cadence.
+
+The cadence is read out of the note's own wording at classification time — "run every morning" is
+daily, "call mum on sundays" is weekly — by all three intelligence implementations, and corrected
+on the thought's own page, which is where a decision about a thought belongs. Where the words say
+nothing about frequency, nothing is inferred and the default applies: a guess is worse than a
+default here, because a wrong cadence silently changes when the app asks.
+
+Provenance reuses `KindSource` rather than declaring a parallel enum. The question is identical —
+did nobody say, did the app guess, or did a person decide — and a chosen cadence is never
+overwritten by a later classification, exactly as a confirmed kind is not.
+
+The cards are also a vertical stack rather than a horizontal run. The horizontal one was chosen
+when the strip showed every habit and had to be bounded; now that it shows only what is due, the
+list is short by construction and every item can simply be read.
+
+**Alternatives.**
+- *An arbitrary "every N days" number* — rejected: a stepper at the moment of correction is a form,
+  and five named rhythms cover what people actually mean. The custom-lifetime wheels already exist
+  for anyone who wants a number.
+- *Keep showing kept habits, greyed or ticked* — rejected, and by the request: the home screen is
+  the most valuable space in the app, and a card that says "nothing to do" is the least valuable
+  thing that could be in it. The Thoughts tab is where the full roll call lives.
+- *Infer cadence but do not let it be edited* — rejected: the inference reads words, and most notes
+  do not name a frequency at all. An uneditable guess would be a rhythm imposed on the user.
+- *A separate `CadenceSource` enum* — rejected: three identical cases, and two enums that must
+  agree forever.
+
+**Consequences.** Schema version 4 adds `cadenceRaw` and `cadenceSourceRaw`, both optional, so the
+migration is lightweight and an existing habit becomes daily — which is exactly what it already
+was. A test asserts that, because a migration that changed how often an existing habit is asked
+for would silently rewrite someone's routine.
+
+The heuristic's habit markers are now derived from its cadence phrases rather than duplicated. They
+had already drifted: "every other day" named a cadence but did not sort as a habit, so the cadence
+was never read. The lists cannot disagree now because there is only one.

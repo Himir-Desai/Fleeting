@@ -22,6 +22,8 @@ extension ThoughtEntity {
             kindSource: KindSource(rawValue: kindSourceRaw) ?? .unclassified,
             dueAt: dueAt,
             streak: StoredStreak.streak(code: streakCode),
+            cadence: cadenceRaw.flatMap(HabitCadence.init(rawValue:)) ?? .default,
+            cadenceSource: cadenceSourceRaw.flatMap(KindSource.init(rawValue:)) ?? .unclassified,
             sharpening: StoredSharpening.decode(sharpeningJSON),
             snoozeCount: snoozeCount,
             customLifetime: customLifetime
@@ -43,6 +45,8 @@ extension ThoughtEntity {
         sharpeningJSON = StoredSharpening.encode(thought.sharpening)
         snoozeCount = thought.snoozeCount
         customLifetime = thought.customLifetime
+        cadenceRaw = thought.cadence.rawValue
+        cadenceSourceRaw = thought.cadenceSource.rawValue
 
         stateCode = StoredState.code(for: thought.state)
         streakCode = StoredStreak.code(for: thought.streak)

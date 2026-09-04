@@ -93,4 +93,64 @@ struct HeuristicIntelligenceTests {
     func availabilityIsHonest() async {
         #expect(await subject.availability == .heuristic(reason: .notBuiltIn))
     }
+
+    @Test(
+        "a habit's frequency is read out of its own words",
+        arguments: [
+            ("run every morning", HabitCadence.daily),
+            ("stretch every day before coffee", .daily),
+            ("meditate daily", .daily),
+            ("call mum every sunday", .weekly),
+            ("read a chapter every week", .weekly),
+            ("weekly review of the inbox", .weekly),
+            ("tidy the flat every other week", .fortnightly),
+            ("every two weeks, water the plants", .fortnightly),
+            ("pay the cleaner every month", .monthly),
+            ("gym every other day", .everyFewDays)
+        ]
+    )
+    func readsCadenceFromWording(text: String, expected: HabitCadence) async {
+        let result = await subject.classify(text)
+
+        #expect(result.kind == .habit, "\(text) should sort as a habit")
+        #expect(result.cadence == expected)
+    }
+
+    @Test("a habit that names no frequency gets none invented for it")
+    func silentHabitHasNoCadence() async {
+        let result = await subject.classify("make reading a habit")
+
+        #expect(result.kind == .habit)
+        #expect(result.cadence == nil, "a guess here would be worse than the default")
+    }
+
+    @Test("a cadence is only ever carried by a habit")
+    func onlyHabitsCarryACadence() async {
+        // The rules cannot tell "buy the daily paper" from a daily routine, and deliberately
+        // prefer habit when a frequency is present. What must hold is the invariant one level
+        // down: anything not sorted as a habit carries no cadence at all.
+        let todo = await subject.classify("pay the parking fine")
+        let idea = await subject.classify("an app that ranks coffee shops")
+
+        #expect(todo.kind == .todo)
+        #expect(todo.cadence == nil)
+        #expect(idea.cadence == nil)
+    }
+
+    @Test("a cadence is dropped when the kind is not a habit, whatever the classifier says")
+    func classificationRefusesACadenceForOtherKinds() {
+        // Guards the domain type rather than the rules: a future classifier that answers
+        // "todo, weekly" must not produce a to-do with a rhythm.
+        let confused = Classification(kind: .todo, title: nil, confidence: 1, cadence: .weekly)
+
+        #expect(confused.cadence == nil)
+    }
+
+    @Test("the more specific frequency wins when two could match")
+    func longerPeriodsWinOverShorterOnes() async {
+        // "every two weeks" also contains "week"; the fortnightly reading is the right one.
+        #expect(await subject.classify("every two weeks, deep clean").cadence == .fortnightly)
+        // "every month" would also match nothing else, but proves the ordering holds at the top.
+        #expect(await subject.classify("every month, review the budget").cadence == .monthly)
+    }
 }

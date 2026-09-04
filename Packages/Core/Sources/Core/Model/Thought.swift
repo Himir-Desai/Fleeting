@@ -24,8 +24,21 @@ public struct Thought: Identifiable, Equatable, Hashable, Sendable {
     /// When a todo is due, if a date has been set. Meaningless for other kinds.
     public var dueAt: Date?
 
-    /// The run of consecutive days a habit has been kept. `nil` until first marked.
+    /// The run of consecutive periods a habit has been kept. `nil` until first marked.
     public private(set) var streak: Streak?
+
+    /// How often a habit is meant to be kept. Meaningless for other kinds.
+    ///
+    /// Inferred from the wording at classification time and editable on the thought's own page,
+    /// which is where a decision about a thought belongs (ADR-0048).
+    public private(set) var cadence: HabitCadence
+
+    /// Where ``cadence`` came from. A confirmed cadence is never overwritten by classification.
+    ///
+    /// Reuses ``KindSource`` rather than declaring a parallel type: the question is identical —
+    /// did nobody say, did the app guess, or did a person decide — and two enums with the same
+    /// three cases would drift.
+    public private(set) var cadenceSource: KindSource
 
     /// The interview and write-up for an idea, or `nil` if it has never been sharpened.
     public internal(set) var sharpening: Sharpening?
@@ -64,7 +77,9 @@ public struct Thought: Identifiable, Equatable, Hashable, Sendable {
     ///     correct for a new capture; storage passes the stored value to reconstitute a thought.
     ///   - kindSource: Where the kind came from. Defaults to unclassified.
     ///   - dueAt: When a todo is due, if set.
-    ///   - streak: A habit's run of consecutive days, if any.
+    ///   - streak: A habit's run of consecutive periods, if any.
+    ///   - cadence: How often a habit is meant to be kept. Defaults to daily.
+    ///   - cadenceSource: Where the cadence came from. Defaults to unclassified.
     ///   - sharpening: An interview already in progress or finished, if any.
     ///   - snoozeCount: How many times it has already been set aside.
     ///   - customLifetime: A capture-time lifetime override, in seconds, or `nil` to decay at the
@@ -80,6 +95,8 @@ public struct Thought: Identifiable, Equatable, Hashable, Sendable {
         kindSource: KindSource = .unclassified,
         dueAt: Date? = nil,
         streak: Streak? = nil,
+        cadence: HabitCadence = .default,
+        cadenceSource: KindSource = .unclassified,
         sharpening: Sharpening? = nil,
         snoozeCount: Int = 0,
         customLifetime: TimeInterval? = nil
@@ -91,6 +108,8 @@ public struct Thought: Identifiable, Equatable, Hashable, Sendable {
         self.kindSource = kindSource
         self.dueAt = dueAt
         self.streak = streak
+        self.cadence = cadence
+        self.cadenceSource = cadenceSource
         self.sharpening = sharpening
         self.snoozeCount = max(snoozeCount, 0)
         self.state = state
@@ -158,13 +177,47 @@ public struct Thought: Identifiable, Equatable, Hashable, Sendable {
         state = .done(at: date)
     }
 
-    /// Records a habit as kept today, extending or restarting its streak.
+    /// Records a habit as kept for this period, extending or restarting its streak.
     /// - Parameter date: When the habit was marked done.
     public mutating func markHabitKept(at date: Date) {
         var updated = streak ?? Streak()
-        updated.mark(at: date)
+        updated.mark(at: date, cadence: cadence)
         streak = updated
         markActed(at: date)
+    }
+
+    /// Whether this habit is waiting to be kept.
+    ///
+    /// A habit already kept within its current period is not due, which is what takes it off the
+    /// home screen the moment it is marked (ADR-0048). Only habits are ever due.
+    /// - Parameter date: The instant being asked about.
+    /// - Returns: `true` when the habit still needs this period's mark.
+    public func isDue(at date: Date) -> Bool {
+        guard kind == .habit else { return false }
+        guard let streak else { return true }
+        return !streak.isKept(at: date, cadence: cadence)
+    }
+
+    /// Replaces how often a habit is meant to be kept, and remembers that a person chose it.
+    ///
+    /// Not deliberate action on the thought: choosing a cadence is a setting about the habit, not
+    /// an instance of keeping it, so it must not restore freshness or touch the run.
+    /// - Parameter cadence: The new cadence.
+    public mutating func setCadence(_ cadence: HabitCadence) {
+        self.cadence = cadence
+        cadenceSource = .confirmed
+    }
+
+    /// Applies a cadence the classifier read out of the wording.
+    ///
+    /// Ignored once a person has chosen one by hand, on the same reasoning as
+    /// ``applyClassification(kind:title:)``: the app noticing something must never overwrite a
+    /// decision someone made.
+    /// - Parameter cadence: The inferred cadence.
+    public mutating func applyInferredCadence(_ cadence: HabitCadence) {
+        guard cadenceSource != .confirmed else { return }
+        self.cadence = cadence
+        cadenceSource = .inferred
     }
 
     /// Takes back the most recent habit mark.

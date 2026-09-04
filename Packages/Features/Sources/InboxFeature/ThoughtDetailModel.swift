@@ -112,6 +112,22 @@ public final class ThoughtDetailModel {
         await persist(undone)
     }
 
+    /// Chooses how often a habit should be kept.
+    ///
+    /// Remembered as a decision, so classification will not talk the user out of it later.
+    /// - Parameter cadence: The chosen cadence.
+    public func chooseCadence(_ cadence: HabitCadence) async {
+        guard cadence != thought.cadence else { return }
+        var updated = thought
+        updated.setCadence(cadence)
+        await persist(updated)
+    }
+
+    /// Whether the shown cadence is the app's guess rather than the user's choice.
+    public var cadenceIsInferred: Bool {
+        thought.cadenceSource == .inferred
+    }
+
     /// Whether there is a habit mark to take back.
     public var canUndoHabitKept: Bool {
         thought.kind == .habit && (thought.streak?.hasStarted ?? false)

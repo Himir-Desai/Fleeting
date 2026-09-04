@@ -11,15 +11,29 @@ public struct Classification: Equatable, Sendable {
     /// How sure the classifier is, within 0...1.
     public let confidence: Double
 
+    /// How often a habit should be kept, or `nil` when the note said nothing about frequency.
+    ///
+    /// Only meaningful when ``kind`` is `.habit`. "Read every week" carries a cadence; "read
+    /// more" does not, and a habit whose note is silent falls back to the default rather than
+    /// having a frequency invented for it (ADR-0048).
+    public let cadence: HabitCadence?
+
     /// Creates a classification.
     /// - Parameters:
     ///   - kind: The inferred kind.
     ///   - title: A generated title, if any.
     ///   - confidence: Certainty within 0...1.
-    public init(kind: ThoughtKind, title: String?, confidence: Double) {
+    ///   - cadence: How often a habit should be kept, if the note said.
+    public init(
+        kind: ThoughtKind,
+        title: String?,
+        confidence: Double,
+        cadence: HabitCadence? = nil
+    ) {
         self.kind = kind
         self.title = title
         self.confidence = min(max(confidence, 0), 1)
+        self.cadence = kind == .habit ? cadence : nil
     }
 
     /// The result when nothing could be determined.

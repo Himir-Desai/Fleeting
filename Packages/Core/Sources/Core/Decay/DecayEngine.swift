@@ -32,13 +32,26 @@ public struct DecayEngine: Sendable {
     ///
     /// A capture-time lifetime override wins over the kind's rate: the whole chosen span is the
     /// decay ramp, with no grace, so "expires in two weeks" falls to zero at exactly two weeks.
+    ///
+    /// A habit decays over its own cadence rather than the shared habit rate. The shipped rate is
+    /// a week, which is right for a daily habit and fatal for a monthly one: it would be archived
+    /// three weeks before it was ever due again, so a habit could be destroyed by the app for
+    /// obeying the rhythm the app itself inferred (ADR-0048).
     /// - Parameter thought: The thought to look up.
-    /// - Returns: The policy for that thought's custom lifetime, or its kind.
+    /// - Returns: The policy for that thought's custom lifetime, cadence, or kind.
     public func policy(for thought: Thought) -> FreshnessPolicy {
         if let custom = thought.customLifetime {
             return FreshnessPolicy(grace: 0, lifetime: custom)
         }
-        return profiles.policy(for: thought.kind)
+        let base = profiles.policy(for: thought.kind)
+        guard thought.kind == .habit else { return base }
+
+        // Two whole periods, matching the streak's own grace: a habit is only past saving once
+        // it has missed twice. Never shorter than the configured rate, so a daily habit keeps
+        // whatever the user set in Settings.
+        let overCadence = thought.cadence.grace
+        guard overCadence > base.lifetime else { return base }
+        return FreshnessPolicy(grace: base.grace, lifetime: overCadence)
     }
 
     /// How fresh a thought is at a given moment.

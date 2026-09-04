@@ -60,23 +60,82 @@ final class CapturePathTests: XCTestCase {
         XCTAssertTrue(habits.waitForExistence(timeout: 5))
     }
 
-    func testAHabitCanBeKeptFromTheHomeScreen() {
+    /// The point of ADR-0048: keeping a habit takes it off the screen, rather than leaving a
+    /// ticked card sitting there.
+    func testAKeptHabitVanishesFromTheHomeScreen() {
         let app = XCUIApplication()
         app.launchArguments = ["--reset-store", "--seed-demo"]
         app.launch()
         _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 10)
 
-        let mark = app.buttons["home.habit.mark"].firstMatch
-        XCTAssertTrue(
-            mark.waitForExistence(timeout: 10),
-            "a habit on the home screen must be markable without opening anything"
-        )
-        mark.tap()
+        let cards = app.descendants(matching: .any).matching(identifier: "home.habit")
+        XCTAssertTrue(cards.firstMatch.waitForExistence(timeout: 10))
+        let before = cards.count
+        XCTAssertGreaterThan(before, 1, "the seed must offer more than one due habit")
+
+        let words = cards.firstMatch.staticTexts.firstMatch.label
+        app.buttons["home.habit.mark"].firstMatch.tap()
 
         XCTAssertTrue(
-            app.descendants(matching: .any)["home.habit.kept"].firstMatch
-                .waitForExistence(timeout: 5),
-            "a kept habit must say so rather than inviting a tap that changes nothing"
+            app.staticTexts[words].waitForNonExistence(timeout: 5),
+            "a kept habit must leave the home screen, not sit there ticked"
+        )
+        XCTAssertEqual(cards.count, before - 1, "only the kept habit may leave")
+    }
+
+    /// That the home screen is a list of what is outstanding, not a roll call of every habit.
+    func testOnlyHabitsThatAreDueAppearOnHome() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--reset-store", "--seed-demo"]
+        app.launch()
+        _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 10)
+        XCTAssertTrue(
+            app.descendants(matching: .any)["home.habits"].waitForExistence(timeout: 10)
+        )
+
+        // Seeded as kept a few hours ago, so it is not due and must not be on the home screen.
+        XCTAssertFalse(
+            app.staticTexts["read ten pages before the phone"].exists,
+            "a habit already kept for its period must not be asked for again"
+        )
+
+        // But it is still a habit, and the Thoughts tab still has it.
+        app.goToThoughts()
+        XCTAssertTrue(app.chooseFilter("Habits"))
+        XCTAssertTrue(
+            app.staticTexts["read ten pages before the phone"].waitForExistence(timeout: 10),
+            "a habit that is not due is still a habit"
+        )
+    }
+
+    /// That a habit's rhythm can be corrected on its own page, which is the customisation half
+    /// of ADR-0048.
+    func testAHabitsFrequencyCanBeChangedOnItsOwnPage() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--reset-store", "--seed-demo"]
+        app.launch()
+        _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 10)
+
+        app.goToThoughts()
+        XCTAssertTrue(app.chooseFilter("Habits"))
+        XCTAssertTrue(app.staticTexts["floss, apparently"].waitForExistence(timeout: 10))
+        app.staticTexts["floss, apparently"].tap()
+
+        let cadence = app.descendants(matching: .any)["detail.cadence"].firstMatch
+        XCTAssertTrue(
+            cadence.waitForExistence(timeout: 10),
+            "a habit's page must say how often it is meant to be kept"
+        )
+        cadence.tap()
+
+        XCTAssertTrue(app.buttons["Weekly"].waitForExistence(timeout: 5))
+        app.buttons["Weekly"].tap()
+
+        XCTAssertTrue(
+            app.descendants(matching: .any)
+                .matching(NSPredicate(format: "label CONTAINS 'Weekly'"))
+                .firstMatch.waitForExistence(timeout: 5),
+            "the chosen rhythm must stick"
         )
     }
 

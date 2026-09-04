@@ -45,9 +45,20 @@ public struct ThoughtDetailView: View {
                     }
                 }
                 if model.canUndoHabitKept, let streak = model.thought.streak {
-                    StreakSection(streak: streak) {
+                    StreakSection(streak: streak, cadence: model.thought.cadence) {
                         Task { await model.undoHabitKept() }
                     }
+                }
+                // Only a habit has a rhythm, and it sits with the streak because the two are the
+                // same subject: how often, and how well it has gone (ADR-0048).
+                if model.thought.kind == .habit {
+                    CadenceSection(
+                        cadence: model.thought.cadence,
+                        isInferred: model.cadenceIsInferred,
+                        onChoose: { cadence in
+                            Task { await model.chooseCadence(cadence) }
+                        }
+                    )
                 }
                 expirySection
                 actions

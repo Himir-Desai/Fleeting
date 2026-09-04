@@ -95,11 +95,16 @@ confirmation to dismiss. Also reachable without unlocking, from a lock-screen wi
 Center control, and an App Intent so Siri can take dictation into it — and each of those still
 arrives with the cursor already blinking, because they promised as much.
 
-Underneath the field sit **today's habits**: the one kind of thought that has to be touched every
-day, so the one kind that earns a place on the screen you land on. One tap keeps a streak, and a
-habit already kept today says so instead of inviting a tap that would change nothing. They vanish
-the instant you start writing — a thought being written down is not a screen you share — and the
-full list still lives in the Thoughts tab, where a habit is edited, snoozed and undone.
+Underneath the field sit **the habits that are due**: the one kind of thought that has to be
+touched on a rhythm, so the one kind that earns a place on the screen you land on. One tap keeps a
+streak, and the card leaves immediately — the home screen is a list of what is outstanding, not a
+roll call. They vanish the instant you start writing too, because a thought being written down is
+not a screen you share, and the full list still lives in the Thoughts tab.
+
+How often a habit is due comes from your own words: *"run every morning"* is daily, *"call mum on
+sundays"* is weekly. Nothing is invented when the note is silent, and the rhythm is a picker on the
+habit's own page. It sets when the habit reappears, what its streak is counted in — a weekly habit
+kept four times is a four *week* streak — and how long it survives without attention.
 
 ### 🕯 Decay — the anti-hoarding mechanic
 

@@ -53,11 +53,11 @@ struct SchemaMigrationTests {
 
     /// Opens an existing store at the current version, running the migration plan.
     ///
-    /// The container is opened at the version `ThoughtEntity` actually names. Opening at V2 and
-    /// fetching the current entity asked SwiftData to cast a V2 row to a V3 class, which is a
-    /// trap rather than an error and took the whole test process down with it.
+    /// The container is opened at the version `ThoughtEntity` actually names. Opening at an older
+    /// version and fetching the current entity asks SwiftData to cast across versions, which is a
+    /// trap rather than an error and takes the whole test process down with it.
     private func openCurrentStore(at url: URL) throws -> [Thought] {
-        let schema = Schema(versionedSchema: ThoughtSchemaV3.self)
+        let schema = Schema(versionedSchema: ThoughtSchemaV4.self)
         let container = try ModelContainer(
             for: schema,
             migrationPlan: ThoughtMigrationPlan.self,
@@ -171,8 +171,8 @@ struct SchemaMigrationTests {
             ])
 
             // At the current version, because `ThoughtEntity` is the current entity: opening at
-            // V2 and inserting one asks SwiftData to cast across versions, which traps.
-            let schema = Schema(versionedSchema: ThoughtSchemaV3.self)
+            // an older one and inserting asks SwiftData to cast across versions, which traps.
+            let schema = Schema(versionedSchema: ThoughtSchemaV4.self)
             let container = try ModelContainer(
                 for: schema,
                 migrationPlan: ThoughtMigrationPlan.self,
@@ -194,6 +194,34 @@ struct SchemaMigrationTests {
             #expect(try openCurrentStore(at: url).count == 2)
             _ = repository
         }
+    }
+
+    @Test("a habit stored before cadences existed migrates to the default rather than to nothing")
+    func cadenceDefaultsAfterMigration() throws {
+        try withTemporaryStore { url in
+            try writeVersion1Store(at: url, rows: [
+                version1Row(
+                    body: "stretch before coffee",
+                    stateRaw: "inbox",
+                    stateDate: nil,
+                    streakCount: 3,
+                    streakLastMarkedAt: epoch
+                )
+            ])
+
+            // Every habit written before version 4 was implicitly daily, so that is what it has
+            // to still be: a migration that changed how often an existing habit is asked for
+            // would silently rewrite the user's routine (ADR-0048).
+            #expect(try openCurrentStore(at: url)[0].cadence == .daily)
+        }
+    }
+
+    @Test("a chosen cadence survives a write and a read")
+    func cadenceRoundTrips() {
+        var thought = Thought(body: "call mum on sundays", capturedAt: epoch, kind: .habit)
+        thought.setCadence(.weekly)
+
+        #expect(ThoughtEntity(thought).domain.cadence == .weekly)
     }
 
     @Test("the columns an older build reads are kept current")

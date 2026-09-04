@@ -232,6 +232,11 @@ public final class CaptureModel {
 
             var classified = thought
             classified.applyClassification(kind: result.kind, title: result.title)
+            // A habit's rhythm is read out of the same sentence as its kind, so it lands in the
+            // same write. A note that named no frequency leaves the default alone (ADR-0048).
+            if let cadence = result.cadence {
+                classified.applyInferredCadence(cadence)
+            }
             try? await repository.update(classified)
             changes.notify()
         }

@@ -21,6 +21,13 @@ import Foundation
             let streak: Int
             let sharpened: Bool
             let archived: Bool
+            let cadence: HabitCadence
+
+            /// How long ago the habit was last marked, in days, or `nil` for never.
+            ///
+            /// Separate from `age` so a habit can be old but freshly kept, which is the state
+            /// that decides whether it shows on the home screen (ADR-0048).
+            let markedAgo: Double?
 
             init(
                 _ body: String,
@@ -28,7 +35,9 @@ import Foundation
                 kind: ThoughtKind,
                 streak: Int = 0,
                 sharpened: Bool = false,
-                archived: Bool = false
+                archived: Bool = false,
+                cadence: HabitCadence = .daily,
+                markedAgo: Double? = nil
             ) {
                 self.body = body
                 self.age = age
@@ -36,6 +45,8 @@ import Foundation
                 self.streak = streak
                 self.sharpened = sharpened
                 self.archived = archived
+                self.cadence = cadence
+                self.markedAgo = markedAgo
             }
         }
 
@@ -107,19 +118,24 @@ import Foundation
         private static let demoThoughts: [DemoThought] = [
             // Plenty of time — fresh, raised cards.
             DemoThought("ship the decay engine before it decays", age: 0.2, kind: .todo),
+            // Due now: kept two days ago, so a daily habit has come round again.
             DemoThought(
                 "stretch every morning before coffee",
                 age: 1.5,
                 kind: .habit,
-                streak: 6
+                streak: 6,
+                markedAgo: 2
             ),
             DemoThought("call mum on sunday", age: 0.5, kind: .todo),
             DemoThought("a podcast where nobody is an expert", age: 3, kind: .idea),
+            // Already kept today, so it must not be on the home screen — the state that would
+            // have been invisible before cadences existed.
             DemoThought(
                 "read ten pages before the phone",
                 age: 0.8,
                 kind: .habit,
-                streak: 2
+                streak: 2,
+                markedAgo: 0.2
             ),
             DemoThought("something I have not sorted yet", age: 0.1, kind: .unsorted),
 
@@ -136,7 +152,38 @@ import Foundation
                 "walk after lunch, every day",
                 age: 3.2,
                 kind: .habit,
-                streak: 11
+                streak: 11,
+                markedAgo: 1.4
+            ),
+
+            // A weekly habit kept three days ago: not due, and proof the period is not a day.
+            DemoThought(
+                "call mum every sunday",
+                age: 30,
+                kind: .habit,
+                streak: 4,
+                cadence: .weekly,
+                markedAgo: 3
+            ),
+
+            // A weekly habit that has lapsed past its week, so it is due again.
+            DemoThought(
+                "review the week every sunday evening",
+                age: 40,
+                kind: .habit,
+                streak: 3,
+                cadence: .weekly,
+                markedAgo: 9
+            ),
+
+            // A monthly one, so the picker has something other than days to show.
+            DemoThought(
+                "pay the cleaner every month",
+                age: 60,
+                kind: .habit,
+                streak: 2,
+                cadence: .monthly,
+                markedAgo: 34
             ),
 
             // Going soon — sunk into the page, amber rails.
@@ -148,7 +195,7 @@ import Foundation
             ),
             DemoThought("renew the passport before spring", age: 12.4, kind: .todo),
             DemoThought("an essay about why nothing finishes", age: 78, kind: .idea),
-            DemoThought("floss, apparently", age: 6.4, kind: .habit, streak: 1),
+            DemoThought("floss, apparently", age: 6.4, kind: .habit, streak: 1, markedAgo: 6.4),
 
             // Already archived — reachable from the filter menu, restorable.
             DemoThought("that startup idea about socks", age: 120, kind: .idea, archived: true),
@@ -164,12 +211,19 @@ import Foundation
             let now = clock.now
             for entry in Self.demoThoughts {
                 let captured = now.addingTimeInterval(-entry.age * .day)
+                // A mark is deliberate action, so a habit kept recently is also *fresh* recently.
+                // Seeding the streak without this left an old weekly habit looking untouched
+                // since capture, and the sweeper archived it before it could ever come due.
+                let marked = entry.streak > 0
+                    ? now.addingTimeInterval(-(entry.markedAgo ?? entry.age) * .day)
+                    : nil
                 var thought = Thought(
                     body: entry.body,
                     capturedAt: captured,
-                    streak: entry.streak > 0
-                        ? Streak(count: entry.streak, lastMarkedAt: captured)
-                        : nil
+                    lastActedAt: marked ?? captured,
+                    streak: marked.map { Streak(count: entry.streak, lastMarkedAt: $0) },
+                    cadence: entry.cadence,
+                    cadenceSource: entry.kind == .habit ? .inferred : .unclassified
                 )
                 if entry.kind != .unsorted {
                     thought.applyClassification(kind: entry.kind, title: nil)

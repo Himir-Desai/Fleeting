@@ -28,10 +28,13 @@ public struct Streak: Equatable, Sendable {
 
     /// Records the habit as done.
     ///
-    /// Marking twice within a day changes nothing. Marking within two days continues the run.
-    /// Anything longer starts a new one.
-    /// - Parameter date: When the habit was marked done.
-    public mutating func mark(at date: Date) {
+    /// Marking twice within one period changes nothing. Marking within two periods continues the
+    /// run. Anything longer starts a new one. The period comes from the habit's cadence, so a
+    /// weekly habit's run advances once a week rather than once a day (ADR-0048).
+    /// - Parameters:
+    ///   - date: When the habit was marked done.
+    ///   - cadence: How often the habit is meant to be kept. Defaults to daily.
+    public mutating func mark(at date: Date, cadence: HabitCadence = .default) {
         defer { lastMarkedAt = date }
 
         guard let lastMarkedAt else {
@@ -42,10 +45,24 @@ public struct Streak: Equatable, Sendable {
         let gap = date.timeIntervalSince(lastMarkedAt)
         switch gap {
         case ..<0: return
-        case ..<TimeInterval.day: return
-        case ..<(2 * TimeInterval.day): count += 1
+        case ..<cadence.period: return
+        case ..<cadence.grace: count += 1
         default: count = 1
         }
+    }
+
+    /// Whether this period's mark has already been made.
+    ///
+    /// The question the home screen asks: a habit kept within the current period is done, and
+    /// showing it again would invite a tap that changes nothing (ADR-0048).
+    /// - Parameters:
+    ///   - date: The instant being asked about.
+    ///   - cadence: How often the habit is meant to be kept.
+    /// - Returns: `true` when the habit has been kept within the last period.
+    public func isKept(at date: Date, cadence: HabitCadence) -> Bool {
+        guard let lastMarkedAt else { return false }
+        let gap = date.timeIntervalSince(lastMarkedAt)
+        return gap >= 0 && gap < cadence.period
     }
 
     /// Takes back the most recent mark.

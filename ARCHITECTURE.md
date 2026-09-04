@@ -100,12 +100,13 @@ Fleeting/
 │   │       │   ├── ThoughtScope.swift        ← live · archived · all; a storage question (ADR-0033)
 │   │       │   ├── KindGlyph.swift           ← the symbol, label and plural for each kind (ADR-0012)
 │   │       │   ├── SortingPreference.swift   ← automatic · rules only; the choice (ADR-0030)
-│   │       │   └── Streak.swift             ← habit-specific payload
+│   │       │   ├── Streak.swift             ← habit-specific payload; a run in cadence periods
+│   │       │   └── HabitCadence.swift        ← daily…monthly: when due, run unit, decay (ADR-0048)
 │   │       ├── Decay/
 │   │       │   ├── Freshness.swift          ← 0…1 value type + presentation bands
 │   │       │   ├── FreshnessPolicy.swift    ← grace + lifetime, linear decay (ADR-0013)
 │   │       │   ├── DecayProfiles.swift      ← per-kind rates: todo 14d · habit 7d · idea 90d
-│   │       │   ├── DecayEngine.swift        ← pure: (Thought, Date) → Freshness; reads rates live
+│   │       │   ├── DecayEngine.swift        ← pure: (Thought, Date) → Freshness; a habit outlives its cadence
 │   │       │   ├── UrgencyBand.swift        ← going soon · this month · plenty of time (ADR-0036)
 │   │       │   └── DecayProfilesStoring.swift ← where the editable rates live (ADR-0031)
 │   │       ├── Sharpen/
@@ -135,11 +136,12 @@ Fleeting/
 │   │   └── Sources/Persistence/
 │   │       ├── PersistenceError.swift    ← failures the store reports to the domain
 │   │       ├── Schema/
-│   │       │   ├── ThoughtEntity.swift      ← typealias naming the version in use (V3); nothing else does
+│   │       │   ├── ThoughtEntity.swift      ← typealias naming the version in use (V4); nothing else does
 │   │       │   ├── ThoughtSchemaV1.swift    ← the store as Phase 6 shipped it; migration source
 │   │       │   ├── ThoughtSchemaV2.swift    ← lifecycle values in single columns
-│   │       │   ├── ThoughtSchemaV3.swift    ← @Model in use; adds the per-thought lifetime column
-│   │       │   ├── ThoughtMigrationPlan.swift ← custom v1→v2 stage (ADR-0019); lightweight v2→v3
+│   │       │   ├── ThoughtSchemaV3.swift    ← adds the per-thought lifetime column
+│   │       │   ├── ThoughtSchemaV4.swift    ← @Model in use; adds a habit's cadence + its source
+│   │       │   ├── ThoughtMigrationPlan.swift ← custom v1→v2 (ADR-0019); lightweight v2→v3, v3→v4
 │   │       │   └── StoredSharpening.swift   ← Codable DTO for the interview, stored as JSON
 │   │       ├── Mapping/
 │   │       │   ├── ThoughtEntity+Domain.swift ← entity ⇄ Core.Thought, both directions
@@ -232,8 +234,8 @@ Fleeting/
 │   │       │   ├── CaptureReceiptCard.swift ← the card the saved text collapses into (ADR-0038)
 │   │       │   ├── CaptureFocus.swift    ← the ambient surfaces' request for the cursor (ADR-0047)
 │   │       │   ├── DailyHabitsModel.swift ← @Observable; today's habits, due first (ADR-0047)
-│   │       │   ├── HabitStrip.swift      ← the run of habit cards under the field (ADR-0047)
-│   │       │   ├── HabitCard.swift       ← one habit: words, streak, one tap to keep it
+│   │       │   ├── HabitStrip.swift      ← the vertical stack of due habits (ADR-0047, ADR-0048)
+│   │       │   ├── HabitCard.swift       ← one habit: words, cadence · streak, one tap to keep
 │   │       │   └── FirstRunHint.swift    ← the one-line explanation of decay (ADR-0021)
 │   │       ├── InboxFeature/        ← the living list: urgency sections, sinking cards, detail
 │   │       │   ├── InboxModel.swift     ← @Observable; load, urgency sections, counts, row actions
@@ -245,6 +247,7 @@ Fleeting/
 │   │       │   ├── ThoughtDetailModel.swift ← @Observable; edit · retype · keep · snooze · archive · delete
 │   │       │   ├── ThoughtDetailView.swift  ← the opened thought: the action hub (ADR-0027)
 │   │       │   ├── KindActionButton.swift   ← mark done · continue streak; sprout for a habit
+│   │       │   ├── CadenceSection.swift   ← how often a habit is kept, and the picker (ADR-0048)
 │   │       │   ├── StreakSection.swift      ← the streak's vine, and Undo (ADR-0044)
 │   │       │   └── ExpiryWheels.swift   ← number + unit wheels; the only copy now (ADR-0039)
 │   │       ├── SharpenFeature/      ← interview → write-up → escalate

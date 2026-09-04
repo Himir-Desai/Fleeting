@@ -155,6 +155,10 @@
             idea worth developing, a todo to be done once, a habit the writer wants to repeat, \
             or unsorted when it is genuinely none of those. Write a short title of at most six \
             words using the writer's own words. Never invent details the note does not contain.
+
+            When the note is a habit, also say how often it is meant to be done, reading only \
+            what the words actually say: "run every morning" is daily, "call mum on sundays" is \
+            weekly. When the note names no frequency, answer unspecified rather than guessing.
             """
         }
 
@@ -216,10 +220,33 @@
 
         @Guide(description: "How certain the sorting is, from 0 to 1")
         var confidence: Double
+
+        @Guide(
+            description: """
+            For a habit, how often it should be done: exactly one of daily, everyFewDays, \
+            weekly, fortnightly, monthly, or unspecified when the note does not say. Use \
+            unspecified for anything that is not a habit.
+            """
+        )
+        var cadence: String
     }
 
     @available(iOS 26, macOS 26, *)
     extension GeneratedClassification {
+        /// The cadence the model named, or `nil` when it named none or answered oddly.
+        ///
+        /// Matched case-insensitively against the domain's own spellings, so a model that answers
+        /// "Weekly" or "every_few_days" is read rather than discarded. Anything unrecognised is
+        /// `nil`, which leaves the habit at the default.
+        var resolvedCadence: HabitCadence? {
+            let normalised = cadence
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .lowercased()
+                .replacingOccurrences(of: "_", with: "")
+                .replacingOccurrences(of: " ", with: "")
+            return HabitCadence.allCases.first { $0.rawValue.lowercased() == normalised }
+        }
+
         /// The domain classification this generation represents.
         ///
         /// An unrecognised kind degrades to unsorted rather than failing: a model that answers
@@ -230,7 +257,8 @@
             return Classification(
                 kind: resolved,
                 title: cleaned.isEmpty ? nil : cleaned,
-                confidence: confidence
+                confidence: confidence,
+                cadence: resolvedCadence
             )
         }
     }

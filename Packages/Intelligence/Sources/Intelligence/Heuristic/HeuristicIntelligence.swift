@@ -31,11 +31,54 @@ public struct HeuristicIntelligence: IntelligenceService {
         let title = Self.title(from: text)
 
         for (kind, markers) in Self.orderedMarkers where Self.contains(normalised, any: markers) {
-            return Classification(kind: kind, title: title, confidence: 0.7)
+            return Classification(
+                kind: kind,
+                title: title,
+                confidence: 0.7,
+                cadence: kind == .habit ? Self.cadence(in: normalised) : nil
+            )
         }
 
         return Classification(kind: .unsorted, title: title, confidence: 0.2)
     }
+
+    /// Reads how often a habit is meant to be kept out of its own wording.
+    ///
+    /// Longest periods first, because "every two weeks" also contains "week" and the more
+    /// specific reading is the right one. A note that says nothing about frequency yields `nil`
+    /// rather than a guess, so the default applies (ADR-0048).
+    /// - Parameter normalised: Lowercased captured text.
+    /// - Returns: The cadence the words name, or `nil` if they name none.
+    static func cadence(in normalised: String) -> HabitCadence? {
+        orderedCadenceMarkers
+            .first { contains(normalised, any: $0.1) }
+            .map(\.0)
+    }
+
+    /// Every frequency phrase, in one flat list, so the habit markers cannot drift from them.
+    private static let cadenceMarkers: [String] = orderedCadenceMarkers.flatMap(\.1)
+
+    /// Frequency phrases per cadence, longest period first so the specific reading wins.
+    private static let orderedCadenceMarkers: [(HabitCadence, [String])] = [
+        (.monthly, ["every month", "each month", "monthly", "once a month"]),
+        (.fortnightly, [
+            "every fortnight", "fortnightly", "every two weeks", "every other week",
+            "biweekly", "once a fortnight"
+        ]),
+        (.weekly, [
+            "every week", "each week", "weekly", "once a week", "every sunday",
+            "every monday", "every tuesday", "every wednesday", "every thursday",
+            "every friday", "every saturday", "on sundays", "on mondays"
+        ]),
+        (.everyFewDays, [
+            "every few days", "every other day", "every second day", "every couple of days",
+            "three times a week", "twice a week"
+        ]),
+        (.daily, [
+            "every day", "everyday", "each day", "every morning", "each morning",
+            "every night", "each night", "every evening", "daily", "twice a day"
+        ])
+    ]
 
     /// Asks a fixed interview.
     ///
@@ -128,10 +171,11 @@ public struct HeuristicIntelligence: IntelligenceService {
 
     /// Phrase lists per kind, in the order they are tested.
     private static let orderedMarkers: [(ThoughtKind, [String])] = [
-        (.habit, [
-            "every day", "everyday", "each day", "every morning", "each morning",
-            "every night", "every week", "every sunday", "every monday", "daily",
-            "weekly", "habit", "routine", "practice ", "stop drinking", "start running"
+        // Every phrase that names a frequency is also a phrase that makes something a habit, so
+        // the two lists are one list. Keeping them separate let them drift: "every other day"
+        // named a cadence but did not sort as a habit, so the cadence was never read (ADR-0048).
+        (.habit, cadenceMarkers + [
+            "habit", "routine", "practice ", "stop drinking", "start running"
         ]),
         (.todo, [
             "call ", "email ", "text ", "buy ", "book ", "pay ", "send ", "fix ",

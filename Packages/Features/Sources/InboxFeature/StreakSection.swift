@@ -14,6 +14,10 @@ struct StreakSection: View {
     /// The streak being shown.
     let streak: Streak
 
+    /// How often the habit is kept, so the run is counted in the right unit: a weekly habit kept
+    /// four times is a four week streak, not a four day one (ADR-0048).
+    let cadence: HabitCadence
+
     /// Takes back the most recent mark.
     let onUndo: () -> Void
 
@@ -22,7 +26,7 @@ struct StreakSection: View {
             VineRule(leaves: min(streak.count, 5), tint: Palette.accentText)
                 .frame(width: 68)
 
-            Text("\(streak.count) day streak")
+            Text("\(streak.count) \(cadence.streakUnit(count: streak.count)) streak")
                 .font(Typography.subtitle)
                 .foregroundStyle(Palette.ink)
 
