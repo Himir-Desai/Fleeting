@@ -1493,5 +1493,15 @@ opened the app by hand, which is exactly the person who might have opened it to 
 **Consequences.** `CaptureView` takes an optional `DailyHabitsModel` and an optional `CaptureFocus`,
 both defaulted to `nil`, so a preview or a test can still build the bare capture screen. The
 `New thought` tab is now `Home`, since it holds two things. The UI tests that asserted a keyboard at
-launch now assert a hittable field that focuses on one tap, and two new ones cover the strip
-appearing, disappearing on focus, and marking a habit without opening anything.
+launch now assert a hittable field that focuses on one tap.
+
+The compensation is the part worth guarding, because it is what makes the traded tap affordable, so
+it is tested rather than asserted: `--focus-capture` drives the same `CaptureFocus` the URL does, and
+a UI test proves a launch from an ambient surface still arrives with the keyboard up and the habits
+out of the way. URL matching lives on `CaptureFocus` rather than in the composition root so it can
+be tested without a simulator. A further UI test marks a habit on the home screen and finds the same
+thought still live under the Habits filter, which is what "the same event in both places" has to mean.
+
+`AppEnvironment.prepare` now notifies the change stream when it finishes. Seeding and the sweep both
+run *after* the home screen has drawn, and without this the strip showed an empty store it had read
+before the store was filled — caught by the new UI test rather than by inspection.

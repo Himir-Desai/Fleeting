@@ -21,4 +21,14 @@ public final class CaptureFocus {
     public func request() {
         requests += 1
     }
+
+    /// Whether a URL is one of the ambient surfaces asking for the capture field.
+    ///
+    /// Lives here rather than in the composition root so it can be tested without a simulator:
+    /// this is the one thing standing between a lock-screen tap and the promise that surface made.
+    /// - Parameter url: The URL the app was opened with.
+    /// - Returns: `true` for `fleeting://capture`, and `false` for anything else.
+    public static func isCaptureRequest(_ url: URL) -> Bool {
+        url.scheme == "fleeting" && url.host == "capture"
+    }
 }

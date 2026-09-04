@@ -147,4 +147,11 @@ struct CaptureFocusTests {
 
         #expect(focus.requests == 2)
     }
+
+    @Test("Only the ambient surfaces' own URL asks for the field")
+    func recognisesTheCaptureURL() throws {
+        #expect(try CaptureFocus.isCaptureRequest(#require(URL(string: "fleeting://capture"))))
+        #expect(try !CaptureFocus.isCaptureRequest(#require(URL(string: "fleeting://review"))))
+        #expect(try !CaptureFocus.isCaptureRequest(#require(URL(string: "https://example.com/capture"))))
+    }
 }

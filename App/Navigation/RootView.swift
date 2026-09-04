@@ -33,6 +33,10 @@ struct RootView: View {
     /// A plain launch never asks, so a plain launch shows the habits instead (ADR-0047).
     @State private var captureFocus = CaptureFocus()
 
+    /// Launch argument standing in for a tap on a widget, so a UI test can drive the promise
+    /// those surfaces make without a second app to open the URL from.
+    static let focusCaptureArgument = "--focus-capture"
+
     var body: some View {
         TabView(selection: $selection) {
             Tab("Home", systemImage: "square.and.pencil", value: AppTab.newThought) {
@@ -74,10 +78,18 @@ struct RootView: View {
         }
         // Runs after the field is on screen, never before it.
         .task { await environment.prepare() }
+        // A launch that came from a widget, Siri or Control Center goes through exactly the path
+        // the URL takes, so the test drives the real mechanism rather than a parallel one.
+        .task {
+            guard ProcessInfo.processInfo.arguments.contains(Self.focusCaptureArgument) else {
+                return
+            }
+            captureFocus.request()
+        }
         // The ambient surfaces open `fleeting://capture` and promise a focused field. Handled
         // here rather than inside capture, because the request also has to select its tab.
         .onOpenURL { url in
-            guard url.scheme == "fleeting", url.host == "capture" else { return }
+            guard CaptureFocus.isCaptureRequest(url) else { return }
             selection = .newThought
             captureFocus.request()
         }

@@ -88,6 +88,54 @@ final class CapturePathTests: XCTestCase {
         XCTAssertEqual(app.sheets.count, 0, "No sheet may precede the capture field.")
     }
 
+    func testAHabitKeptFromHomeIsKeptInTheThoughtsTabToo() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--reset-store", "--seed-demo"]
+        app.launch()
+        _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 10)
+
+        let mark = app.buttons["home.habit.mark"].firstMatch
+        XCTAssertTrue(mark.waitForExistence(timeout: 10))
+        // The words on the card the mark is about to land on, so the assertion names a specific
+        // habit rather than trusting that any streak anywhere is the right one.
+        let card = app.descendants(matching: .any)["home.habit"].firstMatch
+        let words = card.staticTexts.firstMatch.label
+        XCTAssertFalse(words.isEmpty, "the card must say which habit it is")
+        mark.tap()
+        _ = app.descendants(matching: .any)["home.habit.kept"].firstMatch
+            .waitForExistence(timeout: 5)
+
+        // A mark on the home screen and a mark in the list are the same event, so the very same
+        // habit must be sitting in the list, still live rather than consumed by the mark.
+        app.goToThoughts()
+        XCTAssertTrue(app.chooseFilter("Habits"))
+        XCTAssertTrue(
+            app.staticTexts[words].waitForExistence(timeout: 10),
+            "a habit marked on the home screen must still be the same thought in the list"
+        )
+    }
+
+    /// The promise the widget, Control Center and Siri make, which is the whole reason dropping
+    /// launch auto-focus was affordable (ADR-0047).
+    func testALaunchFromAnAmbientSurfaceStillArrivesWithTheKeyboardUp() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--reset-store", "--seed-demo", "--focus-capture"]
+        app.launch()
+
+        let field = app.descendants(matching: .any)["capture.field"]
+        XCTAssertTrue(field.waitForExistence(timeout: 10))
+        XCTAssertTrue(
+            app.keyboards.element.waitForExistence(timeout: 10),
+            "a launch from a widget or Siri must arrive with the keyboard already up"
+        )
+        XCTAssertEqual(
+            field.value(forKey: "hasKeyboardFocus") as? Bool, true,
+            "the field must hold focus without being tapped when a surface asked for it"
+        )
+        // And the habits are out of the way, exactly as they are when focus is taken by hand.
+        XCTAssertFalse(app.descendants(matching: .any)["home.habits"].exists)
+    }
+
     func testTypingAndSavingClearsTheFieldForTheNextThought() {
         let app = launchWithEmptyStore()
         let field = app.descendants(matching: .any)["capture.field"]
