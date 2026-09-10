@@ -186,6 +186,16 @@ import Foundation
                 markedAgo: 34
             ),
 
+            // An arbitrary rhythm, reachable only now the picker takes a number (ADR-0050).
+            DemoThought(
+                "water the plants every three days",
+                age: 20,
+                kind: .habit,
+                streak: 5,
+                cadence: HabitCadence(count: 3, unit: .days),
+                markedAgo: 4
+            ),
+
             // Going soon — sunk into the page, amber rails.
             DemoThought("pay the parking fine", age: 13, kind: .todo),
             DemoThought(

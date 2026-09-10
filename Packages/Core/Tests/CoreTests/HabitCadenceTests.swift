@@ -38,7 +38,7 @@ struct HabitCadenceTests {
     func dueAgainAfterThePeriod() {
         #expect(habit(cadence: .daily, markedAgo: 1.1 * .day).isDue(at: epoch))
         #expect(habit(cadence: .weekly, markedAgo: 8 * .day).isDue(at: epoch))
-        #expect(habit(cadence: .fortnightly, markedAgo: 15 * .day).isDue(at: epoch))
+        #expect(habit(cadence: .init(count: 2, unit: .weeks), markedAgo: 15 * .day).isDue(at: epoch))
     }
 
     @Test("only habits are ever due")
@@ -79,7 +79,9 @@ struct HabitCadenceTests {
         #expect(HabitCadence.daily.streakUnit(count: 4) == "days")
         #expect(HabitCadence.weekly.streakUnit(count: 4) == "weeks")
         #expect(HabitCadence.monthly.streakUnit(count: 1) == "month")
-        #expect(HabitCadence.fortnightly.streakUnit(count: 2) == "fortnights")
+        // A rhythm of more than one unit is counted in times: "4 3-days" is not a unit.
+        #expect(HabitCadence(count: 3, unit: .days).streakUnit(count: 4) == "times")
+        #expect(HabitCadence(count: 2, unit: .weeks).streakUnit(count: 1) == "time")
     }
 
     @Test("a habit with nothing said about frequency is daily")
@@ -116,7 +118,17 @@ struct HabitCadenceTests {
     func decayOutlivesTheCadence() {
         let engine = DecayEngine()
 
-        for cadence in HabitCadence.allCases {
+        // A spread across both wheels, including the longest rhythm the picker offers.
+        let cadences = [
+            HabitCadence.daily,
+            HabitCadence(count: 3, unit: .days),
+            HabitCadence.weekly,
+            HabitCadence(count: 2, unit: .weeks),
+            HabitCadence.monthly,
+            HabitCadence(count: 30, unit: .months)
+        ]
+
+        for cadence in cadences {
             let thought = Thought(
                 body: "a habit",
                 capturedAt: epoch,
@@ -154,6 +166,58 @@ struct HabitCadenceTests {
         )
 
         #expect(engine.policy(for: thought).lifetime == 3 * .day)
+    }
+
+    @Test("an arbitrary rhythm can be expressed as a number and a unit")
+    func arbitraryRhythms() {
+        let everyThreeDays = HabitCadence(count: 3, unit: .days)
+        let everyTwoMonths = HabitCadence(count: 2, unit: .months)
+
+        #expect(everyThreeDays.period == 3 * .day)
+        #expect(everyTwoMonths.period == 60 * .day)
+        #expect(everyThreeDays.label == "Every 3 days")
+        #expect(everyTwoMonths.label == "Every 2 months")
+    }
+
+    @Test("the everyday rhythms keep their ordinary English names")
+    func commonRhythmsReadNaturally() {
+        #expect(HabitCadence(count: 1, unit: .days).label == "Daily")
+        #expect(HabitCadence(count: 1, unit: .weeks).label == "Weekly")
+        #expect(HabitCadence(count: 1, unit: .months).label == "Monthly")
+    }
+
+    @Test("a rhythm of less than one is not a rhythm")
+    func countIsClampedToOne() {
+        #expect(HabitCadence(count: 0, unit: .days).count == 1)
+        #expect(HabitCadence(count: -5, unit: .weeks).count == 1)
+    }
+
+    @Test("a cadence survives being written and read back")
+    func cadenceRoundTripsThroughItsStoredSpelling() {
+        for cadence in [
+            HabitCadence.daily,
+            HabitCadence(count: 3, unit: .days),
+            HabitCadence(count: 2, unit: .weeks),
+            HabitCadence(count: 6, unit: .months)
+        ] {
+            #expect(HabitCadence(rawValue: cadence.rawValue) == cadence)
+        }
+    }
+
+    @Test("an unreadable stored cadence is refused rather than guessed at")
+    func unreadableSpellingsAreRefused() {
+        #expect(HabitCadence(rawValue: "fortnightly") == nil)
+        #expect(HabitCadence(rawValue: "3") == nil)
+        #expect(HabitCadence(rawValue: "many days") == nil)
+        #expect(HabitCadence(rawValue: "3 fortnights") == nil)
+    }
+
+    @Test("a habit kept every three days is due on the fourth")
+    func multiUnitPeriodsDecideDueness() {
+        let cadence = HabitCadence(count: 3, unit: .days)
+
+        #expect(!habit(cadence: cadence, markedAgo: 2 * .day).isDue(at: epoch))
+        #expect(habit(cadence: cadence, markedAgo: 3.5 * .day).isDue(at: epoch))
     }
 
     @Test("choosing a cadence does not count as keeping the habit")

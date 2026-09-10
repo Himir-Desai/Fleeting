@@ -98,15 +98,15 @@ struct HeuristicIntelligenceTests {
         "a habit's frequency is read out of its own words",
         arguments: [
             ("run every morning", HabitCadence.daily),
-            ("stretch every day before coffee", .daily),
-            ("meditate daily", .daily),
-            ("call mum every sunday", .weekly),
-            ("read a chapter every week", .weekly),
-            ("weekly review of the inbox", .weekly),
-            ("tidy the flat every other week", .fortnightly),
-            ("every two weeks, water the plants", .fortnightly),
-            ("pay the cleaner every month", .monthly),
-            ("gym every other day", .everyFewDays)
+            ("stretch every day before coffee", HabitCadence.daily),
+            ("meditate daily", HabitCadence.daily),
+            ("call mum every sunday", HabitCadence.weekly),
+            ("read a chapter every week", HabitCadence.weekly),
+            ("weekly review of the inbox", HabitCadence.weekly),
+            ("tidy the flat every other week", HabitCadence(count: 2, unit: .weeks)),
+            ("every two weeks, water the plants", HabitCadence(count: 2, unit: .weeks)),
+            ("pay the cleaner every month", HabitCadence.monthly),
+            ("gym every other day", HabitCadence(count: 3, unit: .days))
         ]
     )
     func readsCadenceFromWording(text: String, expected: HabitCadence) async {
@@ -141,7 +141,12 @@ struct HeuristicIntelligenceTests {
     func classificationRefusesACadenceForOtherKinds() {
         // Guards the domain type rather than the rules: a future classifier that answers
         // "todo, weekly" must not produce a to-do with a rhythm.
-        let confused = Classification(kind: .todo, title: nil, confidence: 1, cadence: .weekly)
+        let confused = Classification(
+            kind: .todo,
+            title: nil,
+            confidence: 1,
+            cadence: .weekly
+        )
 
         #expect(confused.cadence == nil)
     }
@@ -149,7 +154,10 @@ struct HeuristicIntelligenceTests {
     @Test("the more specific frequency wins when two could match")
     func longerPeriodsWinOverShorterOnes() async {
         // "every two weeks" also contains "week"; the fortnightly reading is the right one.
-        #expect(await subject.classify("every two weeks, deep clean").cadence == .fortnightly)
+        #expect(
+            await subject.classify("every two weeks, deep clean").cadence
+                == HabitCadence(count: 2, unit: .weeks)
+        )
         // "every month" would also match nothing else, but proves the ordering holds at the top.
         #expect(await subject.classify("every month, review the budget").cadence == .monthly)
     }

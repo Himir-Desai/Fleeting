@@ -1569,3 +1569,57 @@ for would silently rewrite someone's routine.
 The heuristic's habit markers are now derived from its cadence phrases rather than duplicated. They
 had already drifted: "every other day" named a cadence but did not sort as a habit, so the cadence
 was never read. The lists cannot disagree now because there is only one.
+
+---
+
+## ADR-0050 · A cadence is a number and a unit
+
+**Status:** Accepted · Design pass
+
+**Context.** ADR-0048 gave habits a cadence as five named rhythms: daily, every few days, weekly,
+fortnightly, monthly. That ADR explicitly rejected an arbitrary number, on the grounds that five
+names cover what people actually mean and a stepper at the moment of correction is a form.
+
+Shipping it showed the reasoning was wrong in two places. `everyFewDays` is not a rhythm anyone
+holds — it is the enum apologising for not having the case you wanted — and it had to be given an
+arbitrary period anyway to compute anything. Meanwhile the app *already* asked people for a duration
+as a number and a unit: the custom-lifetime wheels. The app was therefore asserting that a duration
+is a number for expiry and a menu for cadence, which is not a distinction anyone using it would
+recognise.
+
+**Decision.** `HabitCadence` is a `count` and an `ExpirationUnit`, and the detail page sets it with
+the same two wheels the expiry section uses. "Every 3 days" is sayable, and so is anything else,
+without the app having had to anticipate it.
+
+`ExpirationUnit` is reused rather than a cadence-specific unit declared. Days, weeks and months are
+already spelled there for hand-set lifetimes; one vocabulary for durations means one place to add a
+unit and no way for two lists to disagree.
+
+The common rhythms keep their English names in the interface — `label` says "Daily" and "Weekly",
+never "every 1 days" — and `daily`, `weekly` and `monthly` remain as named constants, so call sites
+and tests read as they did. A count below one is clamped to one at construction: "every zero days"
+is not a rhythm, and clamping once means no caller defends against it.
+
+**Alternatives.**
+- *Keep the five cases and add a `custom(days:)`* — rejected: a sixth case that is a superset of the
+  other five, and every switch over it has to handle both spellings of the same rhythm forever.
+- *A plain day count* — rejected: it cannot express "every month", which is not 30 days, and it
+  would put "every 28 days" in front of someone who said "monthly".
+- *A stepper rather than wheels* — rejected: reaching 30 is thirty taps, and the expiry section had
+  already answered this question with wheels.
+
+**Consequences.** The stored spelling is `"3 days"` — the count, a space, the unit's raw value — in
+one optional column, readable by eye, and unreadable values fall back to the default rather than
+throwing. A habit stored by the previous build as `"weekly"` no longer parses and becomes daily.
+That is a real regression for anyone running the previous build, and it is accepted only because
+that is this machine and this phone; on a shipped app it would have needed a migration reading both
+spellings.
+
+Both intelligence implementations now answer with a count and a unit. The Foundation Models prompt
+asks for a number and a unit and treats a count of zero as "the note named no frequency", which must
+stay `nil` so the default applies rather than a rhythm being invented. The heuristic's phrase table
+gains "every three days" and its kin, and its habit markers are still derived from that one table.
+
+`CadenceSection` shows the rhythm as a sentence — "Every 3 days" — above the wheels, singularising
+the unit so it reads as English. The wheels stop at 30 rather than the expiry wheels' 60: a habit
+kept every 31 months is not a habit, and a shorter wheel is a faster one to spin.

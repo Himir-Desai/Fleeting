@@ -156,9 +156,10 @@
             or unsorted when it is genuinely none of those. Write a short title of at most six \
             words using the writer's own words. Never invent details the note does not contain.
 
-            When the note is a habit, also say how often it is meant to be done, reading only \
-            what the words actually say: "run every morning" is daily, "call mum on sundays" is \
-            weekly. When the note names no frequency, answer unspecified rather than guessing.
+            When the note is a habit, also say how often it is meant to be done as a number and \
+            a unit, reading only what the words actually say: "run every morning" is 1 days, \
+            "call mum on sundays" is 1 weeks, "water the plants every three days" is 3 days. \
+            When the note names no frequency, answer 0 rather than guessing.
             """
         }
 
@@ -223,28 +224,36 @@
 
         @Guide(
             description: """
-            For a habit, how often it should be done: exactly one of daily, everyFewDays, \
-            weekly, fortnightly, monthly, or unspecified when the note does not say. Use \
-            unspecified for anything that is not a habit.
+            For a habit, how many units between one doing and the next: 1 for every day or \
+            every week, 3 for every three days. Use 0 when the note names no frequency, or \
+            when this is not a habit.
             """
         )
-        var cadence: String
+        var cadenceCount: Int
+
+        @Guide(
+            description: """
+            The unit that goes with cadenceCount: exactly one of days, weeks, or months. Use \
+            days when the note names no frequency, or when this is not a habit.
+            """
+        )
+        var cadenceUnit: String
     }
 
     @available(iOS 26, macOS 26, *)
     extension GeneratedClassification {
         /// The cadence the model named, or `nil` when it named none or answered oddly.
         ///
-        /// Matched case-insensitively against the domain's own spellings, so a model that answers
-        /// "Weekly" or "every_few_days" is read rather than discarded. Anything unrecognised is
-        /// `nil`, which leaves the habit at the default.
+        /// A count of zero is the model's way of saying the note named no frequency, which must
+        /// stay `nil` so the default applies rather than a rhythm being invented. An unreadable
+        /// unit is also `nil`: a model that answers oddly costs the habit nothing.
         var resolvedCadence: HabitCadence? {
-            let normalised = cadence
+            guard cadenceCount >= 1 else { return nil }
+            let normalised = cadenceUnit
                 .trimmingCharacters(in: .whitespacesAndNewlines)
                 .lowercased()
-                .replacingOccurrences(of: "_", with: "")
-                .replacingOccurrences(of: " ", with: "")
-            return HabitCadence.allCases.first { $0.rawValue.lowercased() == normalised }
+            guard let unit = ExpirationUnit(rawValue: normalised) else { return nil }
+            return HabitCadence(count: cadenceCount, unit: unit)
         }
 
         /// The domain classification this generation represents.

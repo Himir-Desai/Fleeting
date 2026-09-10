@@ -60,21 +60,23 @@ public struct HeuristicIntelligence: IntelligenceService {
 
     /// Frequency phrases per cadence, longest period first so the specific reading wins.
     private static let orderedCadenceMarkers: [(HabitCadence, [String])] = [
-        (.monthly, ["every month", "each month", "monthly", "once a month"]),
-        (.fortnightly, [
+        (HabitCadence(count: 1, unit: .months), [
+            "every month", "each month", "monthly", "once a month"
+        ]),
+        (HabitCadence(count: 2, unit: .weeks), [
             "every fortnight", "fortnightly", "every two weeks", "every other week",
             "biweekly", "once a fortnight"
         ]),
-        (.weekly, [
+        (HabitCadence(count: 1, unit: .weeks), [
             "every week", "each week", "weekly", "once a week", "every sunday",
             "every monday", "every tuesday", "every wednesday", "every thursday",
             "every friday", "every saturday", "on sundays", "on mondays"
         ]),
-        (.everyFewDays, [
+        (HabitCadence(count: 3, unit: .days), [
             "every few days", "every other day", "every second day", "every couple of days",
             "three times a week", "twice a week"
         ]),
-        (.daily, [
+        (HabitCadence(count: 1, unit: .days), [
             "every day", "everyday", "each day", "every morning", "each morning",
             "every night", "each night", "every evening", "daily", "twice a day"
         ])
