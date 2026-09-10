@@ -32,9 +32,10 @@ struct HabitStrip: View {
                         )
                         .transition(.asymmetric(
                             insertion: .opacity,
-                            // A kept habit leaves towards the trailing edge, which reads as
-                            // being filed away rather than as the list glitching.
-                            removal: .move(edge: .trailing).combined(with: .opacity)
+                            // The same exit a saved thought's receipt makes: down and away, so
+                            // keeping a habit and capturing a thought feel like one gesture in
+                            // one app (ADR-0051).
+                            removal: .move(edge: .bottom).combined(with: .opacity)
                         ))
                     }
                 }
@@ -44,7 +45,10 @@ struct HabitStrip: View {
             .scrollIndicators(.hidden)
             .scrollBounceBehavior(.basedOnSize)
         }
-        .motion(Motion.commit, value: model.habits.map(\.id))
+        // The card's own spring rather than the capture bar's snap: this is a card leaving a
+        // list, which is what `Motion.card` is for, and at commit speed the slide was over
+        // before the eye could follow it.
+        .motion(Motion.card, value: model.habits.map(\.id))
         .accessibilityIdentifier("home.habits")
     }
 }

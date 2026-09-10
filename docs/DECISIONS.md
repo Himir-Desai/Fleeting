@@ -1623,3 +1623,50 @@ gains "every three days" and its kin, and its habit markers are still derived fr
 `CadenceSection` shows the rhythm as a sentence — "Every 3 days" — above the wheels, singularising
 the unit so it reads as English. The wheels stop at 30 rather than the expiry wheels' 60: a habit
 kept every 31 months is not a habit, and a shorter wheel is a faster one to spin.
+
+---
+
+## ADR-0051 · Keeping a habit shows the mark before the card leaves
+
+**Status:** Accepted · Design pass
+
+**Context.** ADR-0048 made a kept habit leave the home screen the moment it is marked, which is
+right: the card's job is to say "this is due", and once it is not, the card is clutter. But it left
+the tap with **no acknowledgement at all**. The sprout was pressed, and the card was gone before the
+finger lifted — indistinguishable from a mis-tap that dismissed something, or from the app losing
+the mark.
+
+Everywhere else in the app, the sprout *grows* to confirm something took (ADR-0042). The home screen
+was the one place it was the control and never the confirmation.
+
+**Decision.** Pressing the sprout grows it, and only then does the card leave — sliding down and
+fading, the same exit a saved thought's receipt makes. The write is deferred until the drawing
+finishes, because the card has to still be on screen to carry the acknowledgement: a card that
+vanished on touch would take the confirmation with it.
+
+The card draws the sprout at its own progress rather than using `GrowingSprout`, which grows on
+appear. Here the growth is the *response to the press*, so the card shows a faint fully-drawn sprout
+at rest — a control has to look like a control — and redraws it in full colour as the tap lands.
+
+Under Reduce Motion the mark is recorded immediately and the sprout is simply drawn complete. The
+answer to "no motion" is the end state, never a wait for an animation that is not playing
+(ADR-0020).
+
+**Alternatives.**
+- *Haptic only* — rejected: it confirms nothing to someone who cannot feel it, and the app already
+  has a visual vocabulary for "this took".
+- *Leave immediately and show a toast* — rejected: a receipt belongs to a thought being filed
+  (ADR-0038); keeping a habit is not a filing, and a toast for a one-tap action is a second thing to
+  read.
+- *Keep the trailing-edge exit* — rejected: the receipt goes down and away, and two exits for two
+  confirmations makes them two features rather than one gesture in one app.
+
+**Consequences.** `HabitCard` owns two pieces of state — how far the sprout has grown, and whether a
+mark is under way — and the second one exists so a second tap during the animation cannot mark
+twice. The strip animates on `Motion.card` rather than `Motion.commit`: this is a card leaving a
+list, which is what `Motion.card` is for, and at commit speed the slide was over before the eye
+could follow it.
+
+The 0.85 second delay before the write is the part to be suspicious of. It is timed to the growth
+animation rather than derived from it, so a change to `Motion.growth` can leave the card departing
+before its own mark is drawn.
