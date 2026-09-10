@@ -313,14 +313,14 @@ usable.
 No App Store, no TestFlight — just your own phone, signed with your own free Apple ID:
 
 ```bash
-export DEVELOPMENT_TEAM=XXXXXXXXXX   # Xcode ▸ Settings ▸ Accounts ▸ your Personal Team
 Tools/install-device.sh
 ```
 
-Then trust the signature on the phone: Settings ▸ General ▸ VPN & Device Management. A free
+It finds the phone and reads your Team ID out of your signing certificate, so there is nothing to
+export. Then trust the signature on the phone: Settings ▸ General ▸ VPN & Device Management. A free
 signature lasts seven days; re-run the script to renew it, and your thoughts are untouched. A
 personal team cannot issue the iCloud or App Group entitlements, so that build is device-local and
-says so in Settings. Full instructions and troubleshooting in
+says so in Settings. First-time setup and troubleshooting in
 [docs/INSTALL.md](docs/INSTALL.md).
 
 ## Documentation

@@ -44,51 +44,33 @@ fi
 # then refuses to launch, which is a far more confusing failure than stopping here.
 
 if [[ -z "${DEVELOPMENT_TEAM:-}" ]]; then
+	# Read from the signing certificate rather than demanded from the user. The Team ID is the
+	# certificate's OU field, which is the only place on this machine it is written down: Xcode
+	# does not cache it in any preference until a profile exists, and the ID in the certificate's
+	# common name — "Apple Development: you@example.com (XXXXXXXXXX)" — is a *different*
+	# identifier that xcodebuild rejects with a misleading "No Account for Team" error.
+	DEVELOPMENT_TEAM=$(
+		security find-certificate -c "Apple Development" -p 2>/dev/null |
+			openssl x509 -noout -subject 2>/dev/null |
+			sed -n 's/.*OU=\([A-Z0-9]*\).*/\1/p'
+	)
+fi
+
+if [[ -z "${DEVELOPMENT_TEAM:-}" ]]; then
 	cat >&2 <<-'MESSAGE'
-		error: DEVELOPMENT_TEAM is not set.
+		error: no Apple Development certificate found, so there is no Team ID to read.
 
-		This is the ten-character Team ID belonging to the Apple ID signed into Xcode.
-		A free Apple ID has one; no paid membership is needed.
+		A free Apple ID has a team; no paid membership is needed. Xcode creates the
+		certificate the first time you ask it to:
 
-		  1. Xcode ▸ Settings ▸ Accounts
-		  2. Add your Apple ID if it is not there
-		  3. Select it — the team is listed below, ending in a (Personal Team) label
-		  4. export DEVELOPMENT_TEAM=XXXXXXXXXX
+		  1. Xcode ▸ Settings ▸ Accounts, and add your Apple ID if it is not there
+		  2. Select it ▸ Personal Team ▸ Manage Certificates…
+		  3. Click + ▸ Apple Development, then Done
 
-		Then run this script again.
+		Then run this script again. It reads the Team ID out of that certificate.
 	MESSAGE
 	exit 1
 fi
-
-# --- The device -------------------------------------------------------------------------------
-
-DEVICE_ID="${DEVICE_ID:-}"
-if [[ -z "$DEVICE_ID" ]]; then
-	# The identifier is the UUID-shaped field on a connected device's line. `|| true` because no
-	# match is the ordinary "nothing plugged in" case, which is reported below rather than by
-	# `set -e` killing the script without a word.
-	DEVICE_ID=$(list_devices | grep -oE '[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}' | head -1 || true)
-fi
-
-if [[ -z "$DEVICE_ID" ]]; then
-	cat >&2 <<-'MESSAGE'
-		error: no connected iPhone found.
-
-		Plug the phone in with a cable, unlock it, and tap Trust if asked.
-		Over Wi-Fi it must have been paired to this Mac at least once by cable.
-
-		  Tools/install-device.sh --list    # to see what Xcode can see
-
-		If the phone is listed but shows as unavailable, it is paired but not reachable:
-		unlock it and check the cable.
-	MESSAGE
-	exit 1
-fi
-
-echo "▸ Device:  $DEVICE_ID"
-echo "▸ Team:    $DEVELOPMENT_TEAM"
-
-# --- Generate, build, install -----------------------------------------------------------------
 
 echo "▸ Generating the personal-team project..."
 xcodegen generate --spec project-personal.yml --project . >/dev/null
@@ -116,6 +98,42 @@ for plist in App/Fleeting-personal.entitlements Widgets/FleetingWidgets-personal
 	fi
 done
 
+# --- The device -------------------------------------------------------------------------------
+#
+# After generating, because the device list is read from the project itself.
+
+DEVICE_ID="${DEVICE_ID:-}"
+if [[ -z "$DEVICE_ID" ]]; then
+	# Taken from xcodebuild's own destination list rather than from `devicectl list devices`.
+	# The two tools use *different* identifiers for the same phone, and devicectl's is the one
+	# xcodebuild rejects — with a wall of available destinations that does not explain why the
+	# ID just given is not among them. `|| true` because no match is the ordinary "nothing
+	# plugged in" case, reported below rather than by `set -e` exiting without a word.
+	DEVICE_ID=$(
+		xcodebuild -project "$PROJECT" -scheme "$SCHEME" -showdestinations 2>/dev/null |
+			grep "platform:iOS," | grep -v "placeholder" | grep -vi "watch" |
+			sed -n 's/.*id:\([0-9A-Fa-f-]*\).*/\1/p' | head -1 || true
+	)
+fi
+
+if [[ -z "$DEVICE_ID" ]]; then
+	cat >&2 <<-'MESSAGE'
+		error: no connected iPhone found.
+
+		Plug the phone in with a cable, unlock it, and tap Trust if asked.
+		Over Wi-Fi it must have been paired to this Mac at least once by cable.
+
+		  Tools/install-device.sh --list    # to see what Xcode can see
+
+		If the phone is listed but shows as unavailable, it is paired but not reachable:
+		unlock it and check the cable.
+	MESSAGE
+	exit 1
+fi
+
+echo "▸ Device:  $DEVICE_ID"
+echo "▸ Team:    $DEVELOPMENT_TEAM"
+
 DERIVED="$(mktemp -d)/DerivedData"
 
 echo "▸ Building (Release)..."
@@ -137,8 +155,14 @@ if [[ ! -d "$APP" ]]; then
 	exit 1
 fi
 
+# devicectl identifies the same phone by a *different* UUID from the one xcodebuild uses, so the
+# install step looks its own up rather than reusing the build's. Falls back to the build's ID on
+# the chance that a future version unifies them.
 echo "▸ Installing..."
-xcrun devicectl device install app --device "$DEVICE_ID" "$APP"
+# Filtered to iPhones: a paired Apple Watch also appears in this list, and picking the first
+# line installed to the watch, which fails for reasons that say nothing about a watch.
+INSTALL_ID=$(list_devices | grep -i "iPhone" | grep -oE '[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}' | head -1 || true)
+xcrun devicectl device install app --device "${INSTALL_ID:-$DEVICE_ID}" "$APP"
 
 cat <<-MESSAGE
 

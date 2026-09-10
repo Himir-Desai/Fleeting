@@ -5,9 +5,11 @@ and install it on your own iPhone, signed with your own free Apple ID. No Develo
 membership, no fee, no review.
 
 ```bash
-export DEVELOPMENT_TEAM=XXXXXXXXXX   # see "Finding your Team ID" below
 Tools/install-device.sh
 ```
+
+It finds your phone and your Team ID by itself. First time only, Xcode needs to have made you a
+signing certificate — see [First time only](#first-time-only) below.
 
 Then trust the signature **on the phone** — a free signature is not trusted until its owner says so:
 
@@ -23,14 +25,25 @@ Open Fleeting from the home screen. That is the whole procedure.
 |---|---|
 | **Xcode 26+** with the iOS 26 SDK | The app targets iOS 26 |
 | **An Apple ID** | Free. Signed into Xcode ▸ Settings ▸ Accounts |
+| **Developer Mode** on the phone | Settings ▸ Privacy & Security ▸ Developer Mode |
 | **An iPhone running iOS 26+**, unlocked and plugged in | Tap Trust on the phone the first time |
 | **XcodeGen** | `brew install xcodegen` |
 
-## Finding your Team ID
+## First time only
 
-Xcode ▸ Settings ▸ Accounts ▸ select your Apple ID. The team beneath it is labelled
-**(Personal Team)**, and its ten-character ID is what `DEVELOPMENT_TEAM` wants. If no team is
-listed, add your Apple ID with the **+** button first.
+Two things have to exist before the script can work, and both are one-time:
+
+**1. A signing certificate.** Xcode ▸ Settings ▸ Accounts ▸ add your Apple ID ▸ select it ▸
+**Personal Team** ▸ **Manage Certificates…** ▸ **+** ▸ **Apple Development** ▸ Done.
+
+The script reads your Team ID out of that certificate, so nothing needs to be typed or exported.
+(If you are curious: the ID is the certificate's `OU` field. The one shown in its name —
+`Apple Development: you@example.com (XXXXXXXXXX)` — is a *different* identifier, and passing it
+to `xcodebuild` produces a confident, entirely misleading "No Account for Team" error.)
+
+**2. Developer Mode on the phone.** Settings ▸ Privacy & Security ▸ **Developer Mode** ▸ On, then
+Restart. The option only appears in Settings once a Mac has tried to use the phone for development,
+so if you cannot see it, run the script once and look again.
 
 ## What is different about a free-signed build
 
@@ -64,9 +77,15 @@ restores iCloud and the widget, at which point the ordinary `project.yml` is the
 `Tools/install-device.sh --list` shows what Xcode can see. A device listed as *unavailable* is
 paired but not reachable right now.
 
+**"Developer Mode is disabled"** — see step 2 above. If it was already on, the phone has probably
+just locked; unlock it and run the script again.
+
+**"No Account for Team"** — the Team ID is wrong. Delete the certificate and remake it as in step 1,
+or override for one run with `DEVELOPMENT_TEAM=XXXXXXXXXX Tools/install-device.sh`.
+
 **"Unable to install"** or a profile error — the Apple ID is probably not in Xcode ▸ Settings ▸
-Accounts, or `DEVELOPMENT_TEAM` is a different team from the one signed in. A free Apple ID is also
-capped at **three** apps at a time; delete an older self-signed app if you have hit it.
+Accounts. A free Apple ID is also capped at **three** apps at a time; delete an older self-signed
+app if you have hit it.
 
 **"Untrusted Developer" when opening the app** — the trust step above has not been done yet. It has
 to happen on the phone, and only after the app is installed.
