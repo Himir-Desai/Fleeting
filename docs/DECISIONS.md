@@ -1572,6 +1572,44 @@ was never read. The lists cannot disagree now because there is only one.
 
 ---
 
+## ADR-0049 · The icon is the app's own mark
+
+**Status:** Accepted · Design pass
+
+**Context.** The icon was three shortening lines of a note — a fair picture of "written down, and
+already going", drawn before the app had a visual vocabulary of its own. By the end of the design
+pass it did: the sprout marks a kept habit and a saved thought, and the vine grows down the capture
+page (ADR-0042). The icon was the only surface still speaking the old language, and it was the first
+one anyone sees.
+
+**Decision.** The icon is the sprout, drawn at icon scale, in the accent on the page colour.
+
+The geometry is a **transcript** of `SproutMark`: the same stem curve, the same two opposed leaves,
+the same proportions, restated in CoreGraphics because `Tools/MakeIcon.swift` is a standalone script
+that cannot import DesignSystem. That is the one duplication here, and it is deliberate — an icon
+that merely *resembled* the in-app mark would drift from it at the first change, whereas a
+transcript that drifts is a visible bug.
+
+Both appearances are rendered from the one path, each in its own accent on its own page colour, and
+`Contents.json` carries the dark variant under a `luminosity` appearance. The icon therefore matches
+the app the phone is about to open, in whichever mode it is in.
+
+**Alternatives.**
+- *Keep the note lines* — rejected: it names a feature the app has (decay) rather than the thing the
+  app is, and it shares no vocabulary with any screen.
+- *Export a PNG from the SwiftUI view* — rejected: it needs a simulator and a running app to render
+  what is meant to be a build artefact. The script needs nothing but Xcode.
+- *Move `SproutMark`'s path into a shared, script-importable module* — rejected for now: it would
+  mean a package existing solely so one script can import it, to remove twenty lines of duplication
+  that a side-by-side diff catches.
+
+**Consequences.** `MakeIcon.swift` takes an output path and an appearance, so both icons come from
+one command each and neither is hand-edited. `Docs/ASSETS.md` documents both invocations. If the
+palette's accent or surface changes, the icons are stale until regenerated — which was already true,
+and is now true of two files rather than one.
+
+---
+
 ## ADR-0050 · A cadence is a number and a unit
 
 **Status:** Accepted · Design pass

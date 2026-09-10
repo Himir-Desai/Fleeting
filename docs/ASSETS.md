@@ -3,15 +3,22 @@
 ## App icon
 
 The icon is rendered from code rather than drawn, so it can be regenerated at any size and its
-colours stay in step with the palette. Three lines of a note, each shorter and fainter than the one
-above it: written down, and already going.
+colours stay in step with the palette. It is the sprout — the same mark the app draws for a kept
+habit and a saved thought — so the first thing anyone sees is the product's own vocabulary
+(ADR-0049).
+
+Both appearances are generated, and both are needed: the light one and the dark one, each in that
+appearance's accent on that appearance's page colour.
 
 ```bash
 swift Tools/MakeIcon.swift App/Resources/Assets.xcassets/AppIcon.appiconset/icon-1024.png
+swift Tools/MakeIcon.swift App/Resources/Assets.xcassets/AppIcon.appiconset/icon-1024-dark.png dark
 ```
 
-The script uses only CoreGraphics and ImageIO, so it needs no toolchain beyond Xcode. Colours come
-from `Palette.surfaceValues.dark` and `Palette.accentTextValues.dark`; if either changes, rerun it.
+The script uses only CoreGraphics and ImageIO, so it needs no toolchain beyond Xcode. Colours are
+transcribed from `Palette` — `surface` and `accentText`, in each appearance — and the geometry is a
+transcript of `SproutMark`. A standalone script cannot import DesignSystem, so if either the palette
+or the sprout's shape changes, the icon is stale until it is regenerated and compared by eye.
 
 ## Screenshots
 
