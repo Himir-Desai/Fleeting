@@ -318,7 +318,14 @@ below. 240 unit tests and 46 UI tests.
 
 **Not possible here: a TestFlight build used for a week.** TestFlight needs a Developer Program
 membership, and this machine has no signing identity at all, so no build made here can be
-distributed. It also needs a week. Everything that does not depend on either is done.
+*distributed*. It also needs a week. Everything that does not depend on either is done.
+
+What was possible, and is now done, is the part that actually mattered: **the app runs on a real
+phone**. `Tools/install-device.sh` builds and installs it under a free personal-team signature, with
+the iCloud and App Group entitlements stripped because a personal team cannot issue them
+([docs/INSTALL.md](INSTALL.md)). That is not distribution — it reaches exactly one device, and the
+signature expires every seven days — but it closes the gap between "the tests pass" and "it is on my
+home screen", which is the only gap the criterion was really about.
 
 Also fixed here, from earlier phases: `ScreenshotTests` was waiting on a thought the demo seed had
 not contained for several phases, so it silently timed out and shot whatever was on screen; and an

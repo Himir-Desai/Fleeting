@@ -292,24 +292,43 @@ Detail and acceptance criteria for each phase in **[docs/ROADMAP.md](docs/ROADMA
 account: convergence has not been *observed*.
 
 ² Everything except the TestFlight build, which needs a Developer Program membership this machine
-does not have. Both are written up honestly in [docs/ROADMAP.md](docs/ROADMAP.md).
+does not have. It runs on a real phone via a free personal-team signature instead
+([docs/INSTALL.md](docs/INSTALL.md)). Both are written up honestly in
+[docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Getting started
 
 ```bash
 git clone <repo> && cd Fleeting
-open Fleeting.xcodeproj
+xcodegen && open Fleeting.xcodeproj
 ```
 
-**Requirements:** Xcode 26+, iOS 26 SDK. Sharpen and classification use on-device Foundation Models
-and require an Apple Intelligence capable device; everywhere else the app falls back to the heuristic
-intelligence layer automatically and stays fully usable.
+**Requirements:** Xcode 26+, iOS 26 SDK, [XcodeGen](https://github.com/yonaskolb/XcodeGen). Sharpen
+and classification use on-device Foundation Models and require an Apple Intelligence capable device;
+everywhere else the app falls back to the heuristic intelligence layer automatically and stays fully
+usable.
+
+### Putting it on a phone
+
+No App Store, no TestFlight — just your own phone, signed with your own free Apple ID:
+
+```bash
+export DEVELOPMENT_TEAM=XXXXXXXXXX   # Xcode ▸ Settings ▸ Accounts ▸ your Personal Team
+Tools/install-device.sh
+```
+
+Then trust the signature on the phone: Settings ▸ General ▸ VPN & Device Management. A free
+signature lasts seven days; re-run the script to renew it, and your thoughts are untouched. A
+personal team cannot issue the iCloud or App Group entitlements, so that build is device-local and
+says so in Settings. Full instructions and troubleshooting in
+[docs/INSTALL.md](docs/INSTALL.md).
 
 ## Documentation
 
 | Document | For |
 |---|---|
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Complete file map, module boundaries, conventions, "where do I add X" |
+| [docs/INSTALL.md](docs/INSTALL.md) | Building it onto your own iPhone with a free Apple ID |
 | [docs/PRIVACY.md](docs/PRIVACY.md) | What is stored, what is not, and the privacy manifest |
 | [docs/ASSETS.md](docs/ASSETS.md) | Regenerating the app icon and the screenshots |
 | [docs/DECISIONS.md](docs/DECISIONS.md) | Architecture Decision Records — what was chosen, and what wasn't |

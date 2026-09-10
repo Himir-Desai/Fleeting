@@ -1,0 +1,36 @@
+# The project as a *free* Apple ID can actually sign it.
+#
+# A personal team — an Apple ID with no Developer Program membership — cannot issue the iCloud
+# or App Group entitlements. Asking for them does not degrade, it fails: the provisioning profile
+# will not generate, and nothing installs. So this overlay points both targets at entitlement
+# files of their own, which `Tools/install-device.sh` then writes out empty.
+#
+# The stripping is done by the script rather than here because XcodeGen *merges* an included
+# spec's `properties` rather than replacing them: an empty `properties: {}` inherits the very
+# entitlements it is meant to remove. That was not obvious, and it produced a spec that looked
+# right and signed wrong, so the emptying is done where it can be seen and asserted.
+#
+# With both stripped the app takes the fallback it already has and already tests (ADR-0019): a
+# device-local store, and a Settings screen that says "This iPhone only" in plain words rather
+# than pretending to sync. The widget shows its placeholder, having no shared store to read.
+#
+# A project of its own rather than overwriting `Fleeting.xcodeproj`, so the real project and the
+# personal one coexist and the repo is never left in the stripped state. Everything except the two
+# entitlement paths is inherited, so this file cannot drift from the real project.
+#
+# Lives at the repo root so the relative paths inside `project.yml` still resolve.
+# See `Docs/INSTALL.md`.
+
+name: Fleeting-Personal
+
+include:
+  - project.yml
+
+targets:
+  Fleeting:
+    entitlements:
+      path: App/Fleeting-personal.entitlements
+
+  FleetingWidgets:
+    entitlements:
+      path: Widgets/FleetingWidgets-personal.entitlements
