@@ -1,8 +1,16 @@
 # Putting Fleeting on your phone
 
-There is no App Store listing and no TestFlight. This is the other path: build the app on your Mac
-and install it on your own iPhone, signed with your own free Apple ID. No Developer Program
-membership, no fee, no review.
+The regular `Fleeting.xcodeproj` is committed for paid-team builds and Xcode Cloud. Select the
+shared **Fleeting** scheme, Xcode 27 or later, and `main` as the cloud workflow branch. Its archive
+action uses Release. The checked-in team matches the paid team selected in Xcode. Keep signing
+settings in `project.yml` so regeneration preserves them.
+
+For TestFlight, archive and upload through App Store Connect, then configure testers there.
+The app and widget must use the same version/build numbers. A cloud archive and TestFlight upload
+still need validation with Apple signing.
+
+The instructions below are the alternative free-team route: build on your Mac and install on your
+own iPhone, signed with a free Apple ID. No Developer Program membership, fee or review is needed.
 
 ```bash
 Tools/install-device.sh

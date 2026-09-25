@@ -9,6 +9,8 @@ options:
 
 settings:
   base:
+    DEVELOPMENT_TEAM: 23C785D8QZ
+    CODE_SIGN_STYLE: Automatic
     SWIFT_VERSION: "6.0"
     SWIFT_STRICT_CONCURRENCY: complete
     SWIFT_UPCOMING_FEATURE_EXISTENTIAL_ANY: YES
@@ -35,6 +37,7 @@ targets:
     platform: iOS
     sources:
       - path: App
+        excludes: ["**/*-personal.entitlements"]
     dependencies:
       # The app target is the only place that may see every module at once:
       # it is the composition root, and nothing else wires concrete types.
@@ -70,6 +73,8 @@ targets:
     info:
       path: App/Info.plist
       properties:
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         UILaunchScreen: {}
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         # CloudKit tells SwiftData a record changed by silent push.
@@ -90,6 +95,7 @@ targets:
     platform: iOS
     sources:
       - path: Widgets
+        excludes: ["**/*-personal.entitlements"]
     dependencies:
       - package: Core
       - package: DesignSystem
@@ -102,13 +108,15 @@ targets:
     info:
       path: Widgets/Info.plist
       properties:
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         CFBundleDisplayName: Fleeting
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.himirdesai.Fleeting.Widgets
-        MARKETING_VERSION: "0.1.0"
+        MARKETING_VERSION: "1.0.0"
         CURRENT_PROJECT_VERSION: "1"
         TARGETED_DEVICE_FAMILY: "1"
         SKIP_INSTALL: YES
@@ -125,3 +133,16 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.himirdesai.Fleeting.UITests
         TEST_TARGET_NAME: Fleeting
         GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  Fleeting:
+    build:
+      targets:
+        Fleeting: all
+        FleetingUITests: [test]
+    test:
+      config: Debug
+      targets:
+        - FleetingUITests
+    archive:
+      config: Release

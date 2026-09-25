@@ -324,19 +324,19 @@ Detail and acceptance criteria for each phase in **[docs/ROADMAP.md](docs/ROADMA
 ¹ Everything is built and tested except the one thing that needs two signed devices under one iCloud
 account: convergence has not been *observed*.
 
-² Everything except the TestFlight build, which needs a Developer Program membership this machine
-does not have. It runs on a real phone via a free personal-team signature instead
-([docs/INSTALL.md](docs/INSTALL.md)). Both are written up honestly in
-[docs/ROADMAP.md](docs/ROADMAP.md).
+² TestFlight distribution is being set up with the paid developer team. The regular Xcode project
+and shared scheme are committed for Xcode Cloud; a successful cloud archive/upload is still pending.
+The free personal-team install remains an alternative ([docs/INSTALL.md](docs/INSTALL.md)).
 
 ## Getting started
 
 ```bash
 git clone <repo> && cd Fleeting
-xcodegen && open Fleeting.xcodeproj
+open Fleeting.xcodeproj
 ```
 
-**Requirements:** Xcode 27+, iOS 27 SDK, [XcodeGen](https://github.com/yonaskolb/XcodeGen). The app still runs on iOS 26+. Sharpen
+**Requirements:** Xcode 27+ and the iOS 27 SDK. Use [XcodeGen](https://github.com/yonaskolb/XcodeGen)
+when editing `project.yml`; regenerate and commit the project, shared scheme, plists and entitlements together. The app still runs on iOS 26+. Sharpen
 and classification use on-device Foundation Models and require an Apple Intelligence capable device;
 everywhere else the app falls back to the heuristic intelligence layer automatically and stays fully
 usable.

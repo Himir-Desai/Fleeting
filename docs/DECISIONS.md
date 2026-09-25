@@ -1831,3 +1831,25 @@ preserve dates during travel, but would create another date field alongside exis
 **Validation.** Repository regressions cover bidirectional changes, migration without resurrection,
 widget completion, explicit archive/type filtering, and overdue retention. Focused Plan UI tests
 exercise entry, shared editing/deletion, persistence, daily review and large text.
+
+
+## ADR-0055 · Commit the generated project for Xcode Cloud discovery
+
+**Date:** 2026-09-24
+
+**Context.** Xcode Cloud reports that Fleeting.xcodeproj does not exist at the repository root.
+The project was ignored, and the current app changes had not reached main. The user now has a
+paid developer team and requested merging the current work into main and using main afterward.
+
+**Decision.** Keep project.yml as the source of truth, but commit the generated regular project,
+shared Fleeting scheme, workspace, Cloud product manifest, Info.plists and entitlements. Declare
+the selected signing team and automatic signing in the spec. Match app/widget versions and derive
+plist versions from build settings. Personal-team project files and user Xcode state remain ignored.
+Regenerate and commit these files together after spec changes. Xcode Cloud should use main and
+Xcode 27+; its archive action uses Release.
+
+**Alternative.** Generating everything in a cloud post-clone script would retain fewer generated
+files but would not provide the project and shared scheme during initial product discovery.
+
+**Validation.** Verify the committed checkout builds without first running XcodeGen. This checks
+project discovery and build inputs; Apple signing and TestFlight upload remain cloud-side checks.
