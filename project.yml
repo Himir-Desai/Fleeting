@@ -53,6 +53,8 @@ targets:
         product: SharpenFeature
       - package: Features
         product: ReviewFeature
+      - package: Features
+        product: PlanFeature
       - target: FleetingWidgets
     entitlements:
       path: App/Fleeting.entitlements

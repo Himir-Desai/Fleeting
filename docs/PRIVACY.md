@@ -9,6 +9,7 @@ user's own iCloud.
 | Data | Where | Why |
 |---|---|---|
 | The text you capture, and anything generated from it | On device, in the app's SwiftData store | It is the app |
+| Daily checklist text, scheduled day and completion time | The same SwiftData store and private iCloud database when enabled | Planning and completion history; shared with widgets through the App Group |
 | The same, mirrored to your private CloudKit database | Your iCloud account | So a thought captured on one device is on the others (ADR-0003) |
 | Notification preferences and whether the first-run hint was dismissed | `UserDefaults`, in the app's App Group | So the app behaves the way you left it |
 
@@ -22,6 +23,10 @@ user's own iCloud.
   back to rules that also run on-device (ADR-0004). The one exception is deliberate and manual:
   *Take this further elsewhere* opens the system share sheet with a prompt you can read first, and
   it only goes wherever you choose to send it.
+
+The iOS 27 integration continues to use only `SystemLanguageModel`. It does not use Private Cloud
+Compute, third-party model providers, or model tools with access to other notes. If a request is
+too large for the on-device context window, local rules handle it instead.
 
 ## Privacy manifest
 

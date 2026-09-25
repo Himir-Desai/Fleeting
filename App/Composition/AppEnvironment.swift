@@ -19,6 +19,12 @@ final class AppEnvironment {
     /// Storage for captured thoughts.
     let thoughts: any ThoughtRepository
 
+    /// Plan presents the same to-dos as Thoughts.
+    let dailyTodos: any DailyTodoRepository
+    var dailyChanges: ThoughtChangeNotifier {
+        changes
+    }
+
     /// Computes freshness and decides what has expired.
     let engine: DecayEngine
 
@@ -70,12 +76,14 @@ final class AppEnvironment {
         self.clock = clock
         if let thoughts {
             self.thoughts = thoughts
+            dailyTodos = ThoughtDailyTodoRepository(thoughts: thoughts, clock: clock)
             storageIsDegraded = false
             storageIsShared = false
             sync = LocalOnlySync()
         } else {
             let store = Self.openStore()
             self.thoughts = store.repository
+            dailyTodos = store.dailyTodos
             storageIsDegraded = store.degraded
             storageIsShared = store.isShared
             sync = store.sync
@@ -118,7 +126,9 @@ final class AppEnvironment {
         #if DEBUG
             await seedDemoDataIfRequested()
             await seedManyIfRequested()
+            await seedPlanIfRequested()
         #endif
+        _ = try? await dailyTodos.all()
         await sweep()
         await refreshNudges()
         // Seeding and the sweep both happen after the home screen has already drawn, so anything
@@ -146,6 +156,7 @@ final class AppEnvironment {
     /// What opening the store produced.
     private struct Store {
         let repository: any ThoughtRepository
+        let dailyTodos: any DailyTodoRepository
         let degraded: Bool
         let isShared: Bool
         let sync: any SyncReporting
@@ -176,13 +187,16 @@ final class AppEnvironment {
             let opened = try ModelContainerFactory.store(resettingFirst: reset)
             return Store(
                 repository: SwiftDataThoughtRepository(modelContainer: opened.container),
+                dailyTodos: SwiftDataDailyTodoRepository(modelContainer: opened.container),
                 degraded: false,
                 isShared: opened.isShared,
                 sync: CloudKitSyncReporter(attachment: opened.cloud)
             )
         } catch {
+            let repository = InMemoryThoughtRepository()
             return Store(
-                repository: InMemoryThoughtRepository(),
+                repository: repository,
+                dailyTodos: ThoughtDailyTodoRepository(thoughts: repository),
                 degraded: true,
                 isShared: false,
                 sync: LocalOnlySync(reason: .notAttached)

@@ -12,7 +12,8 @@
 #
 # With both stripped the app takes the fallback it already has and already tests (ADR-0019): a
 # device-local store, and a Settings screen that says "This iPhone only" in plain words rather
-# than pretending to sync. The widget shows its placeholder, having no shared store to read.
+# than pretending to sync. The widget explains that thoughts are unavailable in this build,
+# having no shared store to read, and offers a tap to capture.
 #
 # A project of its own rather than overwriting `Fleeting.xcodeproj`, so the real project and the
 # personal one coexist and the repo is never left in the stripped state. Everything except the two

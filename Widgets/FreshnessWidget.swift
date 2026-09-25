@@ -11,8 +11,12 @@ struct FreshnessProvider: TimelineProvider {
         .placeholder(at: clock.now)
     }
 
-    func getSnapshot(in _: Context, completion: @escaping (FreshnessEntry) -> Void) {
+    func getSnapshot(in context: Context, completion: @escaping (FreshnessEntry) -> Void) {
         let now = clock.now
+        guard !context.isPreview else {
+            completion(.placeholder(at: now))
+            return
+        }
         let finish = WidgetCompletion(completion)
         Task { await finish(WidgetStore.entry(at: now)) }
     }
@@ -36,6 +40,7 @@ struct FreshnessWidget: Widget {
         StaticConfiguration(kind: "FleetingFreshness", provider: FreshnessProvider()) { entry in
             FreshnessWidgetView(entry: entry)
                 .containerBackground(Palette.surface, for: .widget)
+                .widgetURL(URL(string: "fleeting://capture"))
         }
         .configurationDisplayName("Fleeting")
         .description("How much is still live, and what is fading fastest.")
@@ -50,7 +55,9 @@ struct FreshnessWidgetView: View {
 
     var body: some View {
         if !entry.isReadable {
-            Text("Open Fleeting once to get started.")
+            Text(entry.isShared
+                ? "Thoughts couldn’t load. Open Fleeting to try again."
+                : "Thoughts aren’t available in this widget with this build. Tap to capture.")
                 .font(Typography.caption)
                 .foregroundStyle(Palette.inkMuted)
         } else if family == .accessoryRectangular {

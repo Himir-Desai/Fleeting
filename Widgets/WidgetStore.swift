@@ -20,6 +20,9 @@ struct FreshnessEntry: TimelineEntry {
     /// Whether the store could be read at all.
     let isReadable: Bool
 
+    /// Whether this build can access the app's shared storage.
+    var isShared: Bool = true
+
     /// A stand-in used while the real entry loads.
     static func placeholder(at date: Date) -> FreshnessEntry {
         FreshnessEntry(
@@ -46,6 +49,11 @@ enum WidgetStore {
     /// - Parameter date: The instant to describe.
     /// - Returns: What the widget should show now.
     static func entry(at date: Date) async -> FreshnessEntry {
+        guard ModelContainerFactory.isShared else {
+            var entry = FreshnessEntry.unreadable(at: date)
+            entry.isShared = false
+            return entry
+        }
         guard let store = try? ModelContainerFactory.store(syncing: false) else {
             return .unreadable(at: date)
         }

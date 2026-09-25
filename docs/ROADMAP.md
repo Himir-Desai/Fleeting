@@ -6,6 +6,17 @@ pure plumbing, and no phase is a big-bang integration. Each lists its scope, wha
 
 Status legend: ⚪️ planned · 🟡 in progress · 🟢 done
 
+iOS 27 intelligence maintenance (2026-09-22): adopts capability inspection and explicit context
+options, adds token-budget preflight on iOS 26.4+, and constrains and validates model output.
+Keeps all inference on-device and retains the iOS 26 deployment target. Xcode 27 is required to
+build. Package regression tests and the iOS simulator build pass; live model quality on an
+Apple Intelligence-enabled iPhone remains to be evaluated (ADR-0052).
+
+Widget maintenance (2026-09-22): the freshness widget refuses a private extension-local store,
+explains unavailable sharing on personal-team builds, and opens capture when tapped. Shared
+builds request timeline reloads after app thought-change notifications. Real-device refresh
+timing remains subject to WidgetKit scheduling; personal-team builds cannot display app notes.
+
 ---
 
 ## Phase 0 · Foundations 🟢
@@ -375,6 +386,22 @@ software keyboard is not drawn in `capture.png` even though the field is focused
 `app.keyboards` exists. `CapturePathTests` still asserts the keyboard, so the invariant is
 covered; only the picture is missing it, and the README's alt text describes what the image
 actually shows.
+
+## Phase 9 · Daily plan 🟢 *(device widget acceptance pending)*
+
+- Plan tab with seven date buttons, week navigation, task entry on any selected day and Today shortcut.
+- Completed tasks stay on their day with an animated, multiline strike-through; completion can be undone.
+- Earlier unfinished tasks enter Review's Daily tasks segment at the local day boundary or next foreground.
+- Finished preserves history; Not finished moves the same task to today. No automatic rollover or decay.
+- Today and Tomorrow home-screen widgets with finish buttons, plus today's lock-screen sizes and review links.
+- Plan and Thoughts share to-dos and editing/deletion controls; legacy V5 checklist rows import with history intact (ADR-0054).
+- App and widgets read the same tasks when signed with App Groups.
+- Regression coverage for calendar boundaries, persistence, errors, migration and the focused checklist UI.
+
+**Remaining acceptance.** Verify Today/Tomorrow widgets on a physical device signed with App Groups.
+Personal-team builds cannot expose stored tasks to widgets; their launcher fallback is intentional.
+
+---
 
 ## Deferred
 

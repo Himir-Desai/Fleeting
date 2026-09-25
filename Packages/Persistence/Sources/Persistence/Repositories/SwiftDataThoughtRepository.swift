@@ -9,8 +9,9 @@ import SwiftData
 @ModelActor
 public actor SwiftDataThoughtRepository: ThoughtRepository {
     public func add(_ thought: Thought) async throws {
-        modelContext.insert(ThoughtEntity(thought))
-        try modelContext.save()
+        let context = ModelContext(modelContainer)
+        context.insert(ThoughtEntity(thought))
+        try context.save()
     }
 
     public func thoughts(in scope: ThoughtScope) async throws -> [Thought] {
@@ -25,19 +26,21 @@ public actor SwiftDataThoughtRepository: ThoughtRepository {
     }
 
     public func update(_ thought: Thought) async throws {
-        guard let entity = try entity(for: thought.id) else {
+        let context = ModelContext(modelContainer)
+        guard let entity = try entity(for: thought.id, context: context) else {
             throw PersistenceError.thoughtNotFound(thought.id)
         }
         entity.overwrite(with: thought)
-        try modelContext.save()
+        try context.save()
     }
 
     public func delete(id: Thought.ID) async throws {
-        guard let entity = try entity(for: id) else {
+        let context = ModelContext(modelContainer)
+        guard let entity = try entity(for: id, context: context) else {
             throw PersistenceError.thoughtNotFound(id)
         }
-        modelContext.delete(entity)
-        try modelContext.save()
+        context.delete(entity)
+        try context.save()
     }
 
     /// Fetches rows matching a scope and an optional text query.
@@ -46,11 +49,12 @@ public actor SwiftDataThoughtRepository: ThoughtRepository {
     ///   - query: Text the raw captured body must contain, or `nil` for no text filter.
     /// - Returns: Matching thoughts, newest capture first.
     private func fetch(scope: ThoughtScope, query: String?) throws -> [Thought] {
+        let context = ModelContext(modelContainer)
         let descriptor = FetchDescriptor<ThoughtEntity>(
             predicate: Self.predicate(scope: scope, query: query),
             sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
         )
-        return try modelContext.fetch(descriptor).map(\.domain)
+        return try context.fetch(descriptor).map(\.domain)
     }
 
     /// Builds the store predicate for a scope and optional text query.
@@ -82,9 +86,9 @@ public actor SwiftDataThoughtRepository: ThoughtRepository {
     /// Fetches the row for an identity.
     /// - Parameter id: Identity to look up.
     /// - Returns: The stored row, or `nil` if no row matches.
-    private func entity(for id: Thought.ID) throws -> ThoughtEntity? {
+    private func entity(for id: Thought.ID, context: ModelContext) throws -> ThoughtEntity? {
         var descriptor = FetchDescriptor<ThoughtEntity>(predicate: #Predicate { $0.id == id })
         descriptor.fetchLimit = 1
-        return try modelContext.fetch(descriptor).first
+        return try context.fetch(descriptor).first
     }
 }

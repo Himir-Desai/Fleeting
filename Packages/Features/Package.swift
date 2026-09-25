@@ -12,13 +12,16 @@ let package = Package(
         .library(name: "InboxFeature", targets: ["InboxFeature"]),
         .library(name: "SettingsFeature", targets: ["SettingsFeature"]),
         .library(name: "SharpenFeature", targets: ["SharpenFeature"]),
-        .library(name: "ReviewFeature", targets: ["ReviewFeature"])
+        .library(name: "ReviewFeature", targets: ["ReviewFeature"]),
+        .library(name: "PlanFeature", targets: ["PlanFeature"])
     ],
     dependencies: [
         .package(path: "../Core"),
         .package(path: "../DesignSystem")
     ],
     targets: [
+        .target(name: "PlanFeature", dependencies: ["Core", "DesignSystem"]),
+        .testTarget(name: "PlanFeatureTests", dependencies: ["PlanFeature", "Core"]),
         .target(name: "CaptureFeature", dependencies: ["Core", "DesignSystem"]),
         .target(name: "InboxFeature", dependencies: ["Core", "DesignSystem"]),
         .testTarget(name: "CaptureFeatureTests", dependencies: ["CaptureFeature", "Core"]),

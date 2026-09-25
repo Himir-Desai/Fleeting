@@ -132,6 +132,12 @@ answers rather than from the model's imagination — so it is still your idea, w
 Changed your mind? **Revert** removes the write-up and the answers and leaves the note exactly as you
 captured it.
 
+On iOS 27, Fleeting uses the updated on-device model with capability checks and explicit structured
+generation options. Requests on iOS 26.4 and later are checked against the model's context size,
+including the output schema and response budget. Oversized requests fall back to local rules
+without truncating your note. Sorting, interview questions, write-ups, and reminder copy use
+structured output; no Private Cloud Compute or external model provider is used.
+
 When a thought outgrows what an on-device model can do, a deliberately understated **escalate**
 affordance has the local model compose a rich, context-loaded prompt and hand it to a full assistant
 (Claude, ChatGPT) via the share sheet. Hidden by design — the app stays simple; the door is just there.
@@ -165,6 +171,32 @@ fires.
 
 **Widgets** show what is still live and what is fading fastest, and a lock screen widget opens
 straight into a blank note. **Siri** captures without opening the app at all — *"add to Fleeting"*.
+Thought changes request a widget refresh; iOS controls when it runs. The free personal-team
+build cannot share notes with widgets, so its widget explains the limitation and opens capture
+when tapped.
+
+### ✓ Plan — today, tomorrow, and the week ahead
+
+Plan and Thoughts use the same to-dos. Tasks captured in **New thought** appear on their due day
+(or capture day when no date is set); tasks added in Plan also appear in Thoughts. Tap task text
+to open the same editing and action screen, including Delete, or use the row’s Edit/Delete context
+menu. Existing standalone Plan tasks are imported automatically with their history preserved.
+
+The **Plan** tab sits after Thoughts, with seven day buttons across the top. Pick a day, add a
+short task, and tap its circle when it is finished. The compact entry row sits at the end of the
+checklist: saving turns it into a task and leaves a fresh, focused input underneath. A strike-through draws across the words;
+completed tasks remain on that day, and tapping again undoes completion. Previous and next week
+controls let you plan across a week boundary. Tasks added to an earlier day also enter Review. The tab order is Home, Thoughts, Plan, Review, Settings.
+
+At each new local calendar day, unfinished tasks from earlier days appear under **Review → Daily
+tasks**. **Finished** marks a task done on its original day. **Not finished** moves the same task
+to today, even after several days away. Nothing moves until you decide, and unfinished to-dos are not automatically archived by decay. Explicit Archive and Snooze actions
+from the shared thought controls still apply.
+
+**Today's plan** and **Tomorrow's plan** widgets show the checklist in small or medium sizes;
+today also has lock-screen sizes. Home-screen checkboxes mark tasks done, and a review link opens
+the pending daily decisions. Shared App Group storage is required to show and complete tasks in
+widgets. Personal-team builds show an explanation and open Plan instead.
 
 ### ☁️ Sync
 Local-first SwiftData with automatic private CloudKit sync. There is no account and no server, and
@@ -287,6 +319,7 @@ Detail and acceptance criteria for each phase in **[docs/ROADMAP.md](docs/ROADMA
 | 6 | Ambient | Daily nudge, widgets, Siri capture | 🟢 Done |
 | 7 | Sync | CloudKit, versioned migration, merge-safe schema | 🟢 Done¹ |
 | 8 | Ship | Accessibility, contrast audit, motion, icon, privacy | 🟢 Done² |
+| 9 | Daily plan | Seven-day checklist, explicit daily review, Today/Tomorrow widgets | 🟢 Implemented; device widget validation pending |
 
 ¹ Everything is built and tested except the one thing that needs two signed devices under one iCloud
 account: convergence has not been *observed*.
@@ -303,7 +336,7 @@ git clone <repo> && cd Fleeting
 xcodegen && open Fleeting.xcodeproj
 ```
 
-**Requirements:** Xcode 26+, iOS 26 SDK, [XcodeGen](https://github.com/yonaskolb/XcodeGen). Sharpen
+**Requirements:** Xcode 27+, iOS 27 SDK, [XcodeGen](https://github.com/yonaskolb/XcodeGen). The app still runs on iOS 26+. Sharpen
 and classification use on-device Foundation Models and require an Apple Intelligence capable device;
 everywhere else the app falls back to the heuristic intelligence layer automatically and stays fully
 usable.

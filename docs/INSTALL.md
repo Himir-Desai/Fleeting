@@ -23,7 +23,7 @@ Open Fleeting from the home screen. That is the whole procedure.
 
 | | |
 |---|---|
-| **Xcode 26+** with the iOS 26 SDK | The app targets iOS 26 |
+| **Xcode 27+** with the iOS 27 SDK | The app still runs on iOS 26+ |
 | **An Apple ID** | Free. Signed into Xcode ▸ Settings ▸ Accounts |
 | **Developer Mode** on the phone | Settings ▸ Privacy & Security ▸ Developer Mode |
 | **An iPhone running iOS 26+**, unlocked and plugged in | Tap Trust on the phone the first time |
@@ -55,8 +55,11 @@ tested for from the start ([ADR-0019](DECISIONS.md)):
 
 - **Your thoughts live on the phone and only on the phone.** Settings says *This iPhone only*
   rather than pretending to sync. Everything else in the app is unaffected.
-- **The widget shows its placeholder.** It reads the shared store through the App Group, and
-  without that entitlement it has nothing to read.
+- **The thoughts widget cannot show your notes.** It needs the shared App Group, which this
+  build does not have. It explains that limitation and offers a tap to capture instead of
+  displaying a misleading zero count. Capture shortcuts still work without shared storage.
+- **Plan works inside the app.** Its Today and Tomorrow widgets also require shared storage to
+  show or complete checklist tasks. Without it they explain the limitation and open Plan.
 - **Everything else works**: capture, decay, classification, sharpening, review, the daily nudge,
   the URL scheme, Siri.
 

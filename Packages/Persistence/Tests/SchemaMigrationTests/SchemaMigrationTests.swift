@@ -57,7 +57,7 @@ struct SchemaMigrationTests {
     /// version and fetching the current entity asks SwiftData to cast across versions, which is a
     /// trap rather than an error and takes the whole test process down with it.
     private func openCurrentStore(at url: URL) throws -> [Thought] {
-        let schema = Schema(versionedSchema: ThoughtSchemaV4.self)
+        let schema = Schema(versionedSchema: ThoughtSchemaV5.self)
         let container = try ModelContainer(
             for: schema,
             migrationPlan: ThoughtMigrationPlan.self,
@@ -172,7 +172,7 @@ struct SchemaMigrationTests {
 
             // At the current version, because `ThoughtEntity` is the current entity: opening at
             // an older one and inserting asks SwiftData to cast across versions, which traps.
-            let schema = Schema(versionedSchema: ThoughtSchemaV4.self)
+            let schema = Schema(versionedSchema: ThoughtSchemaV5.self)
             let container = try ModelContainer(
                 for: schema,
                 migrationPlan: ThoughtMigrationPlan.self,
@@ -236,5 +236,42 @@ struct SchemaMigrationTests {
         #expect(row.stateDate == until)
         #expect(row.streakCount == thought.streak?.count)
         #expect(row.streakLastMarkedAt == thought.streak?.lastMarkedAt)
+    }
+}
+
+extension SchemaMigrationTests {
+    @Test("version 4 thoughts survive adding the checklist and the new table accepts tasks")
+    func version4ChecklistMigration() throws {
+        try withTemporaryStore { url in
+            try {
+                let schema = Schema(versionedSchema: ThoughtSchemaV4.self)
+                let container = try ModelContainer(
+                    for: schema, configurations: ModelConfiguration(schema: schema, url: url)
+                )
+                let context = ModelContext(container)
+                let thought = ThoughtSchemaV4.ThoughtEntity(id: UUID(), capturedAt: epoch)
+                thought.body = "Existing habit"
+                thought.kindRaw = "habit"
+                thought.cadenceRaw = "weekly"
+                context.insert(thought)
+                try context.save()
+            }()
+            let schema = Schema(versionedSchema: ThoughtSchemaV5.self)
+            let container = try ModelContainer(
+                for: schema, migrationPlan: ThoughtMigrationPlan.self,
+                configurations: ModelConfiguration(schema: schema, url: url)
+            )
+            let context = ModelContext(container)
+            #expect(try context.fetch(FetchDescriptor<ThoughtEntity>()).first?.body == "Existing habit")
+            #expect(try context.fetch(FetchDescriptor<ThoughtEntity>()).first?.cadenceRaw == "weekly")
+            #expect(try context.fetch(FetchDescriptor<ThoughtSchemaV5.DailyTodoEntity>()).isEmpty)
+            let task = DailyTodo(text: "Today's task", createdAt: epoch, day: PlanDay(rawValue: 20_260_922))
+            let row = ThoughtSchemaV5.DailyTodoEntity(id: task.id, createdAt: epoch)
+            row.payload = try JSONEncoder().encode(task)
+            context.insert(row)
+            try context.save()
+            #expect(try context.fetch(FetchDescriptor<ThoughtSchemaV5.DailyTodoEntity>()).count == 1)
+            #expect(try openCurrentStore(at: url).count == 1)
+        }
     }
 }

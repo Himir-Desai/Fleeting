@@ -4,12 +4,24 @@ import SwiftData
 /// How an existing store is brought up to the current schema version.
 enum ThoughtMigrationPlan: SchemaMigrationPlan {
     static var schemas: [any VersionedSchema.Type] {
-        [ThoughtSchemaV1.self, ThoughtSchemaV2.self, ThoughtSchemaV3.self, ThoughtSchemaV4.self]
+        [
+            ThoughtSchemaV1.self,
+            ThoughtSchemaV2.self,
+            ThoughtSchemaV3.self,
+            ThoughtSchemaV4.self,
+            ThoughtSchemaV5.self
+        ]
     }
 
     static var stages: [MigrationStage] {
-        [version1To2, version2To3, version3To4]
+        [version1To2, version2To3, version3To4, version4To5]
     }
+
+    /// Adds the daily checklist without changing existing thoughts.
+    private static let version4To5 = MigrationStage.lightweight(
+        fromVersion: ThoughtSchemaV4.self,
+        toVersion: ThoughtSchemaV5.self
+    )
 
     /// Adds version 4's optional `cadenceRaw` column.
     ///

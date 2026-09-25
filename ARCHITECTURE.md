@@ -136,11 +136,12 @@ Fleeting/
 │   │   └── Sources/Persistence/
 │   │       ├── PersistenceError.swift    ← failures the store reports to the domain
 │   │       ├── Schema/
-│   │       │   ├── ThoughtEntity.swift      ← typealias naming the version in use (V4); nothing else does
+│   │       │   ├── ThoughtEntity.swift      ← typealias naming the version in use (V5); nothing else does
 │   │       │   ├── ThoughtSchemaV1.swift    ← the store as Phase 6 shipped it; migration source
 │   │       │   ├── ThoughtSchemaV2.swift    ← lifecycle values in single columns
 │   │       │   ├── ThoughtSchemaV3.swift    ← adds the per-thought lifetime column
-│   │       │   ├── ThoughtSchemaV4.swift    ← @Model in use; adds a habit's cadence + its source
+│   │       │   ├── ThoughtSchemaV4.swift    ← migration source; adds a habit's cadence + its source
+│   │       │   ├── ThoughtSchemaV5.swift    ← current thoughts plus the legacy checklist import table
 │   │       │   ├── ThoughtMigrationPlan.swift ← custom v1→v2 (ADR-0019); lightweight v2→v3, v3→v4
 │   │       │   └── StoredSharpening.swift   ← Codable DTO for the interview, stored as JSON
 │   │       ├── Mapping/
@@ -170,6 +171,8 @@ Fleeting/
 │   │   └── Sources/Intelligence/
 │   │       ├── FoundationModels/
 │   │       │   ├── FoundationModelsIntelligence.swift ← on-device LLM implementation
+│   │       │   ├── GeneratedNudge.swift      ← structured reminder output
+│   │       │   ├── OnDeviceGeneration.swift   ← capability checks, token budget, iOS 27 request options
 │   │       │   ├── Generable/                ← @Generable structured-output types
 │   │       │   │   ├── GeneratedClassification.swift
 │   │       │   │   ├── GeneratedQuestions.swift
@@ -302,6 +305,31 @@ Fleeting/
 
 ## 4. Where do I add…?
 
+Daily plan additions (ADR-0053), with paths relative to the repository root:
+
+- `Packages/Core/Sources/Core/Model/PlanDay.swift` stores a civil date independent of time zones.
+- `Packages/Core/Sources/Core/Model/DailyTodo.swift` defines the checklist projection and explicit review decisions.
+- `Packages/Core/Sources/Core/Protocols/DailyTodoRepository.swift` defines checklist storage operations.
+- `Packages/Persistence/Sources/Persistence/Repositories/SwiftDataDailyTodoRepository.swift` reads fresh
+  contexts for app/widget consistency and imports legacy checklist rows atomically.
+  `ThoughtDailyTodoRepository.swift` adapts the single Thought store for Plan and widgets, including
+  the degraded in-memory path. `InMemoryDailyTodoRepository.swift` is a feature-test fixture.
+- `Packages/Features/Sources/PlanFeature/PlanModel.swift` coordinates the week, tasks and overdue queue.
+  `PlanView.swift` is the page, `PlanWeekPicker.swift` the seven buttons, `PlanTodoRow.swift` the checkbox,
+  `PlanTaskText.swift` the animated multiline strike-through, and `DailyReviewView.swift` the decisions.
+- `App/Composition/PlanDemoData.swift` supplies DEBUG-only `--seed-plan` fixtures.
+- `Widgets/DailyPlanProvider.swift` projects today/tomorrow and midnight entries. `DailyPlanWidget.swift`
+  declares both widgets; `CompleteDailyTodoIntent.swift` marks a task done idempotently.
+- `Packages/Core/Tests/CoreTests/DailyTodoTests.swift`,
+  `Packages/Features/Tests/PlanFeatureTests/PlanModelTests.swift`,
+  `Packages/Persistence/Tests/PersistenceTests/DailyTodoRepositoryTests.swift`, and
+  `Tests/UITests/PlanTests.swift` cover lifecycle, failed writes, widget/app consistency and UI.
+
+`RootView` orders Home → Thoughts → Plan → Review → Settings. It owns one `PlanModel` for the page
+and the Daily tasks segment of Review, refreshes on foreground/midnight, and handles `fleeting://plan`
+(optional `day=YYYYMMDD`) and `fleeting://daily-review`. Plan and Thoughts share one change notifier and reload the checklist and freshness widgets.
+`AppEnvironment` injects the checklist adapter over the same thought store.
+
 | I want to add… | Put it in | And also |
 |---|---|---|
 | A new field on a thought | `Core/Model/Thought.swift` | mirror it in `Persistence/Schema` + the mapping file, add a schema version |
@@ -343,6 +371,9 @@ developer to use the API without reading the body. Design rationale belongs in
 shape.
 
 ## 6. Invariants worth protecting
+
+`Packages/Intelligence/Tests/IntelligenceTests/GeneratedOutputTests.swift` covers generated-output
+validation: invalid confidence, non-habit cadence, duplicate questions, and empty write-ups.
 
 These are the things that, if broken, mean the app has become the thing it was built to replace:
 

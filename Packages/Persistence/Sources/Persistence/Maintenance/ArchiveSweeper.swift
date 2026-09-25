@@ -21,13 +21,13 @@ public struct ArchiveSweeper: ArchiveSweeping {
         self.clock = clock
     }
 
-    /// Archives every live thought whose freshness has reached zero.
+    /// Archives expired thoughts, leaving to-dos available for explicit daily review.
     /// - Returns: The thoughts that were archived, in the order they were processed.
     @discardableResult
     public func sweep() async throws -> [Thought] {
         let now = clock.now
         let live = try await repository.thoughts(in: .live)
-        let expired = live.filter { engine.shouldArchive($0, at: now) }
+        let expired = live.filter { $0.kind != .todo && engine.shouldArchive($0, at: now) }
 
         var archived: [Thought] = []
         for thought in expired {

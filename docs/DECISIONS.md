@@ -1708,3 +1708,126 @@ could follow it.
 The 0.85 second delay before the write is the part to be suspicious of. It is timed to the growth
 animation rather than derived from it, so a change to `Motion.growth` can leave the card departing
 before its own mark is drawn.
+
+---
+
+## ADR-0052 · Adopt iOS 27 Foundation Models while keeping inference on-device
+
+**Date:** 2026-09-22
+
+**Context.** iOS 27 updates the on-device model and introduces capability inspection and explicit
+context options. The user requested the new intelligence integration and explicitly chose to keep
+all processing on-device. Apple recommends checking prompts against each new system model.
+
+**Decision.** Keep `SystemLanguageModel.default` as the only model. Route every generation through
+`OnDeviceGeneration`, checking guided-generation support on iOS 27 and including the schema in
+its context options. On iOS 26.4+, measure the instructions, input and schema, reserve a bounded
+response plus formatting overhead, and decline oversized requests without truncating source text.
+The existing resilient service supplies local rules on unavailable models, errors and timeouts.
+Use greedy generation and task-specific response budgets. Constrain kinds, confidence, cadence
+units and question count in the schema; validate output before admitting it to the domain.
+Reminders now also use structured generation. Prompt instructions preserve the writer's language
+and treat notes and answers as source material rather than instructions.
+
+**Alternatives.** Private Cloud Compute offers larger context and reasoning, but changes where
+notes are processed and conflicts with the user's on-device preference. Requesting reasoning
+levels from the on-device model without evidence that it supports them would introduce failures.
+Raising the minimum OS to 27 would unnecessarily remove existing iOS 26 support.
+
+**Consequences.** Building requires Xcode 27; deployment remains iOS 26+. Oversized inputs may use
+less capable local rules, and the token estimate is conservative rather than a guarantee that a
+request will fit. Invalid questions or blank write-ups fall back instead of reaching the UI.
+No network inference, additional entitlement, or new permission prompt is introduced.
+
+**Validation.** All 36 Intelligence package tests pass, including four new output-validation tests;
+the app and widgets build against the iOS 27 simulator SDK. Live model quality has not been
+validated. On an eligible iOS 27 device, evaluate one-off tasks, explicit and unspecified habit
+cadences, non-English notes, long notes, and Sharpen answers with unresolved details. Check that
+classification follows intent, cadence is not invented, questions differ, and write-ups add no
+facts. Repeat with Apple Intelligence disabled and with Rules only selected.
+
+**References.** [Apple's Foundation Models updates](https://developer.apple.com/documentation/updates/foundationmodels)
+and the installed iOS 27 FoundationModels SDK interface.
+
+---
+
+## ADR-0053 · Dated checklists wait for a daily review decision
+
+**Date:** 2026-09-22
+
+**Context.** The user wants short-deadline tasks for today, tomorrow and individual days in a
+seven-button week picker. They explicitly chose review first: an unfinished item moves to today
+only after choosing Not finished. Completed tasks must remain visible with a strike-through.
+
+**Decision.** Add Plan between Thoughts and Review, retaining Settings last and capture first.
+`DailyTodo` is independent of `Thought`: it has a civil calendar day, text and optional completion
+time, and never enters the decay/archive pipeline. A `PlanDay` stores a Gregorian date key rather
+than a midnight timestamp, so travelling between time zones cannot change its assigned date.
+Week boundaries follow the user's calendar; the active app wakes at the next local day boundary
+and refreshes on foreground. Overdue status is derived on read, including after days away, so no
+background job or midnight write is necessary.
+
+Review gets a Daily tasks segment. Finished stamps completion while retaining the original day;
+Not finished moves the same identifier to today. Completed rows remain in that day's list and
+animate a line across wrapped text with Reduce Motion respected. Completion can be undone.
+Tasks can be entered for any selected day; entering a past day puts that task in Review too.
+
+Schema V5 preserves every V4 thought column and adds a separate checklist entity by lightweight
+migration. The complete task is encoded into one payload, so CloudKit cannot merge a scheduled
+day and a completion timestamp from different task versions. Repository operations use fresh
+contexts so foreground reads can see widget writes. A failed save does not clear the draft or
+remove a pending decision.
+
+Today and Tomorrow widgets offer home-screen checkboxes; Today also offers lock-screen counts.
+Their timelines include a projected midnight entry and request later refreshes. Widget completion
+is an explicit, idempotent finish action, never a toggle based on stale rendered state. Widgets
+require a shared App Group; personal-team builds explain the limitation and open Plan. URLs carry
+only an optional date, never task text. iOS controls actual widget rendering/refresh timing.
+
+**Alternatives.** Reusing thought todos would mix daily commitments with decay and weekly pruning.
+Automatically carrying tasks over would contradict the requested review-first behavior. Requiring
+a background job to run exactly at midnight would miss reviews when iOS suspends the app.
+
+**Validation.** Domain tests cover overdue decisions, repeated completion, multi-day gaps, future
+tasks, invalid dates, time zones and a 23-hour day. Feature tests cover the week, midnight reload,
+failed writes, persistence across models and past-day entry. Persistence tests cover fresh reads
+across app/widget repositories and disk reopen. Migration tests cover the old V1 lifecycle and V4
+thought preservation while creating the checklist table. Focused simulator tests cover adding,
+completion after relaunch and both review decisions. Physical-device widget interaction with a
+provisioned App Group remains a device acceptance check.
+
+
+## ADR-0054 · Plan and Thoughts share their to-dos
+
+**Date:** 2026-09-23
+
+**Context.** The user clarified that Plan tasks and captured thought to-dos are the same items,
+and requested the existing thought editing and action controls in Plan. This supersedes ADR-0053's
+separate-storage decision.
+
+**Decision.** Thought is the source of truth for task text, identity, due date and completion.
+DailyTodo is now a checklist projection. Plan creates confirmed Thought todos; captured todos
+appear using their due date, or capture date if undated. Dates use the existing dueAt instant
+interpreted in the current local time zone, matching thought scheduling. The week picker still
+uses civil PlanDay values, but due days can change when traveling across time zones.
+
+The Plan text button opens the very same ThoughtDetailView through app-layer navigation, with
+its editing, type, snooze, archive and delete controls. The separate checkbox completes/reopens
+the shared item. Both surfaces publish through one change notifier, including widget reloads.
+SwiftData thought operations fetch through fresh contexts so widget and app changes are visible.
+Unfinished todos are excluded from automatic archive sweeps so an overdue task stays available
+until the user makes the requested review-first decision. Explicit archive, snooze and type
+changes remain effective; completed todos remain visible on their day in Plan.
+
+Old V5 standalone checklist rows are imported into Thought with the same IDs and completion dates.
+Insertion and legacy-row removal commit together. If a shared record already exists it wins;
+subsequent reads cannot recreate a deleted imported task. The V5 table remains for compatibility.
+
+**Alternatives.** Keeping two records and synchronizing edits would create conflicts and allow
+completion or deletion to diverge. Rebuilding the detail UI inside Plan would duplicate the same
+controls and violate feature boundaries. A new schema for independent civil-day scheduling would
+preserve dates during travel, but would create another date field alongside existing dueAt.
+
+**Validation.** Repository regressions cover bidirectional changes, migration without resurrection,
+widget completion, explicit archive/type filtering, and overdue retention. Focused Plan UI tests
+exercise entry, shared editing/deletion, persistence, daily review and large text.
