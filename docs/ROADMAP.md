@@ -406,7 +406,9 @@ Personal-team builds cannot expose stored tasks to widgets; their launcher fallb
 ## Distribution follow-up
 
 The regular Xcode project and shared scheme are committed for Xcode Cloud discovery (ADR-0055).
-Use main and Xcode 27+. Paid-team cloud archive and TestFlight upload acceptance remain pending.
+Version 1.0.0 is working in TestFlight (confirmed 2026-09-24). Xcode Cloud archive acceptance
+remains pending. Next development branch: `development/1.0.1`, version 1.0.1, build 3;
+feature scope has not yet been selected. Use Xcode 27+.
 
 ## Deferred
 
