@@ -1,19 +1,24 @@
 import Core
 import Foundation
 
-/// Presents the shared thought store as a dated checklist, without copying task records.
-public struct ThoughtDailyTodoRepository: DailyTodoRepository {
+/// Presents any thought list as a dated checklist without copying task records.
+public struct ThoughtListTaskRepository: DailyTodoRepository {
     private let thoughts: any ThoughtRepository
+    private let listID: UUID
     private let clock: any WallClock
 
-    public init(thoughts: any ThoughtRepository, clock: any WallClock = SystemClock()) {
+    public init(
+        thoughts: any ThoughtRepository, listID: UUID = ThoughtList.planID,
+        clock: any WallClock = SystemClock()
+    ) {
+        self.listID = listID
         self.thoughts = thoughts
         self.clock = clock
     }
 
     public func all() async throws -> [DailyTodo] {
         try await thoughts.all().compactMap { thought in
-            guard thought.kind == .todo else { return nil }
+            guard thought.listID == listID, thought.kind == .todo else { return nil }
             if case .done = thought.state {
                 return Self.task(thought)
             }
@@ -24,13 +29,14 @@ public struct ThoughtDailyTodoRepository: DailyTodoRepository {
 
     public func add(_ todo: DailyTodo) async throws {
         guard try await thoughts.all().contains(where: { $0.id == todo.id }) == false else { return }
-        try await thoughts.add(Self.thought(todo))
+        try await thoughts.add(Self.thought(todo, listID: listID))
     }
 
     public func decide(
         id: UUID, decision: DailyTodoDecision, today: PlanDay, at date: Date
     ) async throws -> DailyTodo {
-        guard var thought = try await thoughts.all().first(where: { $0.id == id && $0.kind == .todo })
+        guard var thought = try await thoughts.all()
+            .first(where: { $0.id == id && $0.listID == listID && $0.kind == .todo })
         else { throw PersistenceError.dailyTodoNotFound(id) }
         var task = Self.task(thought)
         task.apply(decision, today: today, at: date)
@@ -50,6 +56,8 @@ public struct ThoughtDailyTodoRepository: DailyTodoRepository {
     }
 
     public func delete(id: UUID) async throws {
+        guard try await thoughts.all().contains(where: { $0.id == id && $0.listID == listID })
+        else { throw PersistenceError.dailyTodoNotFound(id) }
         try await thoughts.delete(id: id)
     }
 
@@ -67,11 +75,11 @@ public struct ThoughtDailyTodoRepository: DailyTodoRepository {
     }
 
     /// Creates a confirmed to-do so later classification cannot change its type.
-    static func thought(_ task: DailyTodo) -> Thought {
+    static func thought(_ task: DailyTodo, listID: UUID = ThoughtList.planID) -> Thought {
         Thought(
             id: task.id, body: task.text, capturedAt: task.createdAt, kind: .todo,
             state: task.completedAt.map { .done(at: $0) } ?? .inbox,
-            kindSource: .confirmed, dueAt: task.day.date()
+            kindSource: .confirmed, dueAt: task.day.date(), listID: listID
         )
     }
 }

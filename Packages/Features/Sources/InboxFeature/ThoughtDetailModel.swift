@@ -10,6 +10,8 @@ import Observation
 @MainActor
 @Observable
 public final class ThoughtDetailModel {
+    public private(set) var lastError: String?
+
     /// The thought as it currently stands, updated after each action.
     public private(set) var thought: Thought
 
@@ -25,6 +27,32 @@ public final class ThoughtDetailModel {
     /// The unit the ``expirationCount`` is measured in.
     public var expirationUnit: ExpirationUnit
 
+    public private(set) var lists: [ThoughtList] = [.plan]
+    public private(set) var listError: String?
+    private let listRepository: (any ThoughtListRepository)?
+
+    /// Changes collection membership without rewriting the thought or its captured date.
+    public func moveToList(_ id: UUID?) async {
+        do {
+            guard var latest = try await repository.all().first(where: { $0.id == thought.id })
+            else { return }
+            latest.listID = id
+            if id == ThoughtList.planID {
+                if latest.kind != .todo {
+                    latest.confirmKind(.todo, at: clock.now)
+                }
+                latest.dueAt = latest.dueAt ?? PlanDay(clock.now).date()
+            }
+            try await repository.update(latest)
+            thought = latest
+            listError = nil
+            changes.notify()
+        } catch {
+            listError = (error as? ListSharingError)?
+                .localizedDescription ?? "This thought couldn’t be moved. Try again."
+        }
+    }
+
     private let repository: any ThoughtRepository
     private let changes: ThoughtChangeNotifier
     private let clock: any WallClock
@@ -39,8 +67,10 @@ public final class ThoughtDetailModel {
         thought: Thought,
         repository: any ThoughtRepository,
         changes: ThoughtChangeNotifier = ThoughtChangeNotifier(),
-        clock: any WallClock
+        clock: any WallClock,
+        listRepository: (any ThoughtListRepository)? = nil
     ) {
+        self.listRepository = listRepository
         self.thought = thought
         self.repository = repository
         self.changes = changes
@@ -55,6 +85,42 @@ public final class ThoughtDetailModel {
             usesCustomExpiration = false
             expirationCount = 1
             expirationUnit = .months
+        }
+    }
+
+    /// Refreshes stored changes while preserving text and expiry edits in progress.
+    public func observeChanges() async {
+        let stream = changes.changes
+        await reload()
+        for await _ in stream {
+            await reload()
+        }
+    }
+
+    /// Whether another device deleted this thought.
+    public private(set) var isDeleted = false
+
+    func reload() async {
+        if let listRepository {
+            do { lists = try await listRepository.lists() }
+            catch { listError = "Lists couldn’t load. Try again." }
+        }
+        guard let all = try? await repository.all() else { return }
+        guard let latest = all.first(where: { $0.id == thought.id }) else {
+            isDeleted = true
+            return
+        }
+        let hasTextEdit = draft != thought.body
+        let hasExpiryEdit = customLifetime != thought.customLifetime
+        thought = latest
+        if !hasTextEdit {
+            draft = latest.body
+        }
+        if !hasExpiryEdit {
+            usesCustomExpiration = latest.customLifetime != nil
+            let value = Self.decompose(latest.customLifetime ?? .day * 30)
+            expirationCount = value.count
+            expirationUnit = value.unit
         }
     }
 
@@ -78,6 +144,13 @@ public final class ThoughtDetailModel {
         guard kind != thought.kind else { return }
         var corrected = thought
         corrected.confirmKind(kind, at: clock.now)
+        if kind != .todo, corrected.listID == ThoughtList.planID {
+            corrected.listID = nil
+        }
+        if kind == .todo, corrected.listID == nil {
+            corrected.listID = ThoughtList.planID
+            corrected.dueAt = corrected.dueAt ?? PlanDay(clock.now).date()
+        }
         await persist(corrected)
     }
 
@@ -89,17 +162,19 @@ public final class ThoughtDetailModel {
     }
 
     /// Marks a to-do complete, taking it out of the live list.
-    public func complete() async {
+    @discardableResult
+    public func complete() async -> Bool {
         var completed = thought
         completed.complete(at: clock.now)
-        await persist(completed)
+        return await persist(completed)
     }
 
     /// Records a habit as kept, extending its streak and restoring its freshness.
-    public func markHabitKept() async {
+    @discardableResult
+    public func markHabitKept() async -> Bool {
         var kept = thought
         kept.markHabitKept(at: clock.now)
-        await persist(kept)
+        return await persist(kept)
     }
 
     /// Takes back the most recent habit mark.
@@ -135,23 +210,33 @@ public final class ThoughtDetailModel {
 
     /// Sets the thought aside for a number of days, held at full freshness until then.
     /// - Parameter days: How long to snooze for.
-    public func snooze(forDays days: Double) async {
+    @discardableResult
+    public func snooze(forDays days: Double) async -> Bool {
         var snoozed = thought
         snoozed.snooze(until: clock.now.addingTimeInterval(days * .day), at: clock.now)
-        await persist(snoozed)
+        return await persist(snoozed)
     }
 
     /// Archives the thought by hand.
-    public func archive() async {
+    @discardableResult
+    public func archive() async -> Bool {
         var archived = thought
         archived.archive(at: clock.now)
-        await persist(archived)
+        return await persist(archived)
     }
 
     /// Permanently deletes the thought. The only path here that destroys anything.
-    public func delete() async {
-        try? await repository.delete(id: thought.id)
-        changes.notify()
+    @discardableResult
+    public func delete() async -> Bool {
+        do {
+            try await repository.delete(id: thought.id)
+            lastError = nil
+            changes.notify()
+            return true
+        } catch {
+            lastError = (error as? ListSharingError)?.localizedDescription ?? "This thought couldn’t be deleted. Try again."
+            return false
+        }
     }
 
     /// The chosen lifetime in seconds, or `nil` to follow the kind's decay rate.
@@ -162,10 +247,18 @@ public final class ThoughtDetailModel {
 
     /// Writes a changed thought back, updates the local copy, and announces the change.
     /// - Parameter thought: The updated thought.
-    private func persist(_ thought: Thought) async {
-        try? await repository.update(thought)
-        self.thought = thought
-        changes.notify()
+    @discardableResult
+    private func persist(_ thought: Thought) async -> Bool {
+        do {
+            try await repository.update(thought)
+            self.thought = thought
+            lastError = nil
+            changes.notify()
+            return true
+        } catch {
+            lastError = (error as? ListSharingError)?.localizedDescription ?? "This change couldn’t be saved. Try again."
+            return false
+        }
     }
 
     /// Splits a lifetime in seconds back into a whole count and the largest even unit, so the

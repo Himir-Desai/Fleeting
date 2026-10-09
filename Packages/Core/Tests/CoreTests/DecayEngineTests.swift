@@ -4,6 +4,27 @@ import Testing
 
 @Suite("DecayEngine")
 struct DecayEngineTests {
+    @Test(
+        "shared thoughts archive only by choice, for every role and even with a custom lifetime",
+        arguments: [ListSharing.Role.owner, .editor, .viewer]
+    )
+    func sharedManualArchiving(role: ListSharing.Role) {
+        var shared = Thought(
+            body: "Together",
+            capturedAt: epoch,
+            customLifetime: 60,
+            sharing: ListSharing(role: role)
+        )
+        #expect(engine.freshness(of: shared, at: day(4000)) == .full)
+        #expect(engine.expiryDate(of: shared) == nil)
+        #expect(!engine.shouldArchive(shared, at: day(4000)))
+        shared.archive(at: day(4000))
+        #expect(engine.freshness(of: shared, at: day(4000)) == .expired)
+        #expect(!engine.shouldArchive(shared, at: day(4001)))
+        shared.restore(at: day(4001))
+        #expect(engine.freshness(of: shared, at: day(9000)) == .full)
+    }
+
     private let epoch = Date(timeIntervalSince1970: 1_700_000_000)
     private let engine = DecayEngine()
 

@@ -16,7 +16,7 @@ struct FirstRunHint: View {
         // No identifier on the stack: an identifier on a container overrides the ones its
         // children set, which would hide the dismiss control from the tests that drive it.
         HStack(alignment: .top, spacing: Spacing.snug) {
-            Text("Thoughts fade as they age and file themselves away. Nothing is ever deleted.")
+            Text("Thoughts fade into the archive. Nothing is deleted.")
                 .font(Typography.caption)
                 .foregroundStyle(Palette.inkMuted)
                 .fixedSize(horizontal: false, vertical: true)
@@ -31,6 +31,7 @@ struct FirstRunHint: View {
                 .tint(Palette.accentText)
                 .frame(minWidth: dismissSize, minHeight: dismissSize)
                 .contentShape(.rect)
+                .buttonStyle(PressFeedbackStyle())
                 .accessibilityIdentifier("capture.hint.dismiss")
         }
         .padding(.vertical, Spacing.tight)

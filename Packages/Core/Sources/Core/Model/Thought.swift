@@ -1,6 +1,6 @@
 import Foundation
 
-/// A single captured thought — the app's only domain entity.
+/// A single captured thought — the app's stored content.
 ///
 /// The raw text in ``body`` is never altered by the intelligence layer; generated material
 /// lives in separate properties such as ``title``. Freshness is derived from ``lastActedAt``,
@@ -14,6 +14,14 @@ public struct Thought: Identifiable, Equatable, Hashable, Sendable {
 
     /// A short generated title, or `nil` until the intelligence layer has produced one.
     public var title: String?
+
+    /// The collection this thought belongs to, or `nil` when unfiled.
+    public var listID: UUID?
+    public var sharing: ListSharing?
+
+    public var canEditContent: Bool {
+        sharing?.canEdit ?? true
+    }
 
     /// What the thought turned out to be.
     public private(set) var kind: ThoughtKind
@@ -84,6 +92,7 @@ public struct Thought: Identifiable, Equatable, Hashable, Sendable {
     ///   - snoozeCount: How many times it has already been set aside.
     ///   - customLifetime: A capture-time lifetime override, in seconds, or `nil` to decay at the
     ///     kind's rate.
+    ///   - listID: The collection this thought belongs to, or `nil` when unfiled.
     public init(
         id: UUID = UUID(),
         body: String,
@@ -99,9 +108,13 @@ public struct Thought: Identifiable, Equatable, Hashable, Sendable {
         cadenceSource: KindSource = .unclassified,
         sharpening: Sharpening? = nil,
         snoozeCount: Int = 0,
-        customLifetime: TimeInterval? = nil
+        customLifetime: TimeInterval? = nil,
+        listID: UUID? = nil,
+        sharing: ListSharing? = nil
     ) {
         self.id = id
+        self.listID = listID
+        self.sharing = sharing
         self.body = body
         self.title = title
         self.kind = kind

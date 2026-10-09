@@ -18,51 +18,72 @@ struct SettingsStepperRow: View {
     /// Called when the plus is tapped.
     let onIncrease: () -> Void
 
-    /// The round tap targets, grown with the type size to stay reachable.
-    @ScaledMetric(relativeTo: .body) private var controlSize: CGFloat = 32
+    /// The visible circle inside an independent 44-point tap target.
+    private let controlSize: CGFloat = 32
 
     var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: Spacing.snug) {
+                heading.fixedSize(horizontal: true, vertical: false)
+                Spacer(minLength: Spacing.snug)
+                valueText.fixedSize()
+                controls
+            }
+            VStack(alignment: .leading, spacing: Spacing.snug) {
+                heading
+                ViewThatFits(in: .horizontal) {
+                    HStack {
+                        valueText.fixedSize()
+                        Spacer(minLength: Spacing.snug)
+                        controls
+                    }
+                    VStack(alignment: .leading, spacing: Spacing.snug) {
+                        valueText
+                        controls
+                    }
+                }
+            }
+        }
+        // Each step control names the value it changes and remains independently reachable.
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(label)
+        .accessibilityValue(value)
+    }
+
+    private var heading: some View {
         HStack(spacing: Spacing.snug) {
             if let symbol {
-                Image(systemName: symbol)
-                    .font(Typography.caption)
+                Image(systemName: symbol).font(Typography.secondarySymbol)
                     .foregroundStyle(Palette.inkMuted)
                     .frame(width: Spacing.loose)
             }
-
-            Text(label)
-                .font(Typography.body)
-                .foregroundStyle(Palette.ink)
-
-            Spacer(minLength: Spacing.snug)
-
-            Text(value)
-                .font(Typography.body)
-                .foregroundStyle(Palette.inkMuted)
-                .monospacedDigit()
-
-            HStack(spacing: Spacing.tight) {
-                stepButton("minus", action: onDecrease)
-                stepButton("plus", action: onIncrease)
-            }
+            Text(label).font(Typography.body).foregroundStyle(Palette.ink)
         }
-        // One element to VoiceOver, with the two buttons as adjustable actions rather than as
-        // two unlabelled glyphs read after the value.
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(label)
-        .accessibilityValue(value)
+    }
+
+    private var valueText: some View {
+        Text(value).font(Typography.body).foregroundStyle(Palette.inkMuted).monospacedDigit()
+    }
+
+    private var controls: some View {
+        HStack(spacing: Spacing.tight) {
+            stepButton("minus", action: onDecrease)
+            stepButton("plus", action: onIncrease)
+        }
     }
 
     /// One round step control.
     private func stepButton(_ symbol: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(Typography.caption)
+                .font(Typography.controlSymbol)
                 .foregroundStyle(Palette.accentText)
                 .frame(width: controlSize, height: controlSize)
                 .background { Circle().fill(Palette.surfaceSunken) }
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(.rect)
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel(symbol == "plus" ? "Increase" : "Decrease")
+        .buttonStyle(PressFeedbackStyle())
+        .accessibilityLabel("\(symbol == "plus" ? "Increase" : "Decrease") \(label)")
     }
 }

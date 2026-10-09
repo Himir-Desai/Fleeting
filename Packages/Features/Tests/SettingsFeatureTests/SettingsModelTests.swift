@@ -147,7 +147,7 @@ struct SettingsSyncTests {
         let model = makeModel(.syncing)
         await model.load()
         #expect(model.syncStatus == .syncing)
-        #expect(model.facts.first { $0.label == "Syncing" }?.value == "iCloud")
+        #expect(model.facts.first { $0.label == "Syncing" }?.value == "iCloud enabled")
     }
 
     @Test("a store that is not syncing says so, and says capture still works")

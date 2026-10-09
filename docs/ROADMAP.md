@@ -282,8 +282,8 @@ fully functional local app with no errors.
 - Settings says which of the two is happening, and never claims more than the storage underneath it.
 
 **Not verified: two devices converging.** It needs two signed installs under one iCloud account.
-This machine has no signing identity, so no build made here carries the CloudKit entitlement at all.
-Everything that does not depend on it is covered.
+The paid developer account is now available. Two signed-device convergence remains an acceptance
+check; local unit tests and simulator builds cannot establish cloud delivery.
 
 Also changed here: CI now runs *every* package's unit tests. It had been running only `Core`'s and
 merely building the rest, which would have let a broken `Persistence` test through.
@@ -420,4 +420,199 @@ Recorded so they aren't rediscovered as new ideas later.
 | Weekly AI synthesis of themes | Attractive but unproven; let the base ritual earn it first (ADR-0007). |
 | Clustering related ideas | Needs embeddings and a real corpus of thoughts to be worth anything. |
 | iPad and Mac targets | The architecture supports it; there's no demand yet. |
-| Sharing or collaboration | Would require accounts and a backend, contradicting ADR-0003. |
+| Custom backend or non-Apple collaboration | iCloud sharing covers the requested scope; no Fleeting accounts or hosting. |
+
+
+## 2.0 · Same-account iCloud saving 🟡
+
+Implemented: background push entitlement/registration, cloud-import and cross-process change
+notifications, foreground refresh, synchronized user settings with live decay-cache invalidation,
+open-detail/review refresh, and one-time import of free-account local records into App Group storage.
+Existing SwiftData CloudKit storage covers every persisted thought field and shared Plan task.
+Reset-store UI test launches disable cloud attachment and preference mirroring.
+
+Validation: persistence and feature regressions, separate schema-migration tests, and an unsigned
+iOS simulator build. Remaining acceptance: provision the container and push entitlement, deploy the
+schema for TestFlight, and execute [the two-device checklist](ICLOUD.md). Cross-account shared tasks
+remain outside this phase.
+
+
+## 2.0 · Navigation simplification
+
+Home, Thoughts and Plan are the three tabs. Thought review sits below Thoughts' count; daily review
+opens from Plan. Settings is a sheet reachable from top-right controls, beside existing
+filter/Today actions. Deep links retain daily-review access without a Review tab (ADR-0057).
+
+Home now reserves a borderless multiline writing area above compact habits. Text uses serif size/weight
+variations throughout, including navigation headings. Plan submits tasks on Return and shows
+its padded keyboard dismissal control only during editing (ADR-0058).
+
+Toolbar pills use balanced 44-point icon targets; page titles align left with the controls.
+Keyboard actions float in glass capsules with margins, and Plan's row icons share alignment
+(ADR-0059).
+
+
+## 2.0 · Thought lists
+
+Implemented: optional named collections, a shared animated glass dropup above capture's keyboard,
+a matching Thoughts dropdown beside Filter, combined collection/kind/archive filtering, inline
+creation preserving drafts, and an initial list editor. Detail supports moving existing thoughts.
+Custom-list deletion unfiles thoughts without deleting content.
+
+Plan is the built-in list over shared thoughts, retaining its week picker, completion history,
+explicit daily review and widgets. A generic list-scoped adapter replaces the separate SwiftData
+checklist actor. V6 storage migrates previous to-dos into Plan and syncs custom lists with thoughts.
+
+The supplied list-management workflow is now implemented as stacked native sheets (ADR-0064).
+Physical-device glass-animation and two-device list-sync acceptance remain pending.
+
+Validation passed: 122 Core, 103 Features, 42 persistence and 10 migration tests; unsigned simulator
+builds and six focused UI checks covering list creation/selection, preserved Plan flows, navigation
+and largest-text capture. Screenshot inspection verified both expansion directions.
+
+
+List-picker revision: balanced inset rows and thin separators, grey names with purple selection,
+compact text labels with truncation, direct empty new-list entry, and outside-tap dismissal that
+preserves Home's keyboard. Both directions use the same anchored spring without bounce (ADR-0061).
+
+Revision validation: all 103 feature tests, four list UI flows (including outside dismissal and
+long labels), and largest-text capture passed. Screenshots checked panel spacing, muted/selected
+colors and the list/filter/settings toolbar. The requested `apple-design` skill is installed in
+`.agents/skills/apple-design` with its source recorded in `skills-lock.json`.
+
+
+## App-wide Apple-design pass
+
+Shared contrast, press feedback, stable icon sizing, responsive headers and accessible glass;
+adaptive Settings and thought-property controls; readable fading metadata; keyboard-preserving
+Plan submission; clearer review completion and retry feedback; larger Sharpen/List targets.
+The nine-screen audit and verification record live in [DESIGN_AUDIT.md](DESIGN_AUDIT.md).
+
+Design-pass validation completed: 105 feature and 22 design/contrast tests, nine-destination
+light/dark routes and focused interaction/large-type checks. Screenshots and findings are saved
+in `DESIGN_AUDIT.md`. Physical-device/widget-host acceptance remains outside this simulator audit.
+
+
+Native menu/review follow-up: Home and Thoughts list selectors now use the thought filter's native
+menu presentation. Thought review mirrors daily review's scrolling cards, with Keep active,
+Hide for 7 days and Archive, including explicit return dates. Custom list-menu spring and popup
+geometry are removed. Shared review controls prevent styling from drifting between the two pages.
+
+Follow-up validation: native-menu capture/create/select/dismiss checks, Archive preservation,
+Hide visibility, Keep active visibility, large-text scrolling, horizontal gesture checks, daily
+review history and an out-of-order card decision preserving the current answer draft.
+
+Native-menu/review checks passed: 106 feature tests, 22 design tests and targeted simulator cases
+for both menus, creation/dismissal, explicit thought-review behavior, daily-review history,
+horizontal shortcuts and vertical scrolling at the largest text size.
+
+
+List-management revision: native bottom sheet matching Settings, one collection including a
+protected Plan row, separate creation button and stacked create/edit sheet. Name, description and
+default thought type persist in V7. Home and Thoughts reuse the same form; the selected list has
+a larger heading with direct editing, and the list selector matches the filter/settings pill.
+Automatic list routing using descriptions remains deferred. Shared lists are implemented below.
+
+
+List-details validation passed: 107 feature, 43 persistence and 11 migration tests, plus six
+focused simulator cases including sheet stacking, metadata editing, capture draft/keyboard
+preservation, toolbar dimensions and largest-text creation/deletion.
+
+
+Contextual-navigation revision: Thoughts expands its selected glass capsule to include Lists;
+the top list control is removed and the selected collection becomes the page heading. List forms
+reuse thought properties’ round icons, close with a leading cross, and use the shared trash
+control. All editing flows expose the same keyboard-down control. The user-approved espresso/cocoa
+dark palette complements off-white light appearance; shared color/contrast tests cover both.
+
+
+Contextual-navigation validation passed: 107 feature and 22 design/contrast tests, focused
+capture/list/keyboard checks in every input flow, largest-text list creation/deletion, and
+nine-destination walkthroughs in both appearances. Screenshots and README product images updated.
+
+
+Native-navigation revision: replace the custom navigation bar using verified public TabContent
+hidden/popover APIs. The system bar expands from three to four tabs in the Thoughts section,
+distinguishes Thoughts/Lists, and stays visible when the chooser opens. Dark is now near-black
+brown with muted sage; light appearance remains unchanged. ADR-0066 supersedes the custom-bar
+portion of ADR-0065.
+
+
+Native revision verified: 107 feature and 22 design tests, six list flows, native count/selection/
+popover checks in both appearances, largest-text behavior and keyboard draft preservation.
+Current screenshots and README product images updated to near-black brown/sage.
+
+
+Permanent-native-tab revision: apply the user’s fallback because the native iPhone bar has no
+public shared pill for two independently highlighted items. Lists stays visible on every page.
+Opening the chooser preserves the active page/highlight; selecting a collection chooses Lists,
+and All thoughts chooses Thoughts. No custom navigation or palette change is added (ADR-0067).
+
+
+Permanent-tab validation passed on iPhone 17 Pro: four tabs on all pages, unchanged selection
+while choosing, selected-list/all-thoughts highlights, open-thought draft preservation, saved
+list loading from Home after relaunch, stacked editing and largest-text creation/deletion.
+
+
+Lists follow-up: immediate empty Lists destination/selector, active navigation collection cleared
+on leaving, lists-only navigation menu with Add List/Edit Lists, shared thought assignment menu,
+slightly larger/inset manager names with original vertical spacing, and circular editor close.
+This intentionally supersedes ADR-0067’s preserve-tab-on-open behavior (ADR-0068).
+
+
+Lists follow-up verified: 107 feature and 22 design tests; iPhone 17 Pro checks for each requested
+navigation/selection transition, clearing navigation without unfiling thoughts, shared assignment
+menu/actions, circular close and retained row spacing with adjusted typography. Screenshots saved.
+
+
+Final follow-up regression: all six existing list UI cases passed on iPhone 17 Pro after the
+new Lists-destination and shared-assignment changes. No requested work remains in this revision.
+
+
+## 2.0 · iCloud shared lists 🟡
+
+Implemented: custom-list Share/Manage Sharing in existing native editors; Apple invitations,
+participant permissions and access management; cold/warm acceptance with exact-list import routing;
+private/shared Core Data stores over the original V8 SwiftData model and private file; journal-aware
+upgrade recovery and durable local fallback; store-level viewer enforcement; private member activity
+and shared to-do completion; manual archive for shared content; matching list/detail/review controls.
+Personal Plan stays private. Cross-share membership moves remain unsupported.
+
+Local validation: domain/feature/persistence/migration tests and focused SharingTests on an unsigned
+simulator. The UI preview seeds shared-store rows only and makes no network claims. Existing list,
+Plan, capture and navigation regressions are checked after the foundation change.
+
+Remaining release acceptance: deploy the V8 CloudKit schema, run the same signed build/environment
+on two different iCloud accounts, verify invitations via Messages/link/AirDrop, offline edits,
+permission changes, stop-sharing/leave and personal progress isolation. See [ICLOUD.md](ICLOUD.md).
+This requires signed accounts/devices; it is not represented as completed by simulator tests.
+
+
+Sharing validation complete (2026-10-07): 123 Core, 110 Features, 22 DesignSystem, 36 Intelligence,
+12 Notifications, 52 Persistence and 12 isolated migration tests passed. Thirteen distinct focused
+UI cases passed, covering sharing fallback/capture/relaunch, viewer controls and personal habits,
+largest text, private edit/delete, Lists selection/assignment/stacked editing, native navigation,
+Plan completion/history and cold capture. Debug and optimized Release simulator app/widget builds
+passed. No live invitation, production schema deployment or signed device acceptance is claimed.
+
+
+Development CloudKit schema initialization completed on the user's signed-in simulator on
+2026-10-07. The native schema request succeeded and the container reported Sandbox/development.
+Normal app launch has been restored. Production deployment and cross-account invitation/device
+acceptance are still pending; this advances the iCloud setup without claiming release acceptance.
+
+
+Alpha release preparation (2026-10-08): version 2.0 build 3 uploaded successfully with Apple's
+TestFlight Internal Only restriction. The confirmed alpha audience is the Internal Tester Group;
+External Tester Group must not receive this build. The user confirmed the new version installed
+on their phone. CloudKit Console confirmed production schema deployment on 2026-10-08; cross-account
+invitation acceptance and collaborative edits still require a live test.
+
+Alpha signing correction (2026-10-08): build 3's unsigned archive lost CloudKit/App Group
+entitlements in distribution, confirmed by the device warning and pipeline signing output.
+Build 4 is normally signed; both exported and staged upload IPAs pass production entitlement
+verification. A repeatable verifier also rejects build 3. Internal-only upload succeeded and
+App Store Connect completed processing and confirms only the Internal Tester Group is assigned;
+live cross-account sharing remains unverified.
+App Store Connect subsequently reports the owner's phone installed 2.0 (4); this is distribution
+acceptance, not confirmation that a live invitation or collaborative edit succeeded.

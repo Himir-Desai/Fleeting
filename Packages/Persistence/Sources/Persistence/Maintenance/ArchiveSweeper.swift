@@ -27,7 +27,7 @@ public struct ArchiveSweeper: ArchiveSweeping {
     public func sweep() async throws -> [Thought] {
         let now = clock.now
         let live = try await repository.thoughts(in: .live)
-        let expired = live.filter { $0.kind != .todo && engine.shouldArchive($0, at: now) }
+        let expired = live.filter { $0.kind != .todo && $0.listID != ThoughtList.planID && engine.shouldArchive($0, at: now) }
 
         var archived: [Thought] = []
         for thought in expired {

@@ -23,15 +23,15 @@ struct KindActionButton: View {
         Button(action: action) {
             HStack(spacing: Spacing.snug) {
                 if isHabit {
-                    GrowingSprout(size: 22, tint: Palette.raised)
+                    GrowingSprout(size: 22, tint: Palette.onAccent)
                         .frame(width: 22, height: 22)
                 } else {
-                    Image(systemName: symbol)
+                    Image(systemName: symbol).font(Typography.controlSymbol)
                 }
                 Text(label)
             }
             .font(Typography.title)
-            .foregroundStyle(Palette.raised)
+            .foregroundStyle(Palette.onAccent)
             .padding(.horizontal, Spacing.loose)
             .padding(.vertical, Spacing.regular)
             .frame(maxWidth: .infinity)
@@ -40,7 +40,7 @@ struct KindActionButton: View {
                     .fill(Palette.accent)
             }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressFeedbackStyle())
         .accessibilityIdentifier("detail.kindAction")
         .accessibilityLabel(label)
     }

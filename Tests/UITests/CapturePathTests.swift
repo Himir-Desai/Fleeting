@@ -869,7 +869,7 @@ final class ReviewTests: XCTestCase {
 
         XCTAssertTrue(app.staticTexts["review.card"].waitForExistence(timeout: 10))
         let dropped = app.staticTexts["review.card"].label
-        app.buttons["review.drop"].tap()
+        app.buttons["review.archive"].tap()
 
         // Finish the rest of the session, then look for it in the archive.
         for _ in 0 ..< 8 {

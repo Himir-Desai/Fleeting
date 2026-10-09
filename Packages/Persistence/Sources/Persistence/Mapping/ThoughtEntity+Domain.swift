@@ -26,7 +26,8 @@ extension ThoughtEntity {
             cadenceSource: cadenceSourceRaw.flatMap(KindSource.init(rawValue:)) ?? .unclassified,
             sharpening: StoredSharpening.decode(sharpeningJSON),
             snoozeCount: snoozeCount,
-            customLifetime: customLifetime
+            customLifetime: customLifetime,
+            listID: listID
         )
     }
 
@@ -36,6 +37,7 @@ extension ThoughtEntity {
     /// only kept current, so an older build installed over this one still works (ADR-0019).
     /// - Parameter thought: The thought whose contents should replace this row's.
     func overwrite(with thought: Thought) {
+        listID = thought.listID
         body = thought.body
         title = thought.title
         kindRaw = thought.kind.rawValue

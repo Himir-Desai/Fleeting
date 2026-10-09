@@ -9,7 +9,7 @@
 ![Platform](https://img.shields.io/badge/platform-iOS%2026%2B-black)
 ![Swift](https://img.shields.io/badge/Swift-6.3-orange)
 ![UI](https://img.shields.io/badge/UI-SwiftUI-blue)
-![Data](https://img.shields.io/badge/data-SwiftData%20%2B%20CloudKit-green)
+![Data](https://img.shields.io/badge/data-Core%20Data%20%2B%20CloudKit-green)
 ![AI](https://img.shields.io/badge/AI-on--device%20Foundation%20Models-purple)
 ![Status](https://img.shields.io/badge/status-feature%20complete-brightgreen)
 
@@ -55,6 +55,9 @@ These are load-bearing. Every design decision in this repo traces back to one of
 | 4 | **Half-baked in, fully-baked out.** The on-device model interviews you about a fragment, then writes it up from *your* answers. | No one-shot "expand this" that invents an idea you didn't have. |
 | 5 | **Quiet by default.** At most one gentle nudge a day; the weekly review is an invitation, never a blocker. | No badge-driven guilt. No dialog on launch. Nothing you *must* dismiss to type. |
 
+Dark appearance uses near-black brown surfaces, ivory text and muted sage controls,
+complementing light appearance’s purple on off-white paper.
+
 ## How a thought moves through the app
 
 ```mermaid
@@ -70,9 +73,9 @@ flowchart LR
     H -.->|hidden escalation| I["Composed prompt →<br/>Claude / ChatGPT"]
 
     D & E & F --> J{{"Weekly Review<br/><i>max 7 cards</i>"}}
-    J -->|Act| K["Freshness resets"]
-    J -->|Snooze| L["Back to sleep"]
-    J -->|Drop| M["🗄 Archive"]
+    J -->|Keep active| K["Freshness resets"]
+    J -->|Hide for 7 days| L["Back to sleep"]
+    J -->|Archive| M["🗄 Archive"]
     D & E & F -->|freshness hits zero| M
     K --> D
 
@@ -86,9 +89,9 @@ flowchart LR
 
 ### ✎ Capture — the only screen that matters
 
-<img src="docs/screenshots/capture.png" width="260" align="right" alt="The capture screen on cold launch: a full-bleed page with What's on your mind? set in a serif at the top margin and the cursor already blinking in it, no box and no border, a single line of first-run text below saying thoughts fade as they age and file themselves away, nothing is ever deleted, with a Got it control, and a four-tab bar along the bottom." />
+<img src="docs/screenshots/capture.png" width="260" align="right" alt="Home in dark appearance: a borderless capture field, a short archive explanation, due habit cards and three tabs." />
 
-Cold launch lands on the field. The page *is* the field: no well, no border, no options. Type, hit
+Cold launch lands on Home, with a spacious borderless writing area above compact habit cards. Type, hit
 save, and the words collapse into a one-line receipt telling you what they were filed as and how
 long they have — `idea · 3 months` — before it retires itself. No navigation, no decisions, no
 confirmation to dismiss. Also reachable without unlocking, from a lock-screen widget, a Control
@@ -106,9 +109,56 @@ sundays"* is weekly. Nothing is invented when the note is silent, and the rhythm
 habit's own page. It sets when the habit reappears, what its streak is counted in — a weekly habit
 kept four times is a four *week* streak — and how long it survives without attention.
 
+### Lists — organize thoughts without slowing capture
+
+The glass “Lists” control at the left above the keyboard uses the same native menu and animation
+as the thought-kind filter. Keyboard dismissal stays at the right. On Thoughts, the
+native tab bar always shows Home, Thoughts, Lists and Plan.
+Thoughts selects the all-thoughts view. Lists immediately opens its own empty destination and
+selector; choosing a collection displays it there. Leaving Lists clears the navigation selection,
+so reopening starts without a tick. The anchored popover keeps the native bar visible, and the
+page heading shows the selected collection’s name. Its menu contains lists, Add List and Edit Lists. The Thoughts tab spans all collections;
+list selection combines with kind and archive filters.
+Create list opens a bottom sheet with a name, description and default thought type, preserving
+Home’s draft. Edit lists opens a bottom sheet showing Plan and custom lists together. Its separate
+Create list button stacks the same form above it. Plan has no edit or delete controls; deleting a
+custom list keeps its thoughts. Creation has a cross at the left and Create at the right. Default
+types use the same four round icons as thought properties, and deletion uses the same trash action.
+The selected list can be edited directly from its toolbar. Thought properties use the same list
+selector and management actions, with No list for removing saved assignment. List editing preserves
+its vertical spacing while using larger, slightly inset names and a circular close control.
+A shared glass keyboard-down control is available throughout capture, Plan, thought editing, list
+forms, review answers and sharpening answers.
+
+Plan is the built-in dated list, using the same stored thoughts and list-backed task adapter.
+Its week picker, completion history, daily review and widgets remain available. Existing to-dos
+migrate into Plan. Automatic capture still files to-dos there; choosing a custom list keeps its
+to-dos in that collection.
+
+### Shared lists — collaborate through iCloud
+
+Open a custom list's editor and tap **Share List**. Apple's invitation sheet handles links,
+Messages, AirDrop and sharing permissions; **Manage Sharing** handles participants, access changes,
+stopping sharing or leaving. Sharing starts with invited people only, with view/edit options and
+an optional anyone-with-the-link setting. Participants need Fleeting and iCloud; no Fleeting server
+or additional account is used. Personal Plan remains private.
+
+Shared content, list metadata, to-do completion and manual archiving belong to everyone with access.
+Habit streaks, personal attention, hiding and reminder preferences stay private to each account.
+Shared thoughts do not automatically decay into the archive. View-only lists keep their content
+controls disabled while allowing personal habit progress and hiding. Capture drafts survive denied
+writes. Existing shared thoughts stay in their shared list; cross-share moves are not supported.
+
+Existing data keeps its store identity and CloudKit metadata. V8 upgrades retain a recovery SQLite
+snapshot before migration. Accepted invitations import into a separate shared store and open the
+invited list when it arrives. Existing cached content remains available offline; iCloud controls
+sync timing. The production schema is deployed and build 4's distribution entitlements are verified;
+signed, two-account invitation acceptance is still pending before broader release;
+see [the sharing checklist](docs/ICLOUD.md#cross-account-shared-list-acceptance).
+
 ### 🕯 Decay — the anti-hoarding mechanic
 
-<img src="docs/screenshots/inbox.png" width="260" align="right" alt="The inbox: a summary line reading 5 thoughts, 2 fading, with a 2 to decide link, then three urgency sections headed GOING SOON, THIS MONTH and PLENTY OF TIME. The two thoughts going soon sit flush with the warm paper with amber rails down their leading edges; the fresher ones below sit on raised white cards with purple rails. Each card carries a tinted chip holding its kind glyph, and the thoughts themselves are set in a serif." />
+<img src="docs/screenshots/inbox.png" width="260" align="right" alt="Thoughts in dark appearance: Lists, Filter and Settings controls, review beneath the count, and thoughts grouped by urgency with readable expiry metadata." />
 
 Every thought has a **freshness** value that falls over time, and the card is what shows it: as a
 thought fades its surface blends toward the page and its shadow drops away, so one about to be
@@ -123,7 +173,7 @@ restored to full freshness.
 
 ### ✦ Sharpen — half-baked in, fully-baked out
 
-<img src="docs/screenshots/sharpen.png" width="260" align="right" alt="The Sharpen screen: the raw captured note sits in a recess labelled WHAT YOU WROTE, and the generated title and paragraph sit on a raised card labelled SHARPENED beneath it, with an understated 'Take this further elsewhere' link and a Revert control below." />
+<img src="docs/screenshots/sharpen.png" width="260" align="right" alt="Sharpen in dark appearance: the original note above its developed title and prose, with share and revert controls below." />
 
 The differentiator. Tap Sharpen on a fragment and the on-device model asks **two or three short,
 specific questions** — *fair by what, income or room size? who has this problem badly enough to pay?*
@@ -144,21 +194,22 @@ affordance has the local model compose a rich, context-loaded prompt and hand it
 
 ### ↻ Review — a ritual you'll actually finish
 
-<img src="docs/screenshots/review.png" width="260" align="right" alt="The review screen, reached from its own tab: a progress label reading 1 of 2 above a progress bar, a single raised card holding the thought's text in a serif and an amber clock line saying it archives tomorrow, and three equal-weight capsule decisions along the bottom — Let go, Snooze and Keep, the last tinted purple." />
+<img src="docs/screenshots/review.png" width="260" align="right" alt="Thought review in dark appearance: scrolling cards with Keep active, Hide for 7 days and Archive inside each card, using the daily review style." />
 
 Once a week, Fleeting picks **at most seven** thoughts that genuinely need a decision — about to
-expire, or snoozed one too many times — and deals them as a card stack. Keep, Snooze, or Let go,
-by button or by swipe: left lets go, right keeps, up snoozes. All three are real decisions, so all
-three carry the same visual weight; the screen does not lean on your arm.
+expire, or paused one too many times — and presents scrolling cards like daily task review.
+Keep active refreshes a thought now; Hide for 7 days pauses visibility; Archive preserves it in Archived.
+Each card contains the same native decision controls as daily task review. Swipe left to archive
+or right to keep active; vertical gestures scroll the cards. A return date explains the pause.
 
-It is a **tab**, not a link buried in the list — this is the half of the deal where the app comes
-back and makes you decide, so it is a place you can go. Never presented on launch, never blocking.
+Open it from the **thoughts to review** invitation directly below the count on Thoughts.
+Review is a short activity within that page, never a separate tab or a launch interruption.
 A short session you finish beats a complete one you abandon. Idea cards arrive with one ambient
 sharpening question attached, so the ritual quietly does double duty.
 
 ### 🔔 Nudges — one a day, never in the way
 
-<img src="docs/screenshots/settings.png" width="260" align="right" alt="The settings screen: small wide section labels above white status cards. Sorting reads On-device model; Notifications reads Off with a Turn on notifications button; Storage reads On this device; Syncing reads This iPhone only in amber because this build cannot reach iCloud; and Widgets reads Sharing." />
+<img src="docs/screenshots/settings.png" width="260" align="right" alt="Settings in dark appearance: accessible sorting choices, notification controls and lifetime steppers on grouped cards." />
 
 A daily notification where the on-device model surfaces one genuinely forgotten thought and phrases
 it in a way that might restart it — in your own words, never scolding. Plus a weekly review
@@ -186,10 +237,10 @@ The **Plan** tab sits after Thoughts, with seven day buttons across the top. Pic
 short task, and tap its circle when it is finished. The compact entry row sits at the end of the
 checklist: saving turns it into a task and leaves a fresh, focused input underneath. A strike-through draws across the words;
 completed tasks remain on that day, and tapping again undoes completion. Previous and next week
-controls let you plan across a week boundary. Tasks added to an earlier day also enter Review. The tab order is Home, Thoughts, Plan, Review, Settings.
+controls let you plan across a week boundary. Tasks added to an earlier day also enter Review. The tab order is **Home, Thoughts, Lists, Plan**. Settings opens from the top-right control on each page;
+on Thoughts it sits beside Filter, and on Plan beside Today, in compact toolbar pills.
 
-At each new local calendar day, unfinished tasks from earlier days appear under **Review → Daily
-tasks**. **Finished** marks a task done on its original day. **Not finished** moves the same task
+At each new local calendar day, unfinished tasks from earlier days appear through the **review invitation on Plan**. **Finished** marks a task done on its original day. **Not finished** moves the same task
 to today, even after several days away. Nothing moves until you decide, and unfinished to-dos are not automatically archived by decay. Explicit Archive and Snooze actions
 from the shared thought controls still apply.
 
@@ -199,9 +250,17 @@ the pending daily decisions. Shared App Group storage is required to show and co
 widgets. Personal-team builds show an explanation and open Plan instead.
 
 ### ☁️ Sync
-Local-first SwiftData with automatic private CloudKit sync. There is no account and no server, and
-nothing leaves your iCloud. Signed out, the app is complete — it opens a device-local store and says
-so in Settings rather than nagging you to sign in.
+Local-first Core Data with automatic private CloudKit sync across devices using the same Apple
+Account. Thoughts, Plan tasks, habits and streaks, archive/completion state, and saved Sharpen
+interviews/write-ups use the same private store. Sorting, decay lifetimes, reminder preferences,
+and the dismissed capture hint synchronize through iCloud key-value storage. Notification
+permissions and delivery history remain device-specific. Capture continues to save locally offline.
+
+Incoming changes refresh lists, open details, review cards, settings and widget timelines. Unsaved
+text in an open detail is preserved. Upgrading from the free-account build imports its local
+records once and keeps the original database as a recovery copy. Settings reports “iCloud enabled”
+when configured and signed in; this is not a claim that every upload has completed. Sync is
+asynchronous, and deletions propagate too. See [iCloud setup and device checks](docs/ICLOUD.md).
 
 The interesting part is what CloudKit does to a schema. It merges a record **column by column**, so
 a thought's lifecycle position and the date belonging to it — stored separately — could arrive from
@@ -242,7 +301,7 @@ flowchart TD
     Feat["<b>Features</b><br/>Capture · Inbox · Sharpen<br/>Review · Settings"]
     DS["<b>DesignSystem</b><br/><i>tokens, components</i>"]
     Intel["<b>Intelligence</b><br/><i>LLM abstraction</i>"]
-    Persist["<b>Persistence</b><br/><i>SwiftData + CloudKit</i>"]
+    Persist["<b>Persistence</b><br/><i>Core Data + CloudKit</i>"]
     Notif["<b>Notifications</b>"]
     Core["<b>Core</b><br/><i>domain model · decay engine<br/>protocols · zero dependencies</i>"]
 
@@ -260,7 +319,7 @@ flowchart TD
 | Module | Responsibility | Depends on |
 |---|---|---|
 | `Core` | Domain entities, the decay engine, repository & service **protocols**. Pure Swift, no UIKit/SwiftUI/SwiftData. | *nothing* |
-| `Persistence` | SwiftData schema, migrations, CloudKit configuration, repository **implementations**. | `Core` |
+| `Persistence` | Versioned SwiftData schema/migrations, native Core Data sharing, CloudKit configuration and repository **implementations**. | `Core` |
 | `Intelligence` | `IntelligenceService` protocol with three implementations: on-device Foundation Models, deterministic heuristics, and a test stub. | `Core` |
 | `DesignSystem` | Colour/type/spacing/radius/elevation tokens and six shared components. Owns the freshness visual language. | — |
 | `Features` | One target per feature, each with its own `@Observable` state model and views. Features never import each other. | `Core`, `DesignSystem`, `Intelligence` |
@@ -292,9 +351,10 @@ This is deliberately built the way a shipped app is built, not the way a demo is
   status lines are each one decision. Elevation is a *level* rather than a shadow, because a drop
   shadow on a near-black page is invisible — the same value is drawn as a hairline in dark mode
   ([ADR-0022](docs/DECISIONS.md)).
-- **Testing** — 245 unit tests on the pure domain, the selection algorithms, the colour palette,
-  and an in-memory SwiftData container, plus 46 UI tests on a simulator. Assertions are about
-  mechanism, never about what a model happens to say.
+- **Testing** — the latest sharing pass ran 367 package tests across domain, features, design,
+  intelligence, notifications, persistence and isolated migrations, plus 13 focused simulator UI
+  cases. Debug and Release app/widget builds passed. Live cross-account iCloud acceptance remains
+  pending; simulator previews do not establish network delivery.
 - **CI** on every push: every package's tests, the app's UI tests on a simulator, SwiftLint,
   SwiftFormat check.
 - **Architecture Decision Records** in [docs/DECISIONS.md](docs/DECISIONS.md) — every significant
@@ -303,6 +363,12 @@ This is deliberately built the way a shipped app is built, not the way a demo is
   to Swift, and the phase order was chosen so each one introduces the Swift and iOS concepts the
   app's next problem actually requires. [docs/LEARNING.md](docs/LEARNING.md) records what that
   covered through Phase 1, before the explicit teaching track was paused in favour of shipping.
+
+## App-wide design review
+
+The [Apple-design audit](docs/DESIGN_AUDIT.md) records the screen-by-screen findings, changes and
+light/dark comparisons. The pass improves contrast, touch feedback, large-text layouts, keyboard
+continuity and failure feedback while retaining the serif identity and four native destinations.
 
 ## Roadmap
 
@@ -320,6 +386,8 @@ Detail and acceptance criteria for each phase in **[docs/ROADMAP.md](docs/ROADMA
 | 7 | Sync | CloudKit, versioned migration, merge-safe schema | 🟢 Done¹ |
 | 8 | Ship | Accessibility, contrast audit, motion, icon, privacy | 🟢 Done² |
 | 9 | Daily plan | Seven-day checklist, explicit daily review, Today/Tomorrow widgets | 🟢 Implemented; device widget validation pending |
+| 2.0 | Thought lists | Glass capture/browse selectors, list editor and shared Plan list | Implemented; bottom-sheet editor and list metadata |
+| 2.0 | iCloud shared lists | Native invitations, permissions, offline storage and personal progress | 🟡 Code and local checks complete; signed two-account acceptance pending |
 
 ¹ Everything is built and tested except the one thing that needs two signed devices under one iCloud
 account: convergence has not been *observed*.

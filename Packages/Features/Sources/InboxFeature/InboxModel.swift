@@ -6,6 +6,11 @@ import Observation
 @MainActor
 @Observable
 public final class InboxModel {
+    public var selectedListID: UUID?
+    public private(set) var lists: [ThoughtList] = [.plan]
+    public private(set) var listError: String?
+    private let listRepository: (any ThoughtListRepository)?
+
     /// Live thoughts, most recently captured first. Archived thoughts are not shown here.
     public private(set) var thoughts: [Thought] = []
 
@@ -35,16 +40,17 @@ public final class InboxModel {
     /// "All" and each kind draw from the live list only; "Archived" draws from the archive.
     /// Unsorted thoughts have no chip of their own — they appear under All.
     public var filteredThoughts: [Thought] {
-        switch filter {
-        case .all: thoughts
-        case let .kind(kind): thoughts.filter { $0.kind == kind }
-        case .archived: archivedThoughts
+        let source = isShowingArchive ? archivedThoughts : thoughts
+        let inList = source.filter { selectedListID == nil || $0.listID == selectedListID }
+        if case let .kind(kind) = filter {
+            return inList.filter { $0.kind == kind }
         }
+        return inList
     }
 
     /// How many live thoughts there are in total, across every kind.
     public var liveCount: Int {
-        thoughts.count
+        listThoughts.count
     }
 
     /// The current filter's thoughts grouped into urgency sections, most urgent first.
@@ -68,12 +74,12 @@ public final class InboxModel {
 
     /// How many archived thoughts there are, for the Archived chip's count.
     public var archivedCount: Int {
-        archivedThoughts.count
+        archivedThoughts.filter { selectedListID == nil || $0.listID == selectedListID }.count
     }
 
     /// How many live thoughts are in the fading or expiring bands, for the masthead.
     public var fadingCount: Int {
-        thoughts.reduce(into: 0) { total, thought in
+        listThoughts.reduce(into: 0) { total, thought in
             switch freshness(of: thought).band {
             case .fading, .expiring: total += 1
             default: break
@@ -85,11 +91,15 @@ public final class InboxModel {
     /// - Parameter kind: The kind to count.
     /// - Returns: The number of live thoughts of that kind.
     public func count(of kind: ThoughtKind) -> Int {
-        thoughts.reduce(into: 0) { total, thought in
+        listThoughts.reduce(into: 0) { total, thought in
             if thought.kind == kind {
                 total += 1
             }
         }
+    }
+
+    private var listThoughts: [Thought] {
+        thoughts.filter { selectedListID == nil || $0.listID == selectedListID }
     }
 
     private let repository: any ThoughtRepository
@@ -110,8 +120,10 @@ public final class InboxModel {
         sweeper: any ArchiveSweeping,
         engine: DecayEngine = DecayEngine(),
         selector: ReviewSelector = ReviewSelector(),
-        clock: any WallClock
+        clock: any WallClock,
+        listRepository: (any ThoughtListRepository)? = nil
     ) {
+        self.listRepository = listRepository
         self.repository = repository
         self.sweeper = sweeper
         self.engine = engine
@@ -130,6 +142,12 @@ public final class InboxModel {
     /// next load.
     public func load() async {
         do {
+            if let listRepository {
+                lists = try await listRepository.lists()
+                if let selectedListID, !lists.contains(where: { $0.id == selectedListID }) {
+                    self.selectedListID = nil
+                }
+            }
             try await sweeper.sweep()
             let now = clock.now
             thoughts = try await repository.thoughts(in: .live).filter { $0.isAwake(at: now) }
@@ -140,6 +158,45 @@ public final class InboxModel {
             lastError = error
         }
         hasLoaded = true
+    }
+
+    /// Saves all list details; creation selects the new list in Thoughts.
+    public func saveList(_ list: ThoughtList, selecting: Bool = false) async -> Bool {
+        guard let listRepository else { return false }
+        do {
+            try await listRepository.saveList(list)
+            if selecting {
+                selectedListID = list.id
+            }
+            await load()
+            listError = nil
+            return true
+        } catch {
+            listError = (error as? ListSharingError)?
+                .localizedDescription ?? (error as? ThoughtListError == .duplicateName
+                    ? "A list with this name already exists." : "This list couldn’t be saved. Try again.")
+            return false
+        }
+    }
+
+    /// Clears a previous form error when opening a new editing session.
+    public func clearListError() {
+        listError = nil
+    }
+
+    /// Unfiles the list's thoughts while preserving their contents and lifecycle.
+    @discardableResult
+    public func deleteList(_ list: ThoughtList) async -> Bool {
+        guard let listRepository else { return false }
+        do {
+            try await listRepository.deleteList(id: list.id)
+            await load()
+            listError = nil
+            return true
+        } catch {
+            listError = (error as? ListSharingError)?
+                .localizedDescription ?? "This list couldn’t be deleted. Try again."; return false
+        }
     }
 
     /// How fresh a thought is right now.

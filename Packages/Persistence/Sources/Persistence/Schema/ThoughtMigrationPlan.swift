@@ -1,3 +1,4 @@
+import Core
 import Foundation
 import SwiftData
 
@@ -9,13 +10,42 @@ enum ThoughtMigrationPlan: SchemaMigrationPlan {
             ThoughtSchemaV2.self,
             ThoughtSchemaV3.self,
             ThoughtSchemaV4.self,
-            ThoughtSchemaV5.self
+            ThoughtSchemaV5.self,
+            ThoughtSchemaV6.self,
+            ThoughtSchemaV7.self,
+            ThoughtSchemaV8.self
         ]
     }
 
     static var stages: [MigrationStage] {
-        [version1To2, version2To3, version3To4, version4To5]
+        [version1To2, version2To3, version3To4, version4To5, version5To6, version6To7, version7To8]
     }
+
+    /// Adds optional sharing graph links and private member activity without moving records.
+    private static let version7To8 = MigrationStage.lightweight(
+        fromVersion: ThoughtSchemaV7.self,
+        toVersion: ThoughtSchemaV8.self
+    )
+
+    /// Adds metadata with neutral defaults, preserving list identities and memberships.
+    private static let version6To7 = MigrationStage.lightweight(
+        fromVersion: ThoughtSchemaV6.self, toVersion: ThoughtSchemaV7.self
+    )
+
+    /// Keeps every previously shared to-do in Plan, including completion and archived history.
+    private static let version5To6 = MigrationStage.custom(
+        fromVersion: ThoughtSchemaV5.self,
+        toVersion: ThoughtSchemaV6.self,
+        willMigrate: nil,
+        didMigrate: { context in
+            for row in try context.fetch(FetchDescriptor<ThoughtSchemaV6.ThoughtEntity>())
+                where row.kindRaw == "todo"
+            {
+                row.listID = ThoughtList.planID
+            }
+            try context.save()
+        }
+    )
 
     /// Adds the daily checklist without changing existing thoughts.
     private static let version4To5 = MigrationStage.lightweight(

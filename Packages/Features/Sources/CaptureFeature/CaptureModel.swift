@@ -10,6 +10,23 @@ import Observation
 @MainActor
 @Observable
 public final class CaptureModel {
+    /// The destination retained for consecutive captures, or `nil` for unfiled thoughts.
+    public var selectedListID: UUID?
+    public private(set) var lists: [ThoughtList] = [.plan]
+    public private(set) var listError: String?
+    private let listRepository: (any ThoughtListRepository)?
+
+    public func loadLists() async {
+        guard let listRepository else { return }
+        do {
+            lists = try await listRepository.lists()
+            if let selectedListID, !lists.contains(where: { $0.id == selectedListID }) {
+                self.selectedListID = nil
+            }
+            listError = nil
+        } catch { listError = "Lists couldn’t load. Try again." }
+    }
+
     /// The text currently in the field. Bound directly to the capture field.
     public var text: String = ""
 
@@ -127,8 +144,10 @@ public final class CaptureModel {
         repository: any ThoughtRepository,
         intelligence: any IntelligenceService,
         changes: ThoughtChangeNotifier = ThoughtChangeNotifier(),
-        clock: any WallClock
+        clock: any WallClock,
+        listRepository: (any ThoughtListRepository)? = nil
     ) {
+        self.listRepository = listRepository
         self.repository = repository
         self.intelligence = intelligence
         self.changes = changes
@@ -151,13 +170,18 @@ public final class CaptureModel {
     public func save() async {
         guard canSave, !isSaving else { return }
 
-        let picked = chosenKind
+        let listDefault = lists.first { $0.id == selectedListID }?.defaultKind
+        let picked = selectedListID == ThoughtList.planID ? ThoughtKind.todo
+            : chosenKind ?? listDefault.flatMap { $0 == .unsorted ? nil : $0 }
+        let destination = selectedListID ?? (picked == .todo ? ThoughtList.planID : nil)
         let thought = Thought(
             body: trimmedText,
             capturedAt: clock.now,
             kind: picked ?? .unsorted,
             kindSource: picked == nil ? .unclassified : .confirmed,
-            customLifetime: customLifetime
+            dueAt: destination == ThoughtList.planID ? PlanDay(clock.now).date() : nil,
+            customLifetime: customLifetime,
+            listID: destination
         )
         isSaving = true
         defer { isSaving = false }
@@ -170,7 +194,7 @@ public final class CaptureModel {
                 id: thought.id,
                 body: thought.body,
                 kind: picked,
-                lifetime: lifetimeDescription()
+                lifetime: lifetimeDescription(for: picked)
             )
             text = ""
             chosenKind = nil
@@ -201,14 +225,17 @@ public final class CaptureModel {
     /// to a different rate, which is exactly why the receipt says "sorting…" rather than naming a
     /// kind it does not yet have.
     /// - Returns: A phrase such as "3 months" or "2 weeks".
-    private func lifetimeDescription() -> String {
+    private func lifetimeDescription(for kind: ThoughtKind?) -> String {
+        if lists.first(where: { $0.id == selectedListID })?.sharing != nil {
+            return "archive manually"
+        }
         let count: Int
         let unit: ExpirationUnit
         if usesCustomExpiration {
             count = max(expirationCount, 1)
             unit = expirationUnit
         } else {
-            let expiry = Self.defaultExpiry(for: chosenKind)
+            let expiry = Self.defaultExpiry(for: kind)
             count = expiry.count
             unit = expiry.unit
         }
@@ -230,8 +257,13 @@ public final class CaptureModel {
             let result = await intelligence.classify(thought.body)
             guard result != .unknown else { return }
 
-            var classified = thought
+            guard var classified = try? await repository.all().first(where: { $0.id == thought.id })
+            else { return }
             classified.applyClassification(kind: result.kind, title: result.title)
+            if classified.kind == .todo, classified.listID == nil, classified.kindSource != .confirmed {
+                classified.listID = ThoughtList.planID
+                classified.dueAt = classified.dueAt ?? PlanDay(classified.capturedAt).date()
+            }
             // A habit's rhythm is read out of the same sentence as its kind, so it lands in the
             // same write. A note that named no frequency leaves the default alone (ADR-0048).
             if let cadence = result.cadence {

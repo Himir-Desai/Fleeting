@@ -204,7 +204,7 @@ public final class SettingsModel {
 
         switch syncStatus {
         case .syncing:
-            rows.append(Fact(label: "Syncing", value: "iCloud", isWarning: false))
+            rows.append(Fact(label: "Syncing", value: "iCloud enabled", isWarning: false))
         case .signedOut, .localOnly:
             rows.append(Fact(label: "Syncing", value: "This iPhone only", isWarning: true))
         case .checking:
@@ -232,7 +232,14 @@ public final class SettingsModel {
             """
         }
         if case .signedOut = syncStatus {
-            return "Sign in to iCloud to keep thoughts in step across devices. Capture works either way."
+            return """
+            Fleeting uses the Apple Account in your device’s Settings—there is no separate login here. \
+            Open Settings to sign in, then go to your name → iCloud → See All and enable Fleeting. \
+            Capture still saves on this device.
+            """
+        }
+        if case let .localOnly(reason) = syncStatus {
+            return reason.summary
         }
         return nil
     }

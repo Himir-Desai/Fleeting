@@ -10,9 +10,10 @@ struct PlanTodoRow: View {
     let action: () -> Void
 
     var body: some View {
-        HStack(alignment: .center, spacing: Spacing.regular) {
+        HStack(alignment: .center, spacing: Spacing.tight) {
             Button(action: action) {
                 Image(systemName: todo.isDone ? "checkmark.circle.fill" : "circle")
+                    .font(Typography.controlSymbol)
                     .foregroundStyle(todo.isDone ? Palette.accentText : Palette.inkMuted)
                     .frame(minWidth: 44, minHeight: 44)
                     .contentShape(Rectangle())
@@ -23,11 +24,12 @@ struct PlanTodoRow: View {
             .accessibilityIdentifier("plan.task.\(todo.id)")
             if let onOpen {
                 Button(action: onOpen) {
-                    HStack {
+                    HStack(spacing: Spacing.tight) {
                         PlanTaskText(text: todo.text, isDone: todo.isDone)
                         Spacer(minLength: 0)
                         Image(systemName: "chevron.right")
-                            .font(Typography.caption).foregroundStyle(Palette.inkMuted)
+                            .font(Typography.secondarySymbol).foregroundStyle(Palette.inkMuted)
+                            .frame(width: 44, height: 44)
                     }
                     .frame(minHeight: 44)
                     .contentShape(Rectangle())
@@ -39,7 +41,7 @@ struct PlanTodoRow: View {
                 Spacer(minLength: 0)
             }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressFeedbackStyle())
         .disabled(disabled)
         .motion(Motion.decay, value: todo.isDone)
         .sensoryFeedback(.success, trigger: todo.isDone)

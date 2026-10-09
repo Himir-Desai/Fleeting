@@ -7,15 +7,18 @@ public struct PlanView: View {
     @Bindable private var model: PlanModel
     @FocusState private var isInputFocused: Bool
     @State private var savedCount = 0
+    private let onSettings: () -> Void
     private let onReview: () -> Void
     private let onOpen: (DailyTodo) -> Void
 
     public init(
-        model: PlanModel, onOpen: @escaping (DailyTodo) -> Void, onReview: @escaping () -> Void
+        model: PlanModel, onOpen: @escaping (DailyTodo) -> Void, onReview: @escaping () -> Void,
+        onSettings: @escaping () -> Void = {}
     ) {
         self.model = model
         self.onReview = onReview
         self.onOpen = onOpen
+        self.onSettings = onSettings
     }
 
     public var body: some View {
@@ -39,7 +42,7 @@ public struct PlanView: View {
                         Button("Try again") { Task { await model.load() } }
                     }
                     if model.selectedDay < model.today {
-                        Text("Tasks added to an earlier day also appear in Review.")
+                        Text("Tasks added to an earlier day will need a review.")
                             .font(Typography.caption).foregroundStyle(Palette.inkMuted)
                     }
                     if !model.hasLoaded {
@@ -50,29 +53,25 @@ public struct PlanView: View {
                 .padding(Spacing.loose)
             }
             .background(Palette.surface.ignoresSafeArea())
-            .navigationTitle("Plan")
-            #if os(iOS)
-                .navigationBarTitleDisplayMode(.inline)
-            #endif
-                .toolbar {
-                    ToolbarItem {
-                        Button("Today") { model.showToday() }
-                            .accessibilityIdentifier("plan.today")
-                    }
-                    #if os(iOS)
-                        ToolbarItemGroup(placement: .keyboard) {
-                            Spacer()
-                            Button("Done") { isInputFocused = false }
-                                .accessibilityIdentifier("plan.dismissKeyboard")
-                        }
-                    #endif
+            .pageHeading("Plan") {
+                ToolbarPill {
+                    Button("Today", systemImage: "calendar") { model.showToday() }
+                        .accessibilityIdentifier("plan.today")
+                    Button(action: onSettings) { Image(systemName: "gearshape") }
+                        .accessibilityLabel("Settings")
+                        .accessibilityIdentifier("app.settings")
                 }
-                .scrollDismissesKeyboard(.interactively)
-                .task { await model.load() }
-                .refreshable { await model.load() }
-                .onChange(of: savedCount) { _, _ in
-                    proxy.scrollTo("plan.composer", anchor: .bottom)
-                }
+            }
+            .keyboardDismissControl(isFocused: isInputFocused, identifier: "plan.dismissKeyboard") {
+                isInputFocused = false
+            }
+            .sensoryFeedback(.success, trigger: savedCount)
+            .scrollDismissesKeyboard(.interactively)
+            .task { await model.load() }
+            .refreshable { await model.load() }
+            .onChange(of: savedCount) { _, _ in
+                proxy.scrollTo("plan.composer", anchor: .bottom)
+            }
         }
     }
 
@@ -109,31 +108,32 @@ public struct PlanView: View {
 
     /// Saves this row and keeps the following blank row ready for the next task.
     private func submit() {
+        guard model.canAdd, !model.isSaving else { return }
+        isInputFocused = true
         Task {
-            guard await model.add() else { return }
-            isInputFocused = true
+            let added = await model.add()
+            guard added else { return }
             savedCount += 1
         }
     }
 
     private var composer: some View {
-        HStack(alignment: .center, spacing: Spacing.regular) {
+        HStack(alignment: .center, spacing: Spacing.tight) {
             Image(systemName: "circle")
-                .font(Typography.body)
+                .font(Typography.controlSymbol)
                 .foregroundStyle(Palette.inkMuted)
                 .frame(minWidth: 44, minHeight: 44)
                 .accessibilityHidden(true)
-            TextField("One thing to do…", text: $model.draft, axis: .vertical)
+            TextField("One thing to do…", text: $model.draft)
                 .focused($isInputFocused)
                 .font(Typography.serifBody)
                 .foregroundStyle(Palette.ink)
                 .frame(minHeight: 44)
-                .lineLimit(1 ... 4)
                 .submitLabel(.next)
                 .onSubmit(submit)
                 .accessibilityIdentifier("plan.input")
             Button(action: submit) {
-                Image(systemName: "plus").font(Typography.body)
+                Image(systemName: "plus").font(Typography.controlSymbol)
                     .frame(minWidth: 44, minHeight: 44)
             }
             .disabled(!model.canAdd || model.isSaving)

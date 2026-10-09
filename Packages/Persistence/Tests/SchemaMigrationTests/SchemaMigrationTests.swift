@@ -1,4 +1,5 @@
 import Core
+import CoreData
 import Foundation
 @testable import Persistence
 import SwiftData
@@ -57,7 +58,7 @@ struct SchemaMigrationTests {
     /// version and fetching the current entity asks SwiftData to cast across versions, which is a
     /// trap rather than an error and takes the whole test process down with it.
     private func openCurrentStore(at url: URL) throws -> [Thought] {
-        let schema = Schema(versionedSchema: ThoughtSchemaV5.self)
+        let schema = Schema(versionedSchema: ThoughtSchemaV8.self)
         let container = try ModelContainer(
             for: schema,
             migrationPlan: ThoughtMigrationPlan.self,
@@ -172,7 +173,7 @@ struct SchemaMigrationTests {
 
             // At the current version, because `ThoughtEntity` is the current entity: opening at
             // an older one and inserting asks SwiftData to cast across versions, which traps.
-            let schema = Schema(versionedSchema: ThoughtSchemaV5.self)
+            let schema = Schema(versionedSchema: ThoughtSchemaV8.self)
             let container = try ModelContainer(
                 for: schema,
                 migrationPlan: ThoughtMigrationPlan.self,
@@ -240,6 +241,92 @@ struct SchemaMigrationTests {
 }
 
 extension SchemaMigrationTests {
+    @MainActor
+    @Test(
+        "V7 upgrades to native collaboration without replacing store identity, text, lifecycle or list metadata"
+    )
+    func version7CollaborationMigration() throws {
+        try withTemporaryStore { url in
+            let thoughtID = UUID(), listID = UUID()
+            let until = epoch.addingTimeInterval(86400)
+            try autoreleasepool {
+                let schema = Schema(versionedSchema: ThoughtSchemaV7.self)
+                let original = try ModelContainer(
+                    for: schema, configurations: ModelConfiguration(
+                        schema: schema,
+                        url: url,
+                        cloudKitDatabase: .none
+                    )
+                )
+                let context = ModelContext(original)
+                let row = ThoughtSchemaV7.ThoughtEntity(id: thoughtID, capturedAt: epoch)
+                row.body = "Original words\nwith café and 🌱"
+                row.title = "A title"
+                row.listID = listID
+                row.kindRaw = "habit"
+                row.kindSourceRaw = "confirmed"
+                row.cadenceRaw = HabitCadence.weekly.rawValue
+                row.cadenceSourceRaw = "confirmed"
+                row.stateCode = StoredState.code(for: .snoozed(until: until))
+                row.streakCode = StoredStreak.code(for: Streak(count: 6, lastMarkedAt: epoch))
+                row.lastActedAt = epoch
+                row.dueAt = until
+                row.snoozeCount = 3
+                row.customLifetime = 43200
+                context.insert(row)
+                context.insert(ThoughtSchemaV7.ThoughtListEntity(
+                    id: listID, name: "Together", listDescription: "Our reading", defaultKindRaw: "habit"
+                ))
+                try context.save()
+            }
+            let before = try NSPersistentStoreCoordinator.metadataForPersistentStore(
+                ofType: NSSQLiteStoreType,
+                at: url
+            )
+            try CollaborationStore.preserveBeforeUpgrade(at: url)
+            let backup = url.deletingLastPathComponent().appending(path: "Fleeting-before-sharing.store")
+            let recovery = try NSPersistentStoreCoordinator.metadataForPersistentStore(
+                ofType: NSSQLiteStoreType,
+                at: backup
+            )
+            #expect(recovery[NSStoreUUIDKey] as? String == before[NSStoreUUIDKey] as? String)
+            try autoreleasepool { _ = try ModelContainerFactory.open(cloudKitDatabase: .none, url: url) }
+            let store = try CollaborationStore(privateURL: url)
+            let repository = CollaborationRepository(store: store)
+            let row = try #require(try repository.thoughtRow(thoughtID))
+            let thought = CollaborationMapping.read(row, listID: listID, sharing: nil)
+            #expect(thought.body == "Original words\nwith café and 🌱")
+            #expect(thought.title == "A title")
+            #expect(thought.state == .snoozed(until: until))
+            #expect(thought.streak == Streak(count: 6, lastMarkedAt: epoch))
+            #expect(thought.cadence == .weekly)
+            #expect(thought.cadenceSource == .confirmed)
+            #expect(thought.kindSource == .confirmed)
+            #expect(thought.dueAt == until)
+            #expect(thought.snoozeCount == 3)
+            #expect(thought.customLifetime == 43200)
+            let list = try #require(try repository.listRow(listID))
+            #expect(list.value(forKey: "listDescription") as? String == "Our reading")
+            #expect(list.value(forKey: "defaultKindRaw") as? String == "habit")
+            #expect(list.value(forKey: "sharingEnabled") as? Bool == false)
+            #expect(row.value(forKey: "collection") == nil)
+            #expect(store.privateStore
+                .metadata[NSStoreUUIDKey] as? String == before[NSStoreUUIDKey] as? String)
+            var updated = thought
+            updated.archive(at: epoch)
+            CollaborationMapping.write(updated, to: row)
+            try repository.save()
+            #expect(row.value(forKey: "stateRaw") as? String == "archived")
+            // The recovery file is still the unmigrated V7 shape after new writes succeed.
+            let preserved = try NSPersistentStoreCoordinator.metadataForPersistentStore(
+                ofType: NSSQLiteStoreType,
+                at: backup
+            )
+            #expect(preserved[NSStoreModelVersionHashesKey] as? [String: Data] ==
+                before[NSStoreModelVersionHashesKey] as? [String: Data])
+        }
+    }
+
     @Test("version 4 thoughts survive adding the checklist and the new table accepts tasks")
     func version4ChecklistMigration() throws {
         try withTemporaryStore { url in
@@ -256,7 +343,7 @@ extension SchemaMigrationTests {
                 context.insert(thought)
                 try context.save()
             }()
-            let schema = Schema(versionedSchema: ThoughtSchemaV5.self)
+            let schema = Schema(versionedSchema: ThoughtSchemaV8.self)
             let container = try ModelContainer(
                 for: schema, migrationPlan: ThoughtMigrationPlan.self,
                 configurations: ModelConfiguration(schema: schema, url: url)
@@ -264,14 +351,92 @@ extension SchemaMigrationTests {
             let context = ModelContext(container)
             #expect(try context.fetch(FetchDescriptor<ThoughtEntity>()).first?.body == "Existing habit")
             #expect(try context.fetch(FetchDescriptor<ThoughtEntity>()).first?.cadenceRaw == "weekly")
-            #expect(try context.fetch(FetchDescriptor<ThoughtSchemaV5.DailyTodoEntity>()).isEmpty)
+            #expect(try context.fetch(FetchDescriptor<ThoughtSchemaV8.DailyTodoEntity>()).isEmpty)
             let task = DailyTodo(text: "Today's task", createdAt: epoch, day: PlanDay(rawValue: 20_260_922))
-            let row = ThoughtSchemaV5.DailyTodoEntity(id: task.id, createdAt: epoch)
+            let row = ThoughtSchemaV8.DailyTodoEntity(id: task.id, createdAt: epoch)
             row.payload = try JSONEncoder().encode(task)
             context.insert(row)
             try context.save()
-            #expect(try context.fetch(FetchDescriptor<ThoughtSchemaV5.DailyTodoEntity>()).count == 1)
+            #expect(try context.fetch(FetchDescriptor<ThoughtSchemaV8.DailyTodoEntity>()).count == 1)
             #expect(try openCurrentStore(at: url).count == 1)
+        }
+    }
+}
+
+extension SchemaMigrationTests {
+    @Test("version 5 assigns previously shared todos to Plan without changing other thoughts or history")
+    func version5ListMigration() throws {
+        try withTemporaryStore { url in
+            let todoID = UUID()
+            let ideaID = UUID()
+            try {
+                let schema = Schema(versionedSchema: ThoughtSchemaV5.self)
+                let container = try ModelContainer(
+                    for: schema,
+                    configurations: ModelConfiguration(schema: schema, url: url)
+                )
+                let context = ModelContext(container)
+                let todo = ThoughtSchemaV5.ThoughtEntity(id: todoID, capturedAt: epoch)
+                todo.body = "Completed task"
+                todo.kindRaw = "todo"
+                todo.dueAt = epoch
+                todo.stateCode = StoredState.code(for: .done(at: epoch))
+                todo.isLive = false
+                context.insert(todo)
+                let idea = ThoughtSchemaV5.ThoughtEntity(id: ideaID, capturedAt: epoch)
+                idea.body = "Keep these words"
+                idea.kindRaw = "idea"
+                context.insert(idea)
+                try context.save()
+            }()
+            let migrated = try openCurrentStore(at: url)
+            let todo = try #require(migrated.first { $0.id == todoID })
+            #expect(todo.listID == ThoughtList.planID)
+            #expect(todo.state == .done(at: epoch))
+            #expect(todo.dueAt == epoch)
+            #expect(todo.body == "Completed task")
+            #expect(migrated.first { $0.id == ideaID }?.listID == nil)
+            #expect(try openCurrentStore(at: url) == migrated)
+        }
+    }
+}
+
+extension SchemaMigrationTests {
+    @Test("version 6 lists retain names, identity and membership with neutral metadata defaults")
+    func version6ListMetadataMigration() throws {
+        try withTemporaryStore { url in
+            let listID = UUID()
+            let thoughtID = UUID()
+            try {
+                let schema = Schema(versionedSchema: ThoughtSchemaV6.self)
+                let container = try ModelContainer(
+                    for: schema,
+                    configurations: ModelConfiguration(schema: schema, url: url)
+                )
+                let context = ModelContext(container)
+                context.insert(ThoughtSchemaV6.ThoughtListEntity(id: listID, name: "Writing"))
+                let row = ThoughtSchemaV6.ThoughtEntity(id: thoughtID, capturedAt: epoch)
+                row.body = "Existing draft"
+                row.listID = listID
+                context.insert(row)
+                try context.save()
+            }()
+            let schema = Schema(versionedSchema: ThoughtSchemaV8.self)
+            let container = try ModelContainer(
+                for: schema,
+                migrationPlan: ThoughtMigrationPlan.self,
+                configurations: ModelConfiguration(schema: schema, url: url)
+            )
+            let context = ModelContext(container)
+            let list = try #require(context.fetch(FetchDescriptor<ThoughtSchemaV8.ThoughtListEntity>()).first)
+            #expect(list.id == listID)
+            #expect(list.name == "Writing")
+            #expect(list.listDescription.isEmpty)
+            #expect(list.defaultKindRaw == "unsorted")
+            let thought = try #require(context.fetch(FetchDescriptor<ThoughtEntity>()).first)
+            #expect(thought.id == thoughtID)
+            #expect(thought.listID == listID)
+            #expect(thought.body == "Existing draft")
         }
     }
 }

@@ -30,8 +30,8 @@ struct HabitCard: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    /// The mark control's tap target, which has to clear 44pt at every type size.
-    @ScaledMetric(relativeTo: .body) private var controlSize: CGFloat = 44
+    /// The mark control's 44-point tap target.
+    private let controlSize: CGFloat = 44
 
     var body: some View {
         HStack(alignment: .center, spacing: Spacing.regular) {
@@ -64,13 +64,14 @@ struct HabitCard: View {
                 .frame(width: controlSize, height: controlSize)
                 .contentShape(.rect)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressFeedbackStyle())
             .disabled(isKeeping)
             .accessibilityIdentifier("home.habit.mark")
             .accessibilityLabel("Keep \(thought.title ?? thought.body)")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(Spacing.inset)
+        .padding(.horizontal, Spacing.regular)
+        .padding(.vertical, Spacing.snug)
         .background {
             RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
                 .fill(Palette.raised)

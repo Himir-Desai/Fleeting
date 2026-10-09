@@ -25,8 +25,8 @@ struct CaptureThoughtIntent: AppIntent {
             return .result(dialog: "There was nothing to save.")
         }
 
-        let store = try ModelContainerFactory.store()
-        let repository = SwiftDataThoughtRepository(modelContainer: store.container)
+        let store = try await CollaborationStore.open()
+        let repository = await CollaborationRepository(store: store)
         try await repository.add(Thought(body: trimmed, capturedAt: SystemClock().now))
 
         return .result(dialog: "Saved.")

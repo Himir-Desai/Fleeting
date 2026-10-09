@@ -10,38 +10,6 @@ public struct ReviewView: View {
     @State private var model: ReviewModel
     @FocusState private var isAnswerFocused: Bool
     @Environment(\.dismiss) private var dismiss
-
-    /// How tall the card's scroll view is, so the card can be centred in it while it fits and
-    /// scroll from the top once it does not.
-    @State private var cardArea: CGFloat = 0
-
-    /// How far the card has been dragged, so it follows the thumb before a decision commits.
-    @State private var dragOffset: CGSize = .zero
-
-    /// How far a drag must travel before it counts as a decision rather than a fidget.
-    private let decisionThreshold: CGFloat = 96
-
-    /// Left lets go, right keeps, up snoozes.
-    ///
-    /// A gesture is a shortcut, never the only way: every decision it can reach is also a button
-    /// in the row below (ADR-0040). Anything short of the threshold springs back and decides
-    /// nothing.
-    private var decisionDrag: some Gesture {
-        DragGesture()
-            .onChanged { dragOffset = $0.translation }
-            .onEnded { value in
-                let horizontal = value.translation.width
-                let vertical = value.translation.height
-                dragOffset = .zero
-
-                if abs(horizontal) > abs(vertical), abs(horizontal) > decisionThreshold {
-                    Task { horizontal > 0 ? await model.act() : await model.drop() }
-                } else if -vertical > decisionThreshold {
-                    Task { await model.snooze() }
-                }
-            }
-    }
-
     /// Creates the review.
     /// - Parameter model: State for the session, built by the composition root.
     public init(model: ReviewModel) {
@@ -66,11 +34,15 @@ public struct ReviewView: View {
         // worth confirming without a banner.
         .motion(Motion.card, value: model.position)
         .sensoryFeedback(.selection, trigger: model.position)
-        .navigationTitle("Review")
+        .keyboardDismissControl(isFocused: isAnswerFocused, identifier: "review.dismissKeyboard") {
+            isAnswerFocused = false
+        }
+        .pageHeading("Review")
         #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
         #endif
             .task { await model.load() }
+            .task { await model.observeChanges() }
             .task(id: model.current?.id) { await model.loadAmbientQuestion() }
     }
 
@@ -83,87 +55,69 @@ public struct ReviewView: View {
         .accessibilityIdentifier("review.empty")
     }
 
-    /// One card, with the decisions available for it.
-    @ViewBuilder
+    /// The same scrolling card layout used by daily task review.
     private var session: some View {
-        if let thought = model.current {
+        ScrollView {
             VStack(alignment: .leading, spacing: Spacing.loose) {
-                progress
-
-                // The card scrolls and the decisions do not. At the largest type sizes the card
-                // grows taller than the screen, and in a plain stack it pushed "Let go" off the
-                // bottom edge — the decisions are the point of the screen, so they stay put and
-                // the card gives way instead.
-                ScrollView {
-                    Card(elevation: .floating) {
-                        VStack(alignment: .leading, spacing: Spacing.loose) {
-                            Text(thought.body)
-                                .font(Typography.quoted)
-                                .foregroundStyle(Palette.ink)
-                                .accessibilityIdentifier("review.card")
-
-                            if let expiry = model.currentExpiry {
-                                Label {
-                                    Text(
-                                        "archives \(expiry, format: .relative(presentation: .named))"
-                                    )
-                                } icon: {
-                                    Image(systemName: "clock")
-                                }
-                                .font(Typography.caption)
-                                .foregroundStyle(Palette.fading)
-                                .accessibilityIdentifier("review.expiry")
-                            }
-
-                            if let question = model.ambientQuestion {
-                                Divider().overlay(Palette.separator)
-                                ambientPrompt(question)
-                            }
-                        }
-                    }
-                    // Centred while it fits and scrolled from the top once it does not: one card
-                    // pinned to the top of an empty page reads as a loading state, but a card
-                    // taller than the screen must start at its first line.
-                    .frame(maxWidth: .infinity, minHeight: cardArea, alignment: .center)
-                    // A card stack should answer to the thumb. Left lets go, right keeps, up
-                    // snoozes — the same three decisions as the row below, so nothing is reachable
-                    // only by gesture (ADR-0040).
-                    .offset(dragOffset)
-                    .gesture(decisionDrag)
-                }
-                .scrollBounceBehavior(.basedOnSize)
-                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { cardArea = $0 }
-
-                ReviewDecisions(
-                    onLetGo: { Task { await model.drop() } },
-                    onSnooze: { Task { await model.snooze() } },
-                    onKeep: { Task { await model.act() } }
+                Text("A fresh start").font(Typography.display).foregroundStyle(Palette.ink)
+                Text(
+                    "Keep active refreshes it now. \(model.hideTitle) pauses visibility. Archive saves it in Archived without deleting it."
                 )
+                .font(Typography.body).foregroundStyle(Palette.inkMuted)
+                Text("\(model.tally.total) of \(model.cards.count) reviewed")
+                    .font(Typography.caption).foregroundStyle(Palette.inkMuted)
+                    .accessibilityIdentifier("review.progress")
+                if let error = model.lastError {
+                    Text(error).font(Typography.caption).foregroundStyle(Palette.fading)
+                        .accessibilityIdentifier("review.error")
+                }
+                ForEach(model.pendingCards) { thought in
+                    thoughtCard(thought)
+                        .transition(.opacity)
+                }
             }
             .padding(Spacing.loose)
         }
+        .scrollDismissesKeyboard(.interactively)
+        .background(Palette.surface)
+        .accessibilityIdentifier("review.list")
     }
 
-    /// How far through the session the user is, said in words and drawn as a bar.
-    ///
-    /// The bar is what makes the session feel finite from the first card, which is the whole
-    /// argument for capping it at seven (ADR-0007).
-    private var progress: some View {
-        VStack(alignment: .leading, spacing: Spacing.snug) {
-            SectionLabel("\(model.progress.position) of \(model.progress.total)")
-                .accessibilityIdentifier("review.progress")
-                .accessibilityLabel(
-                    "Thought \(model.progress.position) of \(model.progress.total)"
+    private func thoughtCard(_ thought: Thought) -> some View {
+        let isCurrent = model.current?.id == thought.id
+        let suffix = isCurrent ? "" : "." + thought.id.uuidString
+        return ReviewThoughtCard(
+            onArchive: { Task { await model.archive(id: thought.id) } },
+            onKeepActive: { Task { await model.act(id: thought.id) } },
+            canArchive: thought.canEditContent
+        ) {
+            VStack(alignment: .leading, spacing: Spacing.regular) {
+                Text(thought.body).font(Typography.serifBody).foregroundStyle(Palette.ink)
+                    .accessibilityIdentifier("review.card" + suffix)
+                Text(thought.capturedAt, format: .dateTime.month(.abbreviated).day())
+                    .font(Typography.caption).foregroundStyle(Palette.inkMuted)
+                if let expiry = model.expiryDate(of: thought) {
+                    Text("Archives \(expiry, format: .relative(presentation: .named))")
+                        .font(Typography.caption).foregroundStyle(Palette.fading)
+                        .accessibilityIdentifier("review.expiry" + suffix)
+                }
+                if isCurrent, thought.canEditContent, let question = model.ambientQuestion {
+                    Divider().overlay(Palette.separator)
+                    ambientPrompt(question)
+                }
+                ReviewDecisions(
+                    hideTitle: model.hideTitle, identifierSuffix: suffix,
+                    onArchive: { Task { await model.archive(id: thought.id) } },
+                    onHide: { Task { await model.snooze(id: thought.id) } },
+                    onKeepActive: { Task { await model.act(id: thought.id) } },
+                    canArchive: thought.canEditContent
                 )
-
-            // The bar is a vine that gains a leaf per decision. It is on screen from the first
-            // card, before anything has been pressed, which is what stops the botanical language
-            // reading as a reward sticker (ADR-0045). The count above it is what VoiceOver reads,
-            // so the vine itself is hidden from accessibility.
-            GrowthProgress(
-                position: model.progress.position,
-                total: model.progress.total
-            )
+                .disabled(model.isDeciding)
+                Text(
+                    "Hidden thoughts return \(model.returnDate, format: .dateTime.month(.abbreviated).day())."
+                )
+                .font(Typography.caption).foregroundStyle(Palette.inkMuted)
+            }
         }
     }
 
@@ -188,7 +142,7 @@ public struct ReviewView: View {
                 .focused($isAnswerFocused)
                 .accessibilityIdentifier("review.answer")
 
-            Button("Answer and keep") {
+            Button("Save answer & keep active") {
                 Task { await model.answerAmbientQuestion() }
             }
             .font(Typography.caption)
@@ -219,7 +173,7 @@ public struct ReviewView: View {
                     .accessibilityIdentifier("review.summary")
             }
 
-            Button("Back to capture") { dismiss() }
+            Button("Back to Thoughts") { dismiss() }
                 .buttonStyle(.borderedProminent)
                 .buttonBorderShape(.capsule)
                 .controlSize(.large)
@@ -235,13 +189,16 @@ public struct ReviewView: View {
         let tally = model.tally
         var parts: [String] = []
         if tally.acted > 0 {
-            parts.append("kept \(tally.acted)")
+            parts.append("kept \(tally.acted) active")
         }
         if tally.snoozed > 0 {
-            parts.append("snoozed \(tally.snoozed)")
+            parts
+                .append(
+                    "hid \(tally.snoozed) for \(model.snoozeDays.formatted(.number.precision(.fractionLength(0 ... 1)))) days"
+                )
         }
-        if tally.dropped > 0 {
-            parts.append("let go of \(tally.dropped)")
+        if tally.archived > 0 {
+            parts.append("archived \(tally.archived)")
         }
         guard !parts.isEmpty else { return "Nothing decided." }
         return "You " + parts.joined(separator: ", ") + "."

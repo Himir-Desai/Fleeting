@@ -11,36 +11,53 @@ public struct ThoughtDetailView: View {
     @State private var model: ThoughtDetailModel
     @Environment(\.dismiss) private var dismiss
     @FocusState private var isEditing: Bool
+    @State private var isChoosingList = false
 
     private let onEnhance: () -> Void
-
-    /// The diameter of a round control, grown with the type size to stay a 44pt target.
-    @ScaledMetric(relativeTo: .body) private var controlSize: CGFloat = 52
+    private let onAddList: (@escaping (ThoughtList) -> Void) -> Void
+    private let onEditLists: () -> Void
 
     /// Creates the detail.
     /// - Parameters:
     ///   - model: State and actions for the opened thought.
     ///   - onEnhance: Called when the user asks to develop the thought further; the app layer
     ///     opens the Sharpen flow.
-    public init(model: ThoughtDetailModel, onEnhance: @escaping () -> Void) {
+    public init(
+        model: ThoughtDetailModel, onEnhance: @escaping () -> Void,
+        onAddList: @escaping (@escaping (ThoughtList) -> Void) -> Void = { _ in },
+        onEditLists: @escaping () -> Void = {}
+    ) {
         _model = State(initialValue: model)
         self.onEnhance = onEnhance
+        self.onAddList = onAddList
+        self.onEditLists = onEditLists
     }
 
     public var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.section) {
+                if let error = model.lastError {
+                    Text(error).font(Typography.caption).foregroundStyle(Palette.fading)
+                        .accessibilityIdentifier("detail.error")
+                }
                 textWell
-                typeSection
-                if let kindAction {
+                Card {
+                    VStack(alignment: .leading, spacing: Spacing.loose) {
+                        typeSection.disabled(!model.thought.canEditContent)
+                        Divider().overlay(Palette.separator)
+                        listSection
+                    }
+                }
+                if let kindAction, model.thought.kind == .habit || model.thought.canEditContent {
                     KindActionButton(
                         label: kindAction.label,
                         symbol: kindAction.symbol,
                         isHabit: model.thought.kind == .habit
                     ) {
                         Task {
-                            await kindAction.perform()
-                            dismiss()
+                            if await kindAction.perform() {
+                                dismiss()
+                            }
                         }
                     }
                 }
@@ -59,30 +76,92 @@ public struct ThoughtDetailView: View {
                             Task { await model.chooseCadence(cadence) }
                         }
                     )
+                    .disabled(!model.thought.canEditContent)
                 }
-                expirySection
+                if model.thought.sharing == nil {
+                    Card { expirySection }
+                } else {
+                    Text(model.thought
+                        .canEditContent ? "Shared thoughts are archived manually." :
+                        "View-only shared list. Your habit progress and hiding stay personal.")
+                        .font(Typography.caption).foregroundStyle(Palette.inkMuted)
+                }
                 actions
             }
             .padding(Spacing.loose)
         }
+        .scrollDismissesKeyboard(.interactively)
         .background(Palette.surface)
-        .navigationTitle("Thought")
+        .keyboardDismissControl(isFocused: isEditing, identifier: "detail.dismissKeyboard") {
+            isEditing = false
+        }
+        .pageHeading("Thought")
         #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
         #endif
+            .task { await model.observeChanges() }
+            .onChange(of: model.isDeleted) { _, deleted in
+                if deleted {
+                    dismiss()
+                }
+            }
             // Text is committed when leaving, so an edit is never lost by tapping back.
             .onDisappear { Task { await model.saveText() } }
+    }
+
+    private var listSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.snug) {
+            SectionLabel("List")
+            Button { isChoosingList = true } label: {
+                Label(
+                    model.lists.first { $0.id == model.thought.listID }?.name ?? "No list",
+                    systemImage: "list.bullet"
+                )
+                .font(Typography.body)
+                .frame(minHeight: 44)
+            }
+            .buttonStyle(PressFeedbackStyle())
+            .foregroundStyle(Palette.accentText)
+            .accessibilityIdentifier("detail.list")
+            .disabled(model.thought.sharing != nil)
+            .popover(isPresented: $isChoosingList) {
+                ListSelectionChoices(
+                    choices: model.lists.map { .init(
+                        id: $0.id.uuidString,
+                        name: $0.name,
+                        detail: $0.sharing?.summary
+                    ) },
+                    selection: model.thought.listID?.uuidString, unassignedLabel: "No list",
+                    onSelect: { id in
+                        isChoosingList = false
+                        Task { await model.moveToList(id.flatMap(UUID.init(uuidString:))) }
+                    }, onAdd: {
+                        isChoosingList = false
+                        onAddList { list in Task { await model.moveToList(list.id) } }
+                    }, onEdit: {
+                        isChoosingList = false
+                        onEditLists()
+                    }
+                )
+                .accessibilityIdentifier("detail.listChoices")
+                .presentationCompactAdaptation(.popover)
+            }
+            if let error = model.listError {
+                Text(error).font(Typography.caption).foregroundStyle(Palette.fading)
+            }
+        }
     }
 
     /// The editable raw text, in the same recessed well as capture.
     private var textWell: some View {
         VStack(alignment: .leading, spacing: Spacing.snug) {
-            SectionLabel("Thought")
             TextField("", text: $model.draft, axis: .vertical)
                 .font(Typography.capture)
                 .foregroundStyle(Palette.ink)
                 .tint(Palette.accentText)
                 .focused($isEditing)
+                .disabled(!model.thought.canEditContent)
+                .accessibilityLabel("Thought text")
                 .accessibilityIdentifier("detail.text")
                 .frame(maxWidth: .infinity, alignment: .topLeading)
                 .padding(Spacing.inset)
@@ -97,37 +176,17 @@ public struct ThoughtDetailView: View {
     private var typeSection: some View {
         VStack(alignment: .leading, spacing: Spacing.regular) {
             SectionLabel("Type")
-            HStack(spacing: Spacing.snug) {
-                ForEach(ThoughtKind.allCases, id: \.self) { kind in
-                    typeChip(kind)
-                }
+            ThoughtKindPicker(selection: model.thought.kind, identifier: "detail.type") { kind in
+                Task { await model.chooseKind(kind) }
             }
         }
-    }
-
-    /// One selectable type chip.
-    private func typeChip(_ kind: ThoughtKind) -> some View {
-        let isSelected = model.thought.kind == kind
-        return Button {
-            Task { await model.chooseKind(kind) }
-        } label: {
-            Image(systemName: KindGlyph.name(for: kind))
-                .font(Typography.body)
-                .foregroundStyle(isSelected ? Palette.raised : Palette.inkMuted)
-                .frame(width: controlSize, height: controlSize)
-                .background { Circle().fill(isSelected ? Palette.accent : Palette.surfaceSunken) }
-        }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier("detail.type.\(kind.rawValue)")
-        .accessibilityLabel(KindGlyph.label(for: kind))
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
     /// A kind's primary action: its label, icon, and what it does.
     private struct KindAction {
         let label: String
         let symbol: String
-        let perform: () async -> Void
+        let perform: () async -> Bool
     }
 
     /// The kind-specific action for the current thought, if any.
@@ -162,30 +221,43 @@ public struct ThoughtDetailView: View {
 
     /// Enhance, snooze, archive and delete, as labelled round chips.
     private var actions: some View {
-        HStack(alignment: .top, spacing: Spacing.regular) {
-            actionButton(symbol: "sparkles", label: "Enhance", tint: Palette.accentText) {
-                onEnhance()
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .top, spacing: Spacing.regular) { actionChoices }
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: Spacing.loose) {
+                actionChoices
             }
-            actionButton(symbol: "moon.zzz", label: "Snooze", tint: Palette.accentText) {
-                Task {
-                    await model.snooze(forDays: 7)
-                    dismiss()
-                }
-            }
-            actionButton(symbol: "archivebox", label: "Archive", tint: Palette.inkMuted) {
-                Task {
-                    await model.archive()
-                    dismiss()
-                }
-            }
-            actionButton(symbol: "trash", label: "Delete", tint: Palette.fading) {
-                Task {
-                    await model.delete()
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    @ViewBuilder
+    private var actionChoices: some View {
+        if model.thought.canEditContent {
+            actionButton(symbol: "sparkles", label: "Enhance", tint: Palette.accentText) { onEnhance() }
+        }
+        actionButton(symbol: "moon.zzz", label: "Snooze", tint: Palette.accentText) {
+            Task {
+                if await model.snooze(forDays: 7) {
                     dismiss()
                 }
             }
         }
-        .frame(maxWidth: .infinity)
+        if model.thought.canEditContent {
+            actionButton(symbol: "archivebox", label: "Archive", tint: Palette.inkMuted) {
+                Task {
+                    if await model.archive() {
+                        dismiss()
+                    }
+                }
+            }
+            actionButton(symbol: "trash", label: "Delete", tint: Palette.fading) {
+                Task {
+                    if await model.delete() {
+                        dismiss()
+                    }
+                }
+            }
+        }
     }
 
     /// One labelled round action chip.
@@ -195,22 +267,8 @@ public struct ThoughtDetailView: View {
         tint: Color,
         action: @escaping () -> Void
     ) -> some View {
-        Button(action: action) {
-            VStack(spacing: Spacing.snug) {
-                Image(systemName: symbol)
-                    .font(Typography.title)
-                    .foregroundStyle(tint)
-                    .frame(width: controlSize, height: controlSize)
-                    .background { Circle().fill(Palette.surfaceSunken) }
-                Text(label)
-                    .font(Typography.caption)
-                    .foregroundStyle(Palette.inkMuted)
-            }
-            .frame(maxWidth: .infinity)
-        }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier("detail.action.\(label.lowercased())")
-        .accessibilityLabel(label)
+        RoundIconButton(symbol: symbol, label: label, tint: tint, showsLabel: true, action: action)
+            .accessibilityIdentifier("detail.action.\(label.lowercased())")
     }
 
     /// The custom-expiry toggle, which applies or clears the override as it flips.

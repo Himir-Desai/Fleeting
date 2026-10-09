@@ -45,8 +45,21 @@ final class ScreenshotTests: XCTestCase {
         _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 10)
         app.goToThoughts()
 
-        let idea = app.staticTexts["newsletter about tools that do one thing"]
-        _ = idea.waitForExistence(timeout: 10)
+        XCTAssertTrue(app.chooseFilter("Ideas"))
+        let idea = app.buttons
+            .matching(
+                NSPredicate(
+                    format: "identifier == 'row.open' AND label CONTAINS 'newsletter about tools that do one thing'"
+                )
+            )
+            .firstMatch
+        for _ in 0 ..< 6 {
+            if idea.exists, idea.isHittable {
+                break
+            }
+            app.swipeUp()
+        }
+        XCTAssertTrue(idea.waitForExistence(timeout: 5))
         idea.tap()
         app.buttons["detail.action.enhance"].tap()
 

@@ -68,8 +68,7 @@ struct PaletteContrastTests {
 
     @Test("white on the prominent fill clears AA")
     func prominentButtonsAreReadable() {
-        let white = ThemedColor(light: RGB(1, 1, 1), dark: RGB(1, 1, 1))
-        check(white, on: Palette.accentValues, atLeast: 4.5, "white on accent")
+        check(Palette.onAccentValues, on: Palette.accentValues, atLeast: 4.5, "control foreground on accent")
     }
 
     @Test("text in the capture well clears AA, because that is where the app is used")

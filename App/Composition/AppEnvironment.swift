@@ -3,6 +3,9 @@ import Foundation
 import Intelligence
 import Notifications
 import Persistence
+#if os(iOS)
+    import UIKit
+#endif
 
 /// The composition root: the single place where protocols are bound to concrete types.
 ///
@@ -13,11 +16,16 @@ final class AppEnvironment {
     /// Launch argument that makes the app start from an empty store, used by the UI tests.
     static let resetStoreArgument = "--reset-store"
 
+    private var cloudChanges: CloudStoreChanges?
+    private var cloudPreferences: CloudPreferences?
+
     /// The time source injected into everything that decays.
     let clock: any WallClock
 
     /// Storage for captured thoughts.
     let thoughts: any ThoughtRepository
+    let lists: any ThoughtListRepository
+    let sharing: ListSharingCoordinator?
 
     /// Plan presents the same to-dos as Thoughts.
     let dailyTodos: any DailyTodoRepository
@@ -70,23 +78,31 @@ final class AppEnvironment {
     /// Creates the environment.
     /// - Parameters:
     ///   - clock: Time source. Defaults to the system clock.
-    ///   - thoughts: Thought storage. Defaults to the on-disk SwiftData store, falling back to
+    ///   - thoughts: Thought storage. Defaults to the on-disk Core Data store, falling back to
     ///     an in-memory store if it cannot be opened.
     init(clock: any WallClock = SystemClock(), thoughts: (any ThoughtRepository)? = nil) {
         self.clock = clock
         if let thoughts {
             self.thoughts = thoughts
-            dailyTodos = ThoughtDailyTodoRepository(thoughts: thoughts, clock: clock)
+            lists = (thoughts as? any ThoughtListRepository) ?? InMemoryThoughtRepository()
+            dailyTodos = ThoughtListTaskRepository(thoughts: thoughts, clock: clock)
             storageIsDegraded = false
             storageIsShared = false
             sync = LocalOnlySync()
         } else {
-            let store = Self.openStore()
+            let store = Self.openStore(clock: clock)
             self.thoughts = store.repository
-            dailyTodos = store.dailyTodos
+            lists = store.lists
+            dailyTodos = ThoughtListTaskRepository(thoughts: store.repository, clock: clock)
             storageIsDegraded = store.degraded
             storageIsShared = store.isShared
             sync = store.sync
+        }
+        if let repository = self.thoughts as? CollaborationRepository {
+            sharing = ListSharingCoordinator(repository: repository, changes: changes)
+            ShareInvitationHandler.shared.coordinator = sharing
+        } else {
+            sharing = nil
         }
         // The engine reads the rates afresh each time, so editing a lifetime in Settings applies
         // to the inbox, the sweeper and the review at once rather than after a relaunch.
@@ -101,6 +117,16 @@ final class AppEnvironment {
             rules: IntelligenceFactory.rulesOnly(),
             preference: { sorting.load() }
         )
+
+        if thoughts == nil, !ProcessInfo.processInfo.arguments.contains(Self.resetStoreArgument) {
+            cloudChanges = CloudStoreChanges(changes: changes)
+            if storageIsShared {
+                cloudPreferences = CloudPreferences { [changes, decayProfiles] in
+                    decayProfiles.reload()
+                    changes.notify()
+                }
+            }
+        }
 
         let centre = SystemNotificationCentre()
         nudges = NudgeScheduler(
@@ -123,10 +149,21 @@ final class AppEnvironment {
     ///
     /// Runs after the capture field is on screen, never before it.
     func prepare() async {
+        #if os(iOS)
+            if storageIsShared, !ProcessInfo.processInfo.arguments.contains(Self.resetStoreArgument) {
+                UIApplication.shared.registerForRemoteNotifications()
+            }
+        #endif
         #if DEBUG
+            initializeCloudSchemaIfRequested()
             await seedDemoDataIfRequested()
             await seedManyIfRequested()
             await seedPlanIfRequested()
+            if ProcessInfo.processInfo.arguments.contains("--seed-shared-preview"),
+               let repository = thoughts as? CollaborationRepository
+            {
+                try? repository.seedSharedPreview(at: clock.now)
+            }
         #endif
         _ = try? await dailyTodos.all()
         await sweep()
@@ -156,7 +193,7 @@ final class AppEnvironment {
     /// What opening the store produced.
     private struct Store {
         let repository: any ThoughtRepository
-        let dailyTodos: any DailyTodoRepository
+        let lists: any ThoughtListRepository
         let degraded: Bool
         let isShared: Bool
         let sync: any SyncReporting
@@ -178,25 +215,27 @@ final class AppEnvironment {
     /// Opens the on-disk store, degrading to memory rather than failing to launch.
     /// - Returns: The repository to use, whether it is the degraded in-memory one, and what it
     ///   can report about sharing and syncing.
-    private static func openStore() -> Store {
+    private static func openStore(clock: any WallClock) -> Store {
         let reset = ProcessInfo.processInfo.arguments.contains(resetStoreArgument)
         if reset {
             clearFirstRunState()
         }
         do {
-            let opened = try ModelContainerFactory.store(resettingFirst: reset)
+            let opened = try CollaborationStore.open(resettingFirst: reset, syncing: !reset)
+            let repository = CollaborationRepository(store: opened, clock: clock)
             return Store(
-                repository: SwiftDataThoughtRepository(modelContainer: opened.container),
-                dailyTodos: SwiftDataDailyTodoRepository(modelContainer: opened.container),
+                repository: repository,
+                lists: repository,
                 degraded: false,
-                isShared: opened.isShared,
-                sync: CloudKitSyncReporter(attachment: opened.cloud)
+                isShared: opened.isSharedStorage,
+                sync: CloudKitSyncReporter(attachment: opened
+                    .cloudEnabled ? .attached : .unavailable(.notAttached))
             )
         } catch {
             let repository = InMemoryThoughtRepository()
             return Store(
                 repository: repository,
-                dailyTodos: ThoughtDailyTodoRepository(thoughts: repository),
+                lists: repository,
                 degraded: true,
                 isShared: false,
                 sync: LocalOnlySync(reason: .notAttached)

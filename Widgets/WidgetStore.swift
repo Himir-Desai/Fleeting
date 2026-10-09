@@ -54,11 +54,11 @@ enum WidgetStore {
             entry.isShared = false
             return entry
         }
-        guard let store = try? ModelContainerFactory.store(syncing: false) else {
+        guard let store = try? await CollaborationStore.open(syncing: false) else {
             return .unreadable(at: date)
         }
 
-        let repository = SwiftDataThoughtRepository(modelContainer: store.container)
+        let repository = await CollaborationRepository(store: store)
         guard let stored = try? await repository.thoughts(in: .live) else {
             return .unreadable(at: date)
         }

@@ -102,3 +102,45 @@ app if you have hit it.
 to happen on the phone, and only after the app is installed.
 
 **The app launches and immediately quits, a week later** — the signature expired. Re-run the script.
+
+
+## Alpha-only TestFlight release · 2026-10-08
+
+The user confirmed that the Internal “Tester Group” is the alpha audience; the External
+“Tester Group” is the beta audience. Version 2.0 build 3 was archived from the current workspace
+and successfully uploaded to App Store Connect with `testFlightInternalTestingOnly=true`.
+This Apple-enforced marker prevents external TestFlight/App Store distribution of this build.
+A later beta/public release requires a separate eligible upload. No external group was modified.
+
+The user confirmed installation of the new version on their phone. App Store Connect's Internal
+group explicitly shows **Build 2.0 (3) Internal — Testing** (90-day expiry). The Internal Only
+upload restriction protects the external audience regardless of group assignment. Local archive signing initially
+failed with errSecInternalComponent; an unsigned archive was completed and Xcode's automatic
+App Store Connect exporter handled distribution signing/upload successfully. No repeat tests
+were needed because the existing package and focused UI validation covered this source version.
+
+Final audience verification: the External group's Builds tab contains only **1.0.0 (1) — Testing**;
+2.0 (3) is absent. The owner's installed-version status can show 2.0 (3) in both tester views because
+the owner belongs to both groups; group build assignment confirms the release audience.
+
+### Build 4 correction
+
+Build 3's unsigned-archive fallback was incorrect: Xcode's exporter signed it successfully but
+did not restore the missing iCloud/App Group capabilities. The distribution pipeline's final
+entitlements contained only basic application/team/TestFlight keys, explaining the device-local
+sync warning. Do not ship an unsigned archive as a signing workaround.
+
+Version 2.0 build 4 was archived with normal signing. A local distribution export and the exact
+IPA staged for upload passed `python3 Tools/verify-distribution.py <IPA>`: app/widget signatures,
+App Group access, CloudKit container/services, Production environment, production push,
+key-value storage, matching build numbers and invitation support. The check also rejected build 3.
+Both exports retain TestFlight Internal Only. Upload succeeded at 18:50 America/Los_Angeles;
+App Store Connect finished processing and confirms build 4's only assigned group is the Internal
+Tester Group (two testers). External distribution remains prohibited by Internal Only signing.
+The Internal group's tester view subsequently reports the owner's phone as Installed 2.0 (4).
+The testing note was saved with update-in-place and cross-account sharing instructions.
+
+Update through TestFlight without uninstalling: capture in build 3 used the app's local support
+store, and the existing local-to-App-Group migration preserves it when capabilities return.
+This fixes the demonstrated signing omission; live invitation acceptance still needs a second
+iCloud account. Package/UI source behavior is unchanged, so existing source tests were not rerun.

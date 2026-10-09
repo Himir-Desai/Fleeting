@@ -15,6 +15,7 @@ import SwiftUI
             clock: PreviewClock()
         )
     )
+    .trackKeyboardVisibility()
 }
 
 /// Storage that discards everything, so previews need no store.

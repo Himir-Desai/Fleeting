@@ -47,7 +47,7 @@ public struct EmptyState: View {
 
             VStack(spacing: Spacing.snug) {
                 Text(title)
-                    .font(Typography.display)
+                    .font(Typography.emptyTitle)
                     .foregroundStyle(Palette.ink)
                     .multilineTextAlignment(.center)
 
@@ -58,6 +58,7 @@ public struct EmptyState: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
+        .frame(maxWidth: 360)
         .padding(Spacing.loose)
         .accessibilityElement(children: .combine)
     }

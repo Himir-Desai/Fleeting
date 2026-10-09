@@ -10,18 +10,28 @@ struct PlanWeekPicker: View {
     var body: some View {
         VStack(spacing: Spacing.regular) {
             HStack {
-                Button { model.shiftWeek(-1) } label: { Image(systemName: "chevron.left") }
-                    .accessibilityLabel("Previous week")
-                    .frame(minWidth: 44, minHeight: 44)
+                Button { model.shiftWeek(-1) } label: {
+                    Image(systemName: "chevron.left").font(Typography.controlSymbol).frame(
+                        width: 44,
+                        height: 44
+                    ).contentShape(.rect)
+                }
+                .accessibilityLabel("Previous week")
+                .frame(minWidth: 44, minHeight: 44)
                 Spacer()
                 if let date = model.selectedDay.date(timeZone: model.calendar.timeZone) {
                     Text(date, format: .dateTime.month(.wide).year()).font(Typography.title)
                         .foregroundStyle(Palette.ink)
                 }
                 Spacer()
-                Button { model.shiftWeek(1) } label: { Image(systemName: "chevron.right") }
-                    .accessibilityLabel("Next week")
-                    .frame(minWidth: 44, minHeight: 44)
+                Button { model.shiftWeek(1) } label: {
+                    Image(systemName: "chevron.right").font(Typography.controlSymbol).frame(
+                        width: 44,
+                        height: 44
+                    ).contentShape(.rect)
+                }
+                .accessibilityLabel("Next week")
+                .frame(minWidth: 44, minHeight: 44)
             }
             if typeSize.isAccessibilitySize {
                 ScrollView(.horizontal) { dayButtons }
@@ -63,7 +73,7 @@ struct PlanWeekPicker: View {
             .clipShape(RoundedRectangle(cornerRadius: Radius.control))
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressFeedbackStyle())
         .accessibilityLabel(date.formatted(date: .complete, time: .omitted))
         .accessibilityValue(day == model.today ? "Today" : "")
         .accessibilityAddTraits(day == model.selectedDay ? [.isSelected] : [])
