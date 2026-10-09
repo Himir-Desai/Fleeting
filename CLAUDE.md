@@ -43,6 +43,11 @@ Persistence is two invocations, never one: `--filter PersistenceTests` and
 `--filter SchemaMigrationTests` (ADR-0029 — SwiftData binds an entity name per process).
 
 ## Working rhythm
+**v2.1 is collecting reports only** (2026-10-08). Maintain [docs/BUGS_V2.1.md](docs/BUGS_V2.1.md)
+as the user reports bugs and UX requests. Do not reproduce, investigate, or implement any of those
+items until the user explicitly gives permission to start. This includes the expiry-based thickness
+removal. A new report is authorization to update the tracker, not to fix it.
+
 **Teaching is paused** (2026-08-18). Do not explain Swift concepts or run comprehension checks
 unless asked. Build **one roadmap phase at a time**, then stop and report what was added and how to
 run the app. Wait for an explicit go-ahead before starting the next phase — never roll straight on.

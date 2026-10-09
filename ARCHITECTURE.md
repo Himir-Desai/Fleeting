@@ -69,6 +69,7 @@ Fleeting/
 ├── .github/workflows/ci.yml         ← build · test · lint on every push
 │
 ├── docs/
+│   ├── BUGS_V2.1.md                 ← v2.1 user reports; collection only until explicit authorization
 │   ├── DECISIONS.md                 ← ADR log: every significant choice + alternatives
 │   ├── DESIGN_AUDIT.md             ← app-wide Apple-design findings, changes and visual verification
 │   ├── screenshots/list-sheets/   ← first list-sheet revision, retained as history
