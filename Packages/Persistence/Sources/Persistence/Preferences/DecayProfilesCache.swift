@@ -29,6 +29,14 @@ public final class DecayProfilesCache: DecayProfilesStoring, @unchecked Sendable
         return cached
     }
 
+    /// Reloads rates delivered by iCloud into the shared cache.
+    public func reload() {
+        let profiles = store.load()
+        lock.lock()
+        cached = profiles
+        lock.unlock()
+    }
+
     /// Saves new rates and makes them current everywhere at once.
     /// - Parameter profiles: The rates to apply.
     public func save(_ profiles: DecayProfiles) {

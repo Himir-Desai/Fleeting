@@ -13,6 +13,7 @@ struct ThoughtRow: View {
     let freshness: Freshness
     let expiresAt: Date?
 
+    @Environment(\.colorSchemeContrast) private var contrast
     @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
@@ -23,6 +24,10 @@ struct ThoughtRow: View {
                 .fontWeight(FreshnessStyle.weight(for: freshness.value))
                 .foregroundStyle(Palette.ink)
                 .lineLimit(typeSize.isAccessibilitySize ? 6 : 3)
+                .opacity(FreshnessStyle.opacity(
+                    for: freshness.value,
+                    increasedContrast: contrast == .increased
+                ))
 
             metadata
         }
@@ -44,7 +49,7 @@ struct ThoughtRow: View {
                 // No vine here. It was tried at 34pt beside this label and read as a scribble
                 // rather than a plant — a line drawing needs room, and a list row has none. The
                 // habit's growth is carried by the sprout in its action chip instead (ADR-0042).
-                Text("\(streak.count) day streak")
+                Text("\(streak.count) \(thought.cadence.streakUnit(count: streak.count)) streak")
                     .font(Typography.caption)
                     // Muted, not accent: a streak is a fact about the thought, and the accent is
                     // reserved for time and action (ADR-0041).

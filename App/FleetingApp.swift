@@ -1,5 +1,6 @@
 import DesignSystem
 import SwiftUI
+import UIKit
 
 /// The application entry point.
 ///
@@ -7,7 +8,30 @@ import SwiftUI
 /// there is nothing between launch and the capture screen — no gate, no prompt, no splash.
 @main
 struct FleetingApp: App {
+    @UIApplicationDelegateAdaptor(SharingApplicationDelegate.self) private var appDelegate
     private let environment = AppEnvironment()
+
+    init() {
+        let title = UIFont.preferredFont(forTextStyle: .headline)
+        let large = UIFont.preferredFont(forTextStyle: .largeTitle)
+        let tab = UIFont.preferredFont(forTextStyle: .caption2)
+        if let descriptor = tab.fontDescriptor.withDesign(.serif) {
+            let attributes: [NSAttributedString.Key: Any] = [.font: UIFont(descriptor: descriptor, size: 0)]
+            UITabBarItem.appearance().setTitleTextAttributes(attributes, for: .normal)
+            UITabBarItem.appearance().setTitleTextAttributes(attributes, for: .selected)
+        }
+        if let descriptor = title.fontDescriptor.withDesign(.serif) {
+            UINavigationBar.appearance().titleTextAttributes = [.font: UIFont(
+                descriptor: descriptor,
+                size: 0
+            )]
+        }
+        if let descriptor = large.fontDescriptor.withDesign(.serif) {
+            UINavigationBar.appearance().largeTitleTextAttributes = [
+                .font: UIFont(descriptor: descriptor, size: 0)
+            ]
+        }
+    }
 
     var body: some Scene {
         WindowGroup {
@@ -19,6 +43,7 @@ struct FleetingApp: App {
                 // on screen is the palette's purple, so the one control always visible was the
                 // one control off-palette.
                 .tint(Palette.accentText)
+                .fontDesign(.serif)
         }
     }
 }

@@ -17,6 +17,78 @@ final class PlanTests: XCTestCase {
         return app
     }
 
+    func testThreeTabsAndSettingsFromEveryPage() {
+        let app = launch()
+        XCTAssertFalse(app.tabBars.buttons["Review"].exists)
+        XCTAssertFalse(app.tabBars.buttons["Settings"].exists)
+        for tab in ["Home", "Thoughts", "Plan"] {
+            app.tabButton(tab).tap()
+            XCTAssertTrue(app.goToSettings())
+            app.buttons["settings.done"].tap()
+            XCTAssertTrue(app.buttons["settings.done"].waitForNonExistence(timeout: 5))
+            XCTAssertTrue(app.tabButton(tab).isSelected)
+        }
+        let shot = XCTAttachment(screenshot: app.screenshot())
+        shot.name = "Three-tab Plan navigation"
+        shot.lifetime = .keepAlways
+        add(shot)
+    }
+
+    func testThoughtReviewIsBelowSummaryAndReturnsToThoughts() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--reset-store", "--seed-demo"]
+        app.launch()
+        XCTAssertTrue(app.goToThoughts())
+        let review = app.buttons["inbox.review"]
+        XCTAssertTrue(review.waitForExistence(timeout: 10))
+        let summary = app.staticTexts["inbox.summary"]
+        XCTAssertGreaterThanOrEqual(review.frame.minY, summary.frame.maxY)
+        let shot = XCTAttachment(screenshot: app.screenshot())
+        shot.name = "Thoughts review below summary"
+        shot.lifetime = .keepAlways
+        add(shot)
+        review.tap()
+        XCTAssertTrue(app.staticTexts["review.card"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.goToSettings())
+        app.buttons["settings.done"].tap()
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        XCTAssertTrue(summary.waitForExistence(timeout: 5))
+    }
+
+    func testReturnCreatesTaskAndDoneOnlyAppearsWhileEditing() {
+        let app = launch()
+        XCTAssertFalse(app.buttons["plan.dismissKeyboard"].exists)
+        XCTAssertTrue(app.buttons["plan.today"].isHittable)
+        XCTAssertTrue(app.buttons["app.settings"].isHittable)
+        let input = app.textFields["plan.input"]
+        input.tap()
+        input.typeText("Test return submission\n")
+        let row = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'plan.open.'")).firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        XCTAssertEqual(input.value as? String, "One thing to do…")
+        XCTAssertTrue(app.keyboards.element.waitForExistence(timeout: 5))
+        let done = app.buttons["plan.dismissKeyboard"]
+        if app.keyboards.element.frame.minY < app.windows.firstMatch.frame.maxY {
+            XCTAssertTrue(done.isHittable)
+            XCTAssertLessThanOrEqual(done.frame.maxY, app.keyboards.element.frame.minY)
+            let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+            shot.name = "Plan keyboard spacing"
+            shot.lifetime = .keepAlways
+            add(shot)
+            done.tap()
+            XCTAssertTrue(done.waitForNonExistence(timeout: 5))
+        } else {
+            XCTAssertFalse(done.exists, "No floating Done control without a software keyboard")
+            input.typeText("A second task\n")
+            XCTAssertEqual(
+                app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'plan.open.'")).count,
+                2
+            )
+            app.tabButton("Home").tap()
+        }
+        XCTAssertTrue(app.tabButton("Home").isHittable)
+    }
+
     func testAddingAndCompletingTaskSurvivesRelaunch() {
         let app = launch()
         let days = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'plan.day.'"))
@@ -89,7 +161,8 @@ final class PlanTests: XCTestCase {
         attachment.name = "Daily review finished"
         attachment.lifetime = .keepAlways
         add(attachment)
-        app.tabButton("Plan").tap()
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        XCTAssertTrue(app.descendants(matching: .any)["plan.week"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["plan.review"].exists)
         XCTAssertEqual(
             app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'plan.task.'")).count,
@@ -116,7 +189,7 @@ final class PlanTests: XCTestCase {
         XCTAssertNotEqual(editedText, "Original task")
         app.navigationBars.buttons.element(boundBy: 0).tap()
         XCTAssertTrue(app.buttons[editedText].waitForExistence(timeout: 5))
-        app.tabButton("Thoughts").tap()
+        XCTAssertTrue(app.goToThoughts())
         let thought = app.buttons["row.open"].firstMatch
         XCTAssertTrue(thought.waitForExistence(timeout: 5))
         thought.tap()
@@ -136,7 +209,7 @@ final class PlanTests: XCTestCase {
         field.tap()
         field.typeText("Buy milk for breakfast")
         app.buttons["capture.save"].tap()
-        app.tabButton("Thoughts").tap()
+        XCTAssertTrue(app.goToThoughts())
         let thought = app.buttons["row.open"].firstMatch
         XCTAssertTrue(thought.waitForExistence(timeout: 5))
         thought.tap()

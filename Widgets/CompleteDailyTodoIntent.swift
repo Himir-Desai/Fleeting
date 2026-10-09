@@ -19,8 +19,9 @@ struct CompleteDailyTodoIntent: AppIntent {
         guard ModelContainerFactory.isShared, let id = UUID(uuidString: taskID) else {
             throw CompletionError.unavailable
         }
-        let store = try ModelContainerFactory.store(syncing: false)
-        let repository = SwiftDataDailyTodoRepository(modelContainer: store.container)
+        let store = try await CollaborationStore.open(syncing: false)
+        let thoughts = await CollaborationRepository(store: store)
+        let repository = ThoughtListTaskRepository(thoughts: thoughts)
         let now = SystemClock().now
         try await repository.decide(id: id, decision: .finish, today: PlanDay(now), at: now)
         WidgetCenter.shared.reloadTimelines(ofKind: "FleetingDailyPlan")

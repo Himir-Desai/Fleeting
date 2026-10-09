@@ -1,17 +1,26 @@
 # Privacy
 
-Fleeting has no account, no server, and no analytics. There is no code in it that talks to a
-network Anthropic, I, or anyone else controls — the only remote destination it can reach is the
-user's own iCloud.
+Fleeting has no app account, hosted server, or analytics. Apple's iCloud handles same-account
+sync and explicitly shared lists. Invited members can access shared content according to the
+owner's permissions; private thoughts and personal activity stay in the user's private database.
 
 ## What is stored
 
 | Data | Where | Why |
 |---|---|---|
-| The text you capture, and anything generated from it | On device, in the app's SwiftData store | It is the app |
-| Daily checklist text, scheduled day and completion time | The same SwiftData store and private iCloud database when enabled | Planning and completion history; shared with widgets through the App Group |
+| The text you capture, and anything generated from it | On device, in the original store opened through Core Data | It is the app |
+| Daily checklist text, scheduled day and completion time | The same store and private iCloud database when enabled | Planning and completion history; shared with widgets through the App Group |
 | The same, mirrored to your private CloudKit database | Your iCloud account | So a thought captured on one device is on the others (ADR-0003) |
 | Notification preferences and whether the first-run hint was dismissed | `UserDefaults`, in the app's App Group | So the app behaves the way you left it |
+| Shared-list name, description, defaults and thought content/history | Owner's iCloud share, members' shared databases and local caches | Collaboration that the owner explicitly initiates |
+| Shared habit progress, attention and hiding | Private member-activity records on device and in each member's own iCloud | These actions affect that member's personal view, not other participants |
+
+Sharing begins with invited-only access. An owner can explicitly choose anyone-with-the-link or
+change view/edit permissions through Apple's sharing UI. Only the selected custom list graph is
+shared; personal Plan and unrelated lists are excluded. Members need Fleeting and iCloud.
+The native share sheet delivers invitations through the service the user chooses. Leaving or
+revocation removes access and may remove the shared cache; copies someone explicitly made elsewhere
+are outside Fleeting's control. Share links and accounts are managed by Apple, not a Fleeting server.
 
 ## What is not
 

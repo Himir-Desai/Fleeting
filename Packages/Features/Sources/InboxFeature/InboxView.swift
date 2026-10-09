@@ -4,14 +4,16 @@ import SwiftUI
 
 /// The list of live thoughts: a summary line, a row of kind filters, and the thoughts themselves.
 ///
-/// A tab in its own right now, so it carries no back-to-capture or settings controls — those are
-/// tabs. Capture is never more than a tab away (ADR-0008).
+/// Review sits below the summary; filtering and Settings sit side by side in the toolbar.
 public struct InboxView: View {
     @State private var model: InboxModel
 
+    private let isListDestination: Bool
     private let storageIsDegraded: Bool
     private let changes: any ThoughtChangeObserving
+    private let onSettings: () -> Void
     private let onReview: () -> Void
+    private let onEditList: (ThoughtList) -> Void
     private let onOpen: (Thought) -> Void
 
     /// Creates the inbox.
@@ -23,43 +25,69 @@ public struct InboxView: View {
     ///     worse than the fault.
     ///   - onReview: Called when the user chooses to run a review session.
     ///   - onOpen: Called when the user taps a thought to open its detail.
+    ///   - onSettings: Opens app settings from the toolbar.
     public init(
         model: InboxModel,
         changes: any ThoughtChangeObserving,
         storageIsDegraded: Bool = false,
+        isListDestination: Bool = false,
         onReview: @escaping () -> Void,
-        onOpen: @escaping (Thought) -> Void
+        onOpen: @escaping (Thought) -> Void,
+        onSettings: @escaping () -> Void = {},
+        onEditList: @escaping (ThoughtList) -> Void = { _ in }
     ) {
         _model = State(initialValue: model)
         self.changes = changes
+        self.isListDestination = isListDestination
         self.storageIsDegraded = storageIsDegraded
         self.onReview = onReview
         self.onOpen = onOpen
+        self.onSettings = onSettings
+        self.onEditList = onEditList
     }
 
     public var body: some View {
-        VStack(spacing: 0) {
-            header
-            list
+        Group {
+            if isListDestination, selectedList == nil {
+                Palette.surface
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .accessibilityIdentifier("lists.emptyDestination")
+            } else {
+                VStack(spacing: 0) {
+                    header
+                    list
+                }
+            }
         }
         .background(Palette.surface)
-        .navigationTitle("Thoughts")
-        #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-        #endif
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    InboxFilterMenu(filter: $model.filter)
+        .pageHeading(
+            selectedList?.name ?? (isListDestination ? "Lists" : "Thoughts"),
+            titleIdentifier: selectedList == nil ? "inbox.heading" : "inbox.selectedList"
+        ) {
+            ToolbarPill {
+                if let selectedList, !selectedList.isBuiltIn {
+                    Button { onEditList(selectedList) } label: { Image(systemName: "pencil") }
+                        .accessibilityLabel("Edit \(selectedList.name)")
+                        .accessibilityIdentifier("inbox.editSelectedList")
                 }
+                InboxFilterMenu(filter: $model.filter)
+                Button(action: onSettings) { Image(systemName: "gearshape") }
+                    .accessibilityLabel("Settings")
+                    .accessibilityIdentifier("app.settings")
             }
-            .task { await model.load() }
-            .task {
-                // Classification finishes after capture has moved on; without this the list
-                // would show "Unsorted" until the user closed and reopened it.
-                for await _ in changes.changes {
-                    await model.load()
-                }
+        }
+        .task { await model.load() }
+        .task {
+            // Classification finishes after capture has moved on; without this the list
+            // would show "Unsorted" until the user closed and reopened it.
+            for await _ in changes.changes {
+                await model.load()
             }
+        }
+    }
+
+    private var selectedList: ThoughtList? {
+        model.lists.first { $0.id == model.selectedListID }
     }
 
     /// The summary line, pinned above the scrolling list.
@@ -69,32 +97,48 @@ public struct InboxView: View {
     /// screen ask two questions at once.
     private var header: some View {
         masthead
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, Spacing.loose)
             .padding(.top, Spacing.snug)
             .padding(.bottom, Spacing.regular)
     }
 
-    /// One honest line about the state of the pile, with the review entry on the end.
+    /// One honest line about the state of the pile, with a review invitation underneath.
     private var masthead: some View {
-        HStack(alignment: .firstTextBaseline, spacing: Spacing.snug) {
+        VStack(alignment: .leading, spacing: Spacing.regular) {
+            if let sharing = selectedList?.sharing {
+                Label(
+                    sharing.role == .viewer ? "Shared · View only" : "Shared · Manual archiving",
+                    systemImage: "person.2"
+                )
+                .font(Typography.caption).foregroundStyle(Palette.accentText)
+            }
+            if let selectedList, !selectedList.description.isEmpty {
+                Text(selectedList.description)
+                    .font(Typography.subtitle)
+                    .foregroundStyle(Palette.inkMuted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if model.lastError != nil {
+                Text("Thoughts couldn’t be updated. Try again.")
+                    .font(Typography.caption).foregroundStyle(Palette.fading)
+                    .accessibilityIdentifier("inbox.error")
+            }
             Text(summaryLine)
                 .font(Typography.subtitle)
                 .foregroundStyle(Palette.inkMuted)
                 .accessibilityIdentifier("inbox.summary")
 
-            Spacer(minLength: Spacing.snug)
-
             if model.reviewCount >= 1 {
                 Button(action: onReview) {
-                    HStack(spacing: Spacing.tight) {
-                        Text("\(model.reviewCount) to decide")
-                        Image(systemName: "chevron.right")
-                            .font(Typography.caption)
-                    }
+                    Label(
+                        "\(model.reviewCount) \(model.reviewCount == 1 ? "thought" : "thoughts") to review",
+                        systemImage: "clock.arrow.circlepath"
+                    )
                     .font(Typography.subtitle)
                     .foregroundStyle(Palette.accentText)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressFeedbackStyle())
                 .accessibilityIdentifier("inbox.review")
                 .accessibilityLabel("\(model.reviewCount) need a decision")
                 .accessibilityHint("Opens a short session to decide what to keep")
@@ -200,30 +244,38 @@ public struct InboxView: View {
     /// empty archive.
     private var emptyState: some View {
         Group {
-            switch model.filter {
-            case .archived:
+            if model.selectedListID != nil {
                 EmptyState(
-                    symbol: "archivebox",
-                    title: "Nothing archived yet",
-                    message: """
-                    Thoughts arrive here when they run out of freshness, or when you set them \
-                    aside. They stay for good.
-                    """
+                    symbol: "list.bullet",
+                    title: "No thoughts here",
+                    message: "Choose this list when capturing a thought."
                 )
-            case .all:
-                EmptyState(
-                    title: "Nothing live right now",
-                    message: """
-                    Everything you captured has been dealt with or filed away. The archive still \
-                    has it all.
-                    """
-                )
-            case .kind:
-                EmptyState(
-                    symbol: "line.3.horizontal.decrease",
-                    title: "Nothing in this filter",
-                    message: "No live thoughts of this kind. Try another chip, or All."
-                )
+            } else {
+                switch model.filter {
+                case .archived:
+                    EmptyState(
+                        symbol: "archivebox",
+                        title: "Nothing archived yet",
+                        message: """
+                        Thoughts arrive here when they run out of freshness, or when you set them \
+                        aside. They stay for good.
+                        """
+                    )
+                case .all:
+                    EmptyState(
+                        title: "Nothing live right now",
+                        message: """
+                        Everything you captured has been dealt with or filed away. The archive still \
+                        has it all.
+                        """
+                    )
+                case .kind:
+                    EmptyState(
+                        symbol: "line.3.horizontal.decrease",
+                        title: "Nothing in this filter",
+                        message: "No live thoughts of this kind. Try another chip, or All."
+                    )
+                }
             }
         }
         .accessibilityIdentifier("inbox.empty")

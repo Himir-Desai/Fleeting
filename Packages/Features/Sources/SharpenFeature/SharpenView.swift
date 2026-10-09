@@ -29,9 +29,13 @@ public struct SharpenView: View {
                 }
                 .padding(Spacing.loose)
             }
+            .scrollDismissesKeyboard(.interactively)
         }
         .motion(Motion.commit, value: model.progress.answered)
-        .navigationTitle("Sharpen")
+        .keyboardDismissControl(isFocused: isAnswerFocused, identifier: "sharpen.dismissKeyboard") {
+            isAnswerFocused = false
+        }
+        .pageHeading("Sharpen")
         #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -100,7 +104,7 @@ public struct SharpenView: View {
                     }
                     .accessibilityIdentifier("sharpen.answer")
 
-                Button("Next") {
+                Button(model.progress.answered + 1 == model.progress.total ? "Finish" : "Next") {
                     Task { await model.submitAnswer() }
                 }
                 .buttonStyle(.borderedProminent)
@@ -153,6 +157,7 @@ public struct SharpenView: View {
                                 .foregroundStyle(Palette.inkMuted)
                                 .underline()
                         }
+                        .frame(minHeight: 44)
                         .accessibilityIdentifier("sharpen.escalate")
                         .accessibilityLabel("Take this further elsewhere")
                         .accessibilityHint("Shares a prompt about this idea with another app")
@@ -163,6 +168,7 @@ public struct SharpenView: View {
                     Button("Revert") { isConfirmingRevert = true }
                         .font(Typography.caption)
                         .tint(Palette.inkMuted)
+                        .frame(minHeight: 44)
                         .accessibilityIdentifier("sharpen.revert")
                 }
             }
@@ -200,6 +206,8 @@ public struct SharpenView: View {
             Button("Cancel") { model.cancel() }
                 .font(Typography.caption)
                 .tint(Palette.inkMuted)
+                .frame(minHeight: 44)
+                .buttonStyle(PressFeedbackStyle())
                 .accessibilityIdentifier("sharpen.cancel")
                 .accessibilityHint("Stops without losing any answers you have given")
         }

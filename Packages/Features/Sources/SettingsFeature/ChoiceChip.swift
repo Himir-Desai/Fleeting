@@ -17,14 +17,15 @@ struct ChoiceChip: View {
         Button(action: action) {
             Text(label)
                 .font(Typography.subtitle)
-                .foregroundStyle(isSelected ? Palette.raised : Palette.ink)
+                .foregroundStyle(isSelected ? Palette.onAccent : Palette.ink)
                 .padding(.horizontal, Spacing.inset)
                 .padding(.vertical, Spacing.snug)
+                .frame(minHeight: 44)
                 .background {
                     Capsule().fill(isSelected ? Palette.accent : Palette.surfaceSunken)
                 }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressFeedbackStyle())
         .accessibilityLabel(label)
         .accessibilityAddTraits(isSelected ? [.isSelected, .isButton] : .isButton)
     }

@@ -18,9 +18,8 @@ struct InboxListRow: View {
 
     @Environment(\.colorSchemeContrast) private var contrast
 
-    /// A round control's tap target. 44pt is the smallest a control may be, and it grows with the
-    /// type size rather than staying a fixed square.
-    @ScaledMetric(relativeTo: .body) private var controlSize: CGFloat = 44
+    /// A 44-point target that leaves room for reading text at accessibility sizes.
+    private let controlSize: CGFloat = 44
 
     var body: some View {
         HStack(spacing: Spacing.regular) {
@@ -31,15 +30,13 @@ struct InboxListRow: View {
                 }
                 .contentShape(.rect)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressFeedbackStyle())
             .accessibilityIdentifier("row.open")
             .accessibilityHint("Opens this thought")
 
             inlineAction
         }
-        // The whole row fades with its freshness — glyph, words and inline action together — so a
-        // fading thought's button is as quiet as its text. Suppressed under increased contrast.
-        .opacity(FreshnessStyle.opacity(for: freshness.value, increasedContrast: contrast == .increased))
+        // Content and its surface express freshness; metadata and actions retain their contrast.
         .motion(Motion.decay, value: freshness.value)
         .listRowInsets(
             EdgeInsets(top: 0, leading: Spacing.loose, bottom: 0, trailing: Spacing.loose)
@@ -65,13 +62,11 @@ struct InboxListRow: View {
             .tint(Palette.inkMuted)
         }
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-            Button(role: .destructive, action: onDelete) {
-                Label("Delete", systemImage: "trash")
+            if thought.canEditContent {
+                Button(role: .destructive, action: onDelete) { Label("Delete", systemImage: "trash") }
+                Button(action: onArchive) { Label("Archive", systemImage: "archivebox") }
+                    .tint(Palette.inkMuted)
             }
-            Button(action: onArchive) {
-                Label("Archive", systemImage: "archivebox")
-            }
-            .tint(Palette.inkMuted)
         }
     }
 
@@ -84,7 +79,7 @@ struct InboxListRow: View {
     /// urgency.
     private var kindGlyph: some View {
         Image(systemName: KindGlyph.name(for: thought.kind))
-            .font(Typography.body)
+            .font(Typography.controlSymbol)
             .foregroundStyle(Palette.inkMuted)
             .frame(width: controlSize, height: controlSize)
             // An indicator, not a control (ADR-0027) — but still the one place the list says
@@ -99,7 +94,11 @@ struct InboxListRow: View {
     private var inlineAction: some View {
         switch thought.kind {
         case .todo:
-            actionChip(symbol: "checkmark", label: "Mark done", action: onComplete)
+            if thought
+                .canEditContent
+            {
+                actionChip(symbol: "checkmark", label: "Mark done", action: onComplete)
+            }
         case .habit:
             // A sprout, not a flame. A streak is a thing you have grown by tending it; fire is
             // what happens to a thing you neglect (ADR-0042).
@@ -111,7 +110,7 @@ struct InboxListRow: View {
                     .frame(width: controlSize, height: controlSize)
                     .contentShape(.rect)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressFeedbackStyle())
             .accessibilityLabel("Continue streak")
         case .idea, .unsorted:
             EmptyView()
@@ -129,12 +128,12 @@ struct InboxListRow: View {
     ) -> some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(Typography.body)
+                .font(Typography.controlSymbol)
                 .foregroundStyle(Palette.accentText)
                 .frame(width: controlSize, height: controlSize)
                 .background { Circle().fill(Palette.accentSoft) }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressFeedbackStyle())
         .accessibilityLabel(label)
     }
 }

@@ -65,7 +65,7 @@ final class AccessibilityTests: XCTestCase {
             "the way back to capture must survive the largest type size"
         )
         XCTAssertTrue(
-            app.tabButton("Settings").isHittable,
+            app.descendants(matching: .any)["inbox.filterMenu"].firstMatch.isHittable,
             "the tab bar must not collapse into something unreachable"
         )
     }
@@ -83,11 +83,32 @@ final class AccessibilityTests: XCTestCase {
         _ = app.staticTexts["review.card"].waitForExistence(timeout: 20)
 
         // All three decisions have to remain reachable; at this type size they stack.
-        for identifier in ["review.act", "review.snooze", "review.drop"] {
+        for identifier in ["review.act", "review.snooze", "review.archive"] {
             XCTAssertTrue(
                 app.buttons[identifier].waitForExistence(timeout: 10),
                 "\(identifier) must still be on screen at the largest type size"
             )
+            let scroll = app.scrollViews["review.list"]
+            for _ in 0 ..< 24 {
+                let button = app.buttons[identifier]
+                if button.isHittable {
+                    break
+                }
+                let towardsTop = button.frame.midY < scroll.frame.midY
+                let start = scroll.coordinate(withNormalizedOffset: CGVector(
+                    dx: 0.8,
+                    dy: towardsTop ? 0.35 : 0.65
+                ))
+                let end = scroll.coordinate(withNormalizedOffset: CGVector(
+                    dx: 0.8,
+                    dy: towardsTop ? 0.6 : 0.4
+                ))
+                start.press(forDuration: 0.1, thenDragTo: end)
+            }
+            let shot = XCTAttachment(screenshot: app.screenshot())
+            shot.name = "Large review \(identifier)"
+            shot.lifetime = .keepAlways
+            add(shot)
             XCTAssertTrue(app.buttons[identifier].isHittable, "\(identifier) must be tappable")
         }
     }
@@ -97,7 +118,7 @@ final class AccessibilityTests: XCTestCase {
         _ = app.descendants(matching: .any)["capture.field"].waitForExistence(timeout: 10)
 
         // Every tab is named, because a glyph on its own is a button VoiceOver calls "button".
-        for tab in ["Home", "Thoughts", "Settings"] {
+        for tab in ["Home", "Thoughts", "Plan"] {
             XCTAssertTrue(app.tabButton(tab).exists, "the \(tab) tab must be named")
         }
 

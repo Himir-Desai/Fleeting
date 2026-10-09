@@ -34,11 +34,8 @@ public struct DailyReviewView: View {
                                 Text(date, format: .dateTime.month(.abbreviated).day())
                                     .font(Typography.caption).foregroundStyle(Palette.inkMuted)
                             }
-                            ViewThatFits(in: .horizontal) {
-                                HStack { decisions(todo) }
-                                VStack(alignment: .leading) { decisions(todo) }
-                            }
-                            .disabled(model.busyIDs.contains(todo.id))
+                            ReviewActionRow { decisions(todo) }
+                                .disabled(model.busyIDs.contains(todo.id))
                         }
                     }
                 }
@@ -60,15 +57,13 @@ public struct DailyReviewView: View {
     }
 
     @ViewBuilder private func decisions(_ todo: DailyTodo) -> some View {
-        Button("Finished", systemImage: "checkmark") {
+        ReviewAction("Finished", symbol: "checkmark", tint: Palette.accentText) {
             Task { await model.decide(todo, .finish, fromReview: true) }
         }
-        .buttonStyle(.borderedProminent)
         .accessibilityIdentifier("plan.review.finish.\(todo.id)")
-        Button("Not finished", systemImage: "arrow.right") {
+        ReviewAction("Not finished", symbol: "arrow.right", tint: Palette.inkMuted) {
             Task { await model.decide(todo, .carryForward, fromReview: true) }
         }
-        .buttonStyle(.bordered)
         .accessibilityIdentifier("plan.review.carry.\(todo.id)")
     }
 }

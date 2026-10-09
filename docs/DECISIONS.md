@@ -1853,3 +1853,453 @@ files but would not provide the project and shared scheme during initial product
 
 **Validation.** Verify the committed checkout builds without first running XcodeGen. This checks
 project discovery and build inputs; Apple signing and TestFlight upload remain cloud-side checks.
+
+
+## ADR-0056 · Complete same-account cloud saving without replacing SwiftData
+
+**Date:** 2026-09-26
+
+**Context.** The user now has a paid developer account and wants all saved app data to follow their
+Apple Account. The private CloudKit store already contains thoughts and Plan's task projections,
+but incoming records did not notify feature models, settings stayed local, and enabling App Groups
+changed the database location without importing free-account data.
+
+**Decision.** Keep SwiftData's private CloudKit mirroring for saved content. Observe persistent
+store remote changes and completed CloudKit imports in Persistence and forward them through the
+existing change notifier. Features re-fetch through their existing fresh contexts; details preserve
+unsaved text and review reconciles remaining cards without resetting completed decisions. Foreground
+activation also notifies screens. Register for silent pushes after capture is visible.
+
+Mirror sorting, decay profiles, reminder preferences and capture-hint dismissal with iCloud
+key-value storage. Use local defaults as an offline cache; existing cloud values win at startup,
+missing values are seeded from explicit local choices, remote updates are not echoed, and incoming
+initial cloud synchronization may supersede seeded values. Cache invalidation and the same notifier
+refresh behavior and UI. Notification permission and delivery history stay specific to each device.
+Concurrent edits to the same preference use the key-value service's conflict handling, not a union.
+
+Before attaching CloudKit, import a previous device-local database into the App Group store.
+Preserve identifiers, prefer existing destination rows, save in one transaction, then write a local
+completion marker. Retain the original file for recovery; the marker prevents later resurrection
+of deleted imported records. An import failure keeps using the original local store and logs the
+failure. No records are deleted as part of the upgrade. Reset-store test launches skip cloud sync.
+
+**Alternatives.** Replacing storage with a custom CloudKit engine would make synchronization and
+conflict handling our responsibility without helping this same-account milestone. Storing tiny
+preferences as new SwiftData entities would require schema evolution and asynchronous reads for
+currently synchronous settings. Polling for incoming data would waste work while missing event
+semantics. Moving raw SQLite files risks losing WAL transactions; importing records avoids that.
+
+**Consequences.** iCloud operates asynchronously. “iCloud enabled” means the container attached and
+an account is available, not proof of a completed transfer. Device acceptance is still required,
+including offline changes, deletion, provisioning and production schema deployment. Simultaneous
+edits to the same content remain subject to CloudKit merging; this is not collaborative editing.
+Cross-account sharing is a separate future storage decision.
+
+**References.** [SwiftData sync](https://developer.apple.com/documentation/swiftdata/syncing-model-data-across-a-persons-devices),
+[iCloud preferences](https://developer.apple.com/documentation/foundation/nsubiquitouskeyvaluestore),
+and [CloudKit diagnostics](https://developer.apple.com/documentation/technotes/tn3164-debugging-the-synchronization-of-nspersistentcloudkitcontainer).
+
+
+## ADR-0057 · Three destinations, with review and settings in context
+
+**Date:** 2026-09-26
+
+**Context.** The user wants to simplify existing navigation before adding lists. Review is a
+finite activity rather than a permanent destination, and Settings need not occupy the tab bar.
+This supersedes ADR-0040's separate Review tab and the five-tab arrangement in ADR-0053.
+
+**Decision.** Keep Home, Thoughts and Plan. Thoughts places its review invitation on a separate
+line below the thought count. Plan's existing invitation pushes daily review within Plan; the
+`fleeting://daily-review` route does the same. Remove the combined review picker. Back returns to
+the originating list. Settings opens in a dismissible sheet from each page's top-right control:
+Home and detail/review screens use a gear, Thoughts includes it alongside filters, and Plan groups
+it with Today. Dismissal preserves the selected tab, navigation and drafts.
+
+**Alternative.** Keeping the tabs would retain the navigation complexity the user explicitly
+rejected. Adding separate settings and filter buttons would crowd the same corner; menus combine
+secondary actions while keeping review invitations visible on their relevant pages.
+
+**Validation.** Focused simulator tests cover the three tabs, Settings access and dismissal from
+each, the position of thought review beneath the summary, and daily-review decisions/back navigation.
+
+
+## ADR-0058 · Direct toolbar actions, serif typography and explicit entry areas
+
+**Date:** 2026-09-26
+
+**Context.** The user wants Settings visible beside existing toolbar actions, a more substantial
+Home writing area, smaller habit cards, consistent serif typography, and Return-to-save on Plan.
+
+**Decision.** Use adjacent toolbar buttons grouped by the system into a pill: Filter / Settings
+on Thoughts, Today / Settings on Plan. This replaces ADR-0057's hidden Settings menu item.
+Home's capture field reserves multiple lines in a recessed writing area; habit cards use smaller
+vertical insets while retaining 44-point action targets. All text tokens use serif size/weight
+variations, with serif navigation titles and inherited serif styles for default SwiftUI controls.
+This supersedes ADR-0037's split serif/sans typography and ADR-0039's borderless capture field.
+
+Plan uses a single-line task-entry TextField: Return submits and retains focus for the next task.
+A conditional bottom safe-area bar provides a padded Done button above the keyboard; it is absent
+when editing ends. A multiline input would preserve newline behavior contrary to the requested
+checklist flow. Longer saved tasks still wrap in their rows.
+
+**Validation.** Focused UI checks exercise Return submission, continued keyboard focus, Done's
+position above the keyboard and disappearance after dismissal, and direct Settings access.
+
+
+## ADR-0059 · Balanced toolbar pills and borderless writing
+
+**Date:** 2026-09-27
+
+**Context.** The user requested balanced pill padding, a borderless but spacious Home field,
+floating glass keyboard controls, aligned Plan row icons, and larger left-aligned page headings.
+
+**Decision.** `ToolbarPill` uses equal 44-point action targets and explicit outer padding inside
+one capsule. Main-page controls live in a shared header because UIKit's toolbar adaptation
+collapses the filter-plus-settings group into a single menu. `PageHeading` aligns a serif title
+with trailing actions and supplies Home's title; pushed pages retain native back navigation. Capture keeps its reserved writing height
+without a field background. Keyboard controls use individual glass capsules with margins instead
+of full-width bars. Dismiss controls follow actual software-keyboard visibility; capture retains
+Save for hardware-keyboard input. Plan uses matching 44-point leading/trailing columns and smaller
+inter-column spacing, with plus and disclosure icons centered on the same trailing column.
+
+**Alternatives.** Shrinking completion tap targets would reduce whitespace but impair usability.
+Relying on focus alone would show keyboard dismissal controls even when a hardware keyboard is in
+use. Native grouped toolbar spacing does not provide the requested balanced icon insets.
+
+**Validation.** Focused UI checks cover direct Settings access, Return-to-save, keyboard controls,
+and capture at the largest Dynamic Type size; screenshots check toolbar and Home layout.
+
+
+## ADR-0060 · Explicit thought collections and Plan as a built-in list
+
+**Date:** 2026-10-05
+
+**Context.** The user wants optional lists at capture and browsing, with glass expansion in
+opposite directions, and Plan generalized without losing its calendar or review features.
+
+**Decision.** A thought has one optional `listID`. Named custom collections are SwiftData records;
+Plan uses a fixed domain ID across devices and needs no duplicate built-in database row. All
+thoughts remains the default aggregate browsing scope. Kind/archive filters compose with membership.
+List creation is inline above the keyboard and preserves the capture draft. Both selectors share
+a primitive-data DesignSystem component with a Liquid Glass matched-geometry transition and a
+Reduce Motion fallback. The initial editor supports creation, rename and deletion; its final
+page design is pending the user's specification. Deleting a custom list clears membership in
+the same store transaction and never deletes thoughts. Detail supports moving existing thoughts.
+
+The generic `ThoughtListTaskRepository` projects dated to-dos from a supplied list ID, defaulting
+to Plan. The app, widgets and in-memory fallback use it. Import of legacy checklist rows now
+belongs to the single thought repository; the duplicate SwiftData checklist actor is removed.
+Plan's presentation keeps its date picker, explicit carry-forward, completion history and widgets.
+V5→V6 migrates every previously shared to-do, including archived/completed ones, into Plan.
+Automatic captures classified as to-dos and unfiled thoughts explicitly changed to to-dos still
+enter Plan; explicit custom-list choices take precedence. Existing no-auto-expiry behavior for
+to-dos remains, and Plan membership protects the rest of that list from expiry too.
+
+**Alternatives.** A separate Plan store repeats storage and lifecycle rules. Assigning every
+new to-do to Plan would override custom-list choices. Multiple memberships require an additional
+selection model and delete semantics the requested single-list selector does not need. Treating
+list names as identifiers makes renames break membership and device synchronization.
+
+**Validation.** Storage regressions cover stable identity, case-insensitive names, non-destructive
+list deletion and scoped task decisions. Migration preserves old records and completion dates.
+Feature tests cover classification membership, capture into Plan and combined list/kind/archive
+filters. Focused simulator tests exercise both glass selectors, draft-preserving creation and
+Plan's daily review.
+
+**API reference.** [Apple's custom Liquid Glass guidance](https://developer.apple.com/documentation/SwiftUI/Applying-Liquid-Glass-to-custom-views).
+
+
+## ADR-0061 · Text list controls, inline creation and keyboard-preserving dismissal
+
+**Date:** 2026-10-05
+
+**Context.** The first list selectors had inconsistent spacing, uniform purple text, an icon-only
+collapsed state, and extra heading/close/new-list controls. The user requested a simpler dropdown
+with restrained selection emphasis and outside dismissal that preserves capture focus.
+
+**Decision.** Both directions use a 16-point panel inset, equally sized rows and one-pixel inset
+separators. Unselected names use muted text; only the selected choice uses purple. The compact
+control reads “Lists” or a selected name capped at ten characters plus ellipsis, with a fixed width
+and full accessible label. Remove the internal heading and close button. An empty New list field
+appears immediately on opening; Return or an inline check commits it. Outside taps dismiss the
+selector and restore capture focus rather than dismissing the keyboard. VoiceOver uses Escape.
+
+The glass surface keeps its identity while its width and measured height change. Opening and
+closing share an anchored, critically damped spring, with no overshoot, timer, or input lockout.
+Reduce Motion disables the spatial animation. Button press feedback is immediate. These choices
+apply the installed `apple-design` skill’s principles using native SwiftUI.
+
+**Alternative.** A close button duplicates outside dismissal and competes with the list choices.
+A second new-list button makes a common operation require another step. Independent popover
+surfaces lose the shared glass origin. A fullscreen accessibility button above the picker masks
+its choices; the transparent outside-tap layer is excluded from accessibility, while the picker
+supplies Escape.
+
+
+## ADR-0062 · App-wide Apple-design pass
+
+**Context.** The user requested evaluation and improvement of the entire app with the installed
+apple-design skill. The audit exposed dark-mode foreground errors, oversized control glyphs at
+accessibility sizes, undersized targets, keyboard focus churn, unclear return labels and visual
+success feedback after failed writes.
+
+**Decision.** Keep the existing product structure and serif identity. Share immediate custom-button
+press feedback, a semantic foreground for purple fills, stable glyph sizes, adaptive page headers,
+and stronger accessibility presentation of floating glass. Reading text continues to scale fully;
+compact navigation text and icon targets do not consume its space. Group thought properties and
+adapt settings/detail controls to available width. Preserve the fading body while keeping expiry
+metadata and row actions readable. Use critically damped transitions for ordinary state changes,
+and projected release travel for review gestures. Native controls retain native interaction behavior.
+
+Make submission and decision feedback reflect actual writes. Plan keeps focus while saving.
+Review failures retain the current card and tally; detail actions return success and dismiss only
+after successful writes. Inline errors allow retry without adding a launch modal or alert flow.
+
+**Alternatives.** Replacing the serif with the default sans would override the user’s established
+preference. Scaling decorative glyphs like reading text steals its space. Applying opacity to an
+entire row compounds muted metadata contrast. A visual overhaul of navigation or data behavior
+would exceed this design pass. Physical animation polish is not inferred from static screenshots.
+
+**Validation.** Feature regressions, four-appearance contrast tests, focused keyboard and review
+interaction checks, and nine-destination screenshot routes in both appearances. Details and
+remaining device-only acceptance are in `docs/DESIGN_AUDIT.md`.
+
+
+## ADR-0063 · Native list-menu animation and explicit scrolling thought review
+
+**Date:** 2026-10-06
+
+**Context.** The user prefers the thought-kind filter's animation and requests the same for both
+list controls. They also find Let go, Snooze and Keep imprecise, and prefer daily task review's
+scrolling cards and in-card decisions.
+
+**Decision.** Use the same SwiftUI Menu with an inline Picker for list selection. Remove custom
+morphing geometry, spring timing and outside-tap capture. The system handles presentation and
+reversal, including the menu above Home's keyboard. Keep the compact Lists/selected-name label.
+New list opens a small anchored naming field from the native menu, retaining creation and draft
+preservation. This replaces ADR-0061's always-visible input in a custom expanding panel in favor
+of the user's requested system-menu behavior.
+
+Thought review uses daily review's scrolling cards and the same shared native capsule controls.
+Actions are Keep active (refresh now and remain visible), Hide for 7 days (pause visibility until
+the displayed return date), and Archive (move to Archived without deletion). Avoid calling the
+pause a reminder because the operation changes visibility; it does not schedule a dedicated
+notification. Preserve optional answer capture, progress, summary, retries and horizontal
+archive/keep shortcuts. Vertical gestures scroll the list. Decisions can target any pending card,
+so choosing a later card must not erase the current card's draft answer or count a decision twice.
+
+**Alternatives.** Tuning another custom spring cannot guarantee parity with the native menu.
+Keeping an independently animated glass panel would repeat the inconsistency the user rejected.
+A centered single-card stack does not match the requested task-review design. Ambiguous labels
+force users to infer whether they are preserving or deleting their thoughts.
+
+**Reference.** [SwiftUI Menu](https://developer.apple.com/documentation/swiftui/menu).
+
+
+Directional card shortcuts use UIKit's gesture representable with an early horizontal-only
+recognition decision. Ignoring vertical movement after a SwiftUI drag has already begun can
+capture the scroll instead. Large-text scrolling and small/deliberate horizontal drags verify
+both paths. [Apple gesture representable](https://developer.apple.com/documentation/swiftui/uigesturerecognizerrepresentable).
+
+
+## ADR-0064 · Stacked list sheets and persistent list details
+
+**Date:** 2026-10-06
+
+**Context.** The user requests list management to open from below like Settings, one collection
+including protected Plan, a separate creation action, metadata fields, and direct editing from
+the selected list on Thoughts. Shared lists are explicitly deferred until their next message.
+
+**Decision.** Use native sheet presentation for management and stack the shared list editor over
+it. Use the same editor for Home/Thoughts creation and direct editing; preserve Home’s draft and
+restore its focus on dismissal. Reuse Card, SectionLabel, typography/color tokens and native
+controls rather than designing another panel animation. Plan is a plain row in the same section;
+custom rows disclose their editable details. The separate Create list button is the manager’s
+only creation entry. Existing picker creation entries also open the same complete form.
+
+Lists persist a description and default thought kind. V7 adds defaulted fields through a
+lightweight migration; existing lists remain Unsorted with empty descriptions. Capture honors
+custom-list defaults, explicit choices take precedence, and Unsorted keeps existing background
+classification. Description is stored for future list routing; this change adds no automatic
+routing engine or sharing service. Removing a list continues to unfile thoughts without deletion.
+
+**Alternatives.** A navigation push repeats the inconsistency with Settings. Separate create and
+edit forms drift in behavior and design. Changing V6 in place breaks versioned stores. Converting
+existing thoughts when a list default changes would rewrite a person’s earlier choices; defaults
+apply only to subsequent captures. Implementing sharing now contradicts the requested deferral.
+
+
+## ADR-0065 · Contextual Lists navigation, shared input controls and warm dark surfaces
+
+**Date:** 2026-10-06
+
+**Context.** The user requests four round default-type choices, an untitled editor with cross and
+Create at opposite corners, one keyboard-down control throughout editing, a trash icon for list
+deletion, and a Lists action extending the selected Thoughts tab. Dark palette changes require
+approval; the user explicitly approved warm ink/espresso before implementation.
+
+**Decision.** Preserve the native TabView and NavigationStacks, hide the system tab bar at each
+stack, and supply one glass navigation bar. Thoughts’ selected capsule expands to two tab widths
+and contains the contextual native Lists menu. Native Layout interpolation and matched geometry
+share one spring without bounce; Reduce Motion removes movement. List selection changes the page
+heading and returns to the inbox root. Thoughts’ primary button restores the all-lists view.
+
+Reuse `RoundIconButton` and `ThoughtKindPicker` for the four choices and trash action. Use native
+sheet toolbar placements with a leading cross, trailing Create/Save and no title. Reuse one glass
+keyboard-down button and accessory modifier in every input flow. Each editing presentation observes keyboard notifications through the same modifier. Apply page
+accessibility identifiers before its inset so they cannot overwrite the keyboard button’s own
+identifier. Hiding the keyboard changes focus only and never clears a draft.
+
+Dark surfaces become espresso/cocoa with warm ivory, taupe metadata and lavender accents; the
+user’s off-white light palette remains unchanged. Brighten lavender text slightly after the
+cocoa-card contrast audit showed 4.47:1, below AA; rerun all four appearance combinations.
+
+**Alternatives.** Four independent peer tabs misrepresent Lists as another destination. A separate
+floating list button would contradict the requested shared selected capsule. Replacing native
+navigation stacks would risk losing their push state and sheet behavior. Independent type and
+keyboard controls would drift again. Updating colors before approval would violate the user’s
+explicit request. Sharing remains outside this revision.
+
+
+## ADR-0066 · Native contextual tab set and sage on near-black brown
+
+**Date:** 2026-10-06
+
+**Context.** The custom bar remained full-width with three controls, had uneven grouped padding,
+looked less like the system glass, and did not distinguish Thoughts from Lists. The user requests
+checking native APIs before retaining custom navigation, noting Phone’s changing tab count. They
+also request darker brown surfaces and an accent that complements them.
+
+**Decision.** Replace the custom bar with native TabView. The public TabContent.hidden API allows
+Lists to appear only in the Thoughts section, producing a compact three-tab bar elsewhere and a
+four-tab bar there. A distinct Lists selection clarifies the active view. TabContent.popover
+anchors the choices to its tab while preserving the bar. The selection binding also handles
+re-tapping the already selected Lists tab. Synchronize selection after creation/deletion and
+restore Thoughts after dismissing an unselected list chooser. Remove AppNavigationBar and the
+navigation-specific GlassListPicker rendering branch. The system owns Liquid Glass and padding.
+
+Animate only the tab-set expansion/contraction at the app level; keep selection/popover animation
+native. Applying an extra spring within the section produced an intermittent XCTest animation-idle
+pause during verification. Dark becomes near-black brown with muted sage controls; light retains
+its existing purple/off-white palette. All contrast pairings continue to pass.
+
+**Alternatives.** A refined custom bar would still duplicate a native feature. A two-tab highlight
+would obscure which content is selected. Tab context menus target sidebar representations and
+are not the needed tap interaction; a public tab popover supplies it directly. UIKit also exposes
+setTabs(_:animated:), confirming dynamic tab counts are a supported system capability.
+
+**Sources.** [Apple TabView](https://developer.apple.com/documentation/swiftui/tabview),
+[TabContent popover](https://developer.apple.com/documentation/swiftui/tabcontent/popover(ispresented:attachmentanchor:arrowedge:content:)),
+[UITabBarController](https://developer.apple.com/documentation/uikit/uitabbarcontroller).
+
+**Verification.** Simulator assertions for native tab count, selected state, symmetric expanded
+bounds, repeated list opening, persistent bar, list creation/editing/deletion and largest text.
+
+
+## ADR-0067 · Permanent native tabs and selection after choosing a list
+
+**Date:** 2026-10-06
+
+**Context.** The user prefers a shared Thoughts/Lists pill with independent inner highlights, but
+explicitly chooses an always-visible native Lists tab when native APIs do not support that pill.
+Opening the chooser alone must not suggest that a list is being viewed.
+
+**Decision.** Use the fallback: four native tabs on Home, Thoughts, Lists and Plan. Public
+UITabGroup/TabSection APIs define hierarchy/sidebar grouping; the iPhone bar exposes one selected
+tab and no grouped background around two distinct items. Remove contextual hiding and bar-count
+animation. The Lists selection callback opens the native tab popover and leaves selection intact.
+Do not reset the navigation stack until a destination is actually chosen. Choosing a collection
+highlights Lists; All thoughts highlights Thoughts. Cancel/dismiss preserves the existing page.
+Load the existing inbox/list data when the chooser opens, including from Home or Plan on a fresh
+launch. Creation/deletion continue to synchronize selection with list membership. Keep native glass,
+spacing, accessibility and the existing sage accent; no custom navigation replacement.
+
+**Alternatives.** A custom shared capsule would violate the requested fallback priority. Selecting
+Lists merely to open its popover incorrectly describes the current content. TabSection is not a
+public way to draw the requested grouped iPhone pill.
+
+**Sources.** [UITabGroup](https://developer.apple.com/documentation/uikit/uitabgroup),
+[selectedTab](https://developer.apple.com/documentation/uikit/uitabbarcontroller/selectedtab),
+[tab navigation](https://developer.apple.com/documentation/swiftui/enhancing-your-app-content-with-tab-navigation).
+
+
+## ADR-0068 · Real Lists destination and shared selection/assignment controls
+
+**Date:** 2026-10-06
+
+**Context.** The user explicitly replaces the earlier chooser-preserves-tab requirement. Lists
+must immediately select its own empty destination, stay selected while choosing, and forget its
+navigation selection when left. They request actual lists plus Add List/Edit Lists, shared thought
+assignment menus, unchanged row spacing with better typography, and a circular close bubble.
+
+**Decision.** Keep four native tabs. Lists has an explicit inbox scope with an empty canvas until
+a collection is selected. Clear only navigation membership filtering on exit; never write thought
+membership when navigating. Remove All thoughts from navigation choices, because Thoughts already
+serves that purpose. Selecting a collection does not switch tabs a second time.
+
+Extract ListSelectionChoices into DesignSystem using string IDs. Reuse its rows, ticks, separators
+and management actions for navigation and thought properties. Assignment retains No list and calls
+the existing domain operation, including Plan’s dated-todo behavior. App-coordinated creation can
+return the created list to the thought editor and opt out of navigation selection. Management
+opened there likewise avoids redirecting the editor’s underlying tab.
+
+Use title3 serif names and a four-point leading inset in the manager, preserving row min-height
+and existing vertical insets. Use native icon-only labeling with circular border shape for Close.
+
+**Alternatives.** Reusing navigation’s nil selection as saved assignment would unfile thoughts
+without a user request. Keeping separate menu implementations repeats the drift the user identified.
+Reducing row heights would contradict their explicit spacing preference. A custom tab bar remains
+outside scope; this revision preserves the native Apple component.
+
+
+## ADR-0069 · Native iCloud list collaboration over the original store
+
+**Date:** 2026-10-06
+
+**Context.** The user requests live shared lists using Apple's link/AirDrop/iCloud features without
+hosting a server. They approve the proposal: custom lists first, protected personal Plan, native
+invitation/management UI, editor/viewer access, personal habit progress/hiding and manual archiving.
+SwiftData's public CloudKit configuration exposes private sync but no shared-database configuration.
+
+**Decision.** Use NSPersistentCloudKitContainer with private and shared store descriptions in the
+existing iCloud container. Generate the exact managed-object model using Apple's public
+NSManagedObjectModel.makeManagedObjectModel bridge from the versioned SwiftData schema. Upgrade to
+V8 through the existing migration plan, release SwiftData, then open the original private SQLite
+file through Core Data. Preserve store UUID, existing record IDs and cloud metadata; keep a
+coordinated, journal-aware pre-upgrade recovery snapshot. Cloud attachment failure retries the same
+durable store locally before the existing memory fallback. Widgets/intents use the same foundation.
+
+Share a custom list and its optional inverse thought relationship, including archived/completed
+history. Repair graph membership before creating a share so unrelated lists and Plan cannot enter
+it. Personal activity lives in a separate private entity with scalar IDs and no relationships to
+the shared graph. To-do completion/archive/content are common; streaks, hiding and attention are
+personal. Shared thoughts require manual archiving to avoid one person's decay settings archiving
+content for everyone. Store-level native permissions and view-only controls enforce access.
+
+UICloudSharingController supplies invitations and management (links, Messages/AirDrop where the
+system offers them). New shares use publicPermission.none. Owners can choose invited-only or
+anyone-link access and read/write permissions; participants can leave. Sharing/deleting Plan is
+protected. Shared-list deletion requires stopping sharing first; existing shared thoughts cannot
+move across shares. Default listing/name validation tolerates same-named received lists from
+other owners. Native scene delegates accept cold/warm invitations, validate the container, and
+route to the exact list after its shared zone imports. Async share/accept callbacks have bounded,
+single-resume waits. Closing an editor while preparing prevents a late share sheet appearing elsewhere.
+
+**Alternatives and cost.** A hosted backend contradicts the user's scope. A second CloudKit
+collaboration container would duplicate the private store, identity and synchronization logic.
+Hand-written CKRecord replication would require conflict, token, deletion, retry and migration
+machinery already provided by Core Data. A copied/rebuilt private store risks losing mirroring
+metadata and duplicating existing cloud records. Retaining only SwiftData does not expose the
+required shared scope. The cost is a Core Data repository over the existing model, a second local
+store, and signed two-account acceptance/schema deployment before release. Native sync is eventual,
+not real-time; no external website or account system is introduced.
+
+**Sources.** [Apple Core Data sharing](https://developer.apple.com/documentation/coredata/sharing-core-data-objects-between-icloud-users),
+[SwiftData/Core Data coexistence](https://developer.apple.com/documentation/coredata/adopting-swiftdata-for-a-core-data-app),
+[UICloudSharingController](https://developer.apple.com/documentation/uikit/uicloudsharingcontroller),
+[SwiftUI scene delegates](https://developer.apple.com/documentation/swiftui/uiapplicationdelegateadaptor).
+
+**Verification.** Tests cover model/store compatibility, preserved V7 identity/history/recovery,
+share graph isolation, owner/editor/viewer writes, personal activity, durable offline reopening,
+and focused unsigned UI flows. These do not claim an actual CloudKit invitation was delivered.
+The signed two-account checklist is recorded in ICLOUD.md.

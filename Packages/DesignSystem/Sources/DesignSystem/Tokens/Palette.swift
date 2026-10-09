@@ -13,9 +13,9 @@ public enum Palette {
     /// The page behind everything.
     public static let surfaceValues = ThemedColor(
         light: RGB(0.976, 0.969, 0.949),
-        dark: RGB(0.043, 0.043, 0.051),
+        dark: RGB(22 / 255, 19 / 255, 17 / 255),
         lightIncreased: RGB(1, 1, 1),
-        darkIncreased: RGB(0, 0, 0)
+        darkIncreased: RGB(15 / 255, 13 / 255, 11 / 255)
     )
 
     /// A recess in the page: the capture field's well, and search fields.
@@ -24,31 +24,31 @@ public enum Palette {
     /// into from a card the app has put there.
     public static let surfaceSunkenValues = ThemedColor(
         light: RGB(0.937, 0.929, 0.906),
-        dark: RGB(0.078, 0.078, 0.090),
+        dark: RGB(14 / 255, 12 / 255, 10 / 255),
         lightIncreased: RGB(0.898, 0.890, 0.867),
-        darkIncreased: RGB(0.114, 0.114, 0.133)
+        darkIncreased: RGB(9 / 255, 8 / 255, 7 / 255)
     )
 
     /// Raised surfaces such as thought rows and review cards.
     public static let raisedValues = ThemedColor(
         light: RGB(1, 1, 1),
-        dark: RGB(0.114, 0.114, 0.133),
+        dark: RGB(35 / 255, 30 / 255, 26 / 255),
         lightIncreased: RGB(1, 1, 1),
-        darkIncreased: RGB(0.153, 0.153, 0.180)
+        darkIncreased: RGB(45 / 255, 38 / 255, 32 / 255)
     )
 
     /// Text at full freshness.
     public static let inkValues = ThemedColor(
         light: RGB(0.086, 0.078, 0.066),
-        dark: RGB(0.961, 0.953, 0.933),
+        dark: RGB(245 / 255, 237 / 255, 223 / 255),
         lightIncreased: RGB(0, 0, 0),
-        darkIncreased: RGB(1, 1, 1)
+        darkIncreased: RGB(1, 245 / 255, 232 / 255)
     )
 
     /// Supporting text and timestamps.
     public static let inkMutedValues = ThemedColor(
         light: RGB(0.361, 0.345, 0.318),
-        dark: RGB(0.596, 0.588, 0.569),
+        dark: RGB(183 / 255, 170 / 255, 157 / 255),
         lightIncreased: RGB(0.235, 0.220, 0.196),
         darkIncreased: RGB(0.749, 0.741, 0.722)
     )
@@ -57,26 +57,29 @@ public enum Palette {
     /// contrast minimum of its own.
     public static let separatorValues = ThemedColor(
         light: RGB(0.878, 0.867, 0.839),
-        dark: RGB(0.204, 0.204, 0.231),
+        dark: RGB(81 / 255, 69 / 255, 60 / 255),
         lightIncreased: RGB(0.639, 0.627, 0.600),
-        darkIncreased: RGB(0.365, 0.365, 0.400)
+        darkIncreased: RGB(129 / 255, 112 / 255, 96 / 255)
     )
 
-    /// The fill behind a prominent control. Chosen so white text on it clears AA.
+    /// Purple in light appearance, sage in dark; white text clears AA on both.
     public static let accentValues = ThemedColor(
         light: RGB(0.31, 0.25, 0.82),
-        dark: RGB(0.36, 0.29, 0.84),
+        dark: RGB(0.29, 0.38, 0.31),
         lightIncreased: RGB(0.24, 0.18, 0.72),
-        darkIncreased: RGB(0.30, 0.23, 0.78)
+        darkIncreased: RGB(0.22, 0.32, 0.24)
     )
+
+    /// Text and meaningful marks on a prominent fill in every appearance.
+    public static let onAccentValues = ThemedColor(light: RGB(1, 1, 1), dark: RGB(1, 1, 1))
 
     /// The accent used as text or a tint on a surface. Lighter in the dark appearance, because a
     /// fill colour and a text colour cannot be the same value and both clear AA.
     public static let accentTextValues = ThemedColor(
         light: RGB(0.29, 0.227, 0.784),
-        dark: RGB(0.56, 0.505, 0.949),
+        dark: RGB(0.68, 0.79, 0.71),
         lightIncreased: RGB(0.20, 0.15, 0.66),
-        darkIncreased: RGB(0.68, 0.64, 0.98)
+        darkIncreased: RGB(0.78, 0.90, 0.81)
     )
 
     /// A quiet tinted fill: the chip behind a glyph, the ground under a highlighted row.
@@ -84,9 +87,9 @@ public enum Palette {
     /// Audited as a background in its own right, because ``accentText`` is drawn on it.
     public static let accentSoftValues = ThemedColor(
         light: RGB(0.925, 0.918, 0.984),
-        dark: RGB(0.153, 0.145, 0.239),
+        dark: RGB(0.14, 0.19, 0.155),
         lightIncreased: RGB(0.902, 0.894, 0.980),
-        darkIncreased: RGB(0.180, 0.169, 0.278)
+        darkIncreased: RGB(0.12, 0.20, 0.145)
     )
 
     /// Applied to a thought that is close to expiring.
@@ -135,6 +138,11 @@ public enum Palette {
     /// The accent used as text or a tint on a surface.
     public static var accentText: Color {
         accentTextValues.color
+    }
+
+    /// Text and meaningful marks on a prominent control.
+    public static var onAccent: Color {
+        onAccentValues.color
     }
 
     /// A quiet tinted fill: the chip behind a glyph, the ground under a highlighted row.

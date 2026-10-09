@@ -63,6 +63,9 @@ public struct DecayEngine: Sendable {
     /// - Returns: Freshness within 0...1.
     public func freshness(of thought: Thought, at date: Date) -> Freshness {
         guard thought.state.isLive else { return .expired }
+        if thought.sharing != nil {
+            return .full
+        }
         let policy = policy(for: thought)
         guard policy.decayWindow > 0 else {
             return date.timeIntervalSince(referenceDate(for: thought)) >= policy.lifetime
@@ -79,7 +82,7 @@ public struct DecayEngine: Sendable {
     /// - Parameter thought: The thought to evaluate.
     /// - Returns: The expiry instant, or `nil` for thoughts that no longer decay.
     public func expiryDate(of thought: Thought) -> Date? {
-        guard thought.state.isLive else { return nil }
+        guard thought.state.isLive, thought.sharing == nil else { return nil }
         return referenceDate(for: thought).addingTimeInterval(policy(for: thought).lifetime)
     }
 
@@ -89,7 +92,7 @@ public struct DecayEngine: Sendable {
     ///   - date: The instant to evaluate at.
     /// - Returns: `true` only for live thoughts whose freshness has reached zero.
     public func shouldArchive(_ thought: Thought, at date: Date) -> Bool {
-        thought.state.isLive && freshness(of: thought, at: date).hasExpired
+        thought.sharing == nil && thought.state.isLive && freshness(of: thought, at: date).hasExpired
     }
 
     /// The instant decay is measured from.

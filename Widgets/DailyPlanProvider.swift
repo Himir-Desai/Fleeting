@@ -45,8 +45,9 @@ struct DailyPlanProvider: TimelineProvider {
 
     private func entries(at date: Date) async -> [DailyPlanEntry] {
         guard ModelContainerFactory.isShared,
-              let store = try? ModelContainerFactory.store(syncing: false),
-              let todos = try? await SwiftDataDailyTodoRepository(modelContainer: store.container).all()
+              let store = try? await CollaborationStore.open(syncing: false),
+              let todos =
+              try? await ThoughtListTaskRepository(thoughts: CollaborationRepository(store: store)).all()
         else { return [unavailable(at: date)] }
         let midnight = Calendar.autoupdatingCurrent.dateInterval(of: .day, for: date)?.end
         return [date, midnight].compactMap(\.self).map { instant in

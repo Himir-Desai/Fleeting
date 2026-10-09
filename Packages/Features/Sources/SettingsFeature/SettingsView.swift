@@ -10,10 +10,13 @@ import SwiftUI
 /// settings (ADR-0032).
 public struct SettingsView: View {
     @State private var model: SettingsModel
+    @Environment(\.dynamicTypeSize) private var typeSize
+    private let changes: (any ThoughtChangeObserving)?
 
     /// Creates the settings screen.
     /// - Parameter model: State for the screen, built by the composition root.
-    public init(model: SettingsModel) {
+    public init(model: SettingsModel, changes: (any ThoughtChangeObserving)? = nil) {
+        self.changes = changes
         _model = State(initialValue: model)
     }
 
@@ -29,11 +32,17 @@ public struct SettingsView: View {
             .padding(.vertical, Spacing.loose)
         }
         .background(Palette.surface)
-        .navigationTitle("Settings")
+        .pageHeading("Settings")
         #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
         #endif
-            .task { await model.load() }
+            .task {
+                await model.load()
+                guard let changes else { return }
+                for await _ in changes.changes {
+                    await model.load()
+                }
+            }
     }
 
     /// A titled group of controls on one card.
@@ -58,16 +67,9 @@ public struct SettingsView: View {
     /// The sorting choice, and what that choice is actually getting right now.
     private var sorting: some View {
         section("Sorting") {
-            HStack(spacing: Spacing.snug) {
-                ForEach(SortingPreference.allCases) { choice in
-                    ChoiceChip(
-                        label: choice.label,
-                        isSelected: model.sorting == choice
-                    ) {
-                        Task { await model.chooseSorting(choice) }
-                    }
-                    .accessibilityIdentifier("settings.sorting.\(choice.rawValue)")
-                }
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: Spacing.snug) { sortingChoices.fixedSize() }
+                VStack(alignment: .leading, spacing: Spacing.snug) { sortingChoices }
             }
 
             Text(model.sorting.explanation)
@@ -83,6 +85,15 @@ public struct SettingsView: View {
                 .foregroundStyle(Palette.inkMuted)
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityIdentifier("settings.sorting.reality")
+        }
+    }
+
+    private var sortingChoices: some View {
+        ForEach(SortingPreference.allCases) { choice in
+            ChoiceChip(label: choice.label, isSelected: model.sorting == choice) {
+                Task { await model.chooseSorting(choice) }
+            }
+            .accessibilityIdentifier("settings.sorting.\(choice.rawValue)")
         }
     }
 
@@ -133,7 +144,8 @@ public struct SettingsView: View {
                         Task { await model.requestPermission() }
                     }
                     .buttonStyle(.borderedProminent)
-                    .buttonBorderShape(.capsule)
+                    .buttonBorderShape(typeSize
+                        .isAccessibilitySize ? .roundedRectangle(radius: Radius.control) : .capsule)
                     .controlSize(.large)
                     .tint(Palette.accent)
                     .accessibilityIdentifier("settings.notifications.enable")
@@ -184,12 +196,19 @@ public struct SettingsView: View {
             }
 
             ForEach(model.facts, id: \.label) { fact in
-                HStack {
-                    Text(fact.label)
-                        .foregroundStyle(Palette.ink)
-                    Spacer(minLength: Spacing.snug)
-                    Text(fact.value)
-                        .foregroundStyle(fact.isWarning ? Palette.fading : Palette.inkMuted)
+                ViewThatFits(in: .horizontal) {
+                    HStack {
+                        Text(fact.label).foregroundStyle(Palette.ink).fixedSize()
+                        Spacer(minLength: Spacing.snug)
+                        Text(fact.value)
+                            .foregroundStyle(fact.isWarning ? Palette.fading : Palette.inkMuted)
+                            .fixedSize()
+                    }
+                    VStack(alignment: .leading, spacing: Spacing.tight) {
+                        Text(fact.label).foregroundStyle(Palette.ink)
+                        Text(fact.value)
+                            .foregroundStyle(fact.isWarning ? Palette.fading : Palette.inkMuted)
+                    }
                 }
                 .font(Typography.body)
                 .accessibilityElement(children: .combine)

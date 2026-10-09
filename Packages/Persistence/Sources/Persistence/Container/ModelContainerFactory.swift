@@ -1,5 +1,6 @@
 import Core
 import Foundation
+import OSLog
 import SwiftData
 
 /// Builds the SwiftData containers the app and its tests run against.
@@ -16,7 +17,7 @@ public enum ModelContainerFactory {
     ///
     /// Falls back to the app's own support directory when the App Group is unavailable — an
     /// unsigned build or a missing entitlement must degrade to a working app, not a broken one.
-    private static var storeURL: URL {
+    public static var storeURL: URL {
         let shared = FileManager.default.containerURL(
             forSecurityApplicationGroupIdentifier: appGroupIdentifier
         )
@@ -32,7 +33,7 @@ public enum ModelContainerFactory {
 
     /// The schema the app reads and writes.
     private static var schema: Schema {
-        Schema(versionedSchema: ThoughtSchemaV5.self)
+        Schema(versionedSchema: ThoughtSchemaV8.self)
     }
 
     /// The on-disk store the app uses, syncing through iCloud when it can.
@@ -62,6 +63,21 @@ public enum ModelContainerFactory {
             removeStoreFiles(in: directory)
         }
 
+        if syncing, isShared, !resettingFirst {
+            let localURL = URL.applicationSupportDirectory.appending(path: "Fleeting.store")
+            do {
+                try LocalStoreMigration.migrate(from: localURL, to: storeURL)
+            } catch {
+                Logger(subsystem: "com.himirdesai.Fleeting", category: "Storage")
+                    .error("Local store import failed: \(error.localizedDescription, privacy: .public)")
+                return try OpenedStore(
+                    container: open(cloudKitDatabase: .none, url: localURL),
+                    isShared: false,
+                    cloud: .unavailable(.notAttached)
+                )
+            }
+        }
+
         guard syncing, isShared else {
             return try OpenedStore(
                 container: open(cloudKitDatabase: .none),
@@ -70,8 +86,12 @@ public enum ModelContainerFactory {
             )
         }
 
-        if let container = try? open(cloudKitDatabase: .private(cloudContainerIdentifier)) {
+        do {
+            let container = try open(cloudKitDatabase: .private(cloudContainerIdentifier))
             return OpenedStore(container: container, isShared: isShared, cloud: .attached)
+        } catch {
+            Logger(subsystem: "com.himirdesai.Fleeting", category: "Sync")
+                .error("Cloud store unavailable: \(error.localizedDescription, privacy: .public)")
         }
 
         return try OpenedStore(
@@ -84,15 +104,16 @@ public enum ModelContainerFactory {
     /// Opens the on-disk store with a given iCloud configuration, migrating it if needed.
     /// - Parameter cloudKitDatabase: Which CloudKit database to back the store with.
     /// - Returns: The opened container.
-    private static func open(
-        cloudKitDatabase: ModelConfiguration.CloudKitDatabase
+    static func open(
+        cloudKitDatabase: ModelConfiguration.CloudKitDatabase,
+        url: URL? = nil
     ) throws -> ModelContainer {
         try ModelContainer(
             for: schema,
             migrationPlan: ThoughtMigrationPlan.self,
             configurations: ModelConfiguration(
                 schema: schema,
-                url: storeURL,
+                url: url ?? storeURL,
                 cloudKitDatabase: cloudKitDatabase
             )
         )

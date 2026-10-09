@@ -35,14 +35,18 @@ struct ArchivedListRow: View {
                 .padding(.vertical, Spacing.tight)
         )
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
-            Button(action: onRestore) {
-                Label("Restore", systemImage: "arrow.uturn.backward")
+            if thought.canEditContent {
+                Button(action: onRestore) {
+                    Label("Restore", systemImage: "arrow.uturn.backward")
+                }
+                .tint(Palette.accent)
             }
-            .tint(Palette.accent)
         }
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-            Button(role: .destructive, action: onDelete) {
-                Label("Delete", systemImage: "trash")
+            if thought.canEditContent {
+                Button(role: .destructive, action: onDelete) {
+                    Label("Delete", systemImage: "trash")
+                }
             }
         }
     }

@@ -58,6 +58,30 @@ private struct StubIntelligence: IntelligenceService {
 @MainActor
 @Suite("ReviewModel")
 struct ReviewModelTests {
+    @Test("view-only review permits personal decisions but refuses shared archive and sharpening")
+    func viewOnlyReview() async {
+        let thought = Thought(
+            body: "Shared idea",
+            capturedAt: epoch,
+            kind: .idea,
+            snoozeCount: 3,
+            sharing: ListSharing(role: .viewer)
+        )
+        let repository = SpyRepository([thought])
+        let model = makeModel(repository, intelligence: StubIntelligence(questions: ["Who?"]))
+        await model.load()
+        await model.loadAmbientQuestion()
+        #expect(!model.currentAcceptsAmbientQuestion)
+        #expect(model.ambientQuestion == nil)
+        await model.archive()
+        #expect(model.tally.total == 0)
+        #expect(model.current?.id == thought.id)
+        #expect(await repository.stored.first?.state == .inbox)
+        await model.snooze()
+        #expect(model.tally.snoozed == 1)
+        #expect(model.isFinished)
+    }
+
     private let epoch = Date(timeIntervalSince1970: 1_700_000_000)
 
     private func fading(_ body: String, kind: ThoughtKind = .unsorted, agedDays: Double = 25) -> Thought {
@@ -75,6 +99,20 @@ struct ReviewModelTests {
             intelligence: intelligence,
             clock: StubClock(now: epoch)
         )
+    }
+
+    @Test("remote deletions remove pending cards without resetting completed decisions")
+    func cloudReviewChanges() async throws {
+        let repository = SpyRepository([fading("first"), fading("second"), fading("third")])
+        let model = makeModel(repository)
+        await model.load()
+        await model.act()
+        let pending = try #require(model.current)
+        try await repository.delete(id: pending.id)
+        await model.refreshPending()
+        #expect(model.tally.acted == 1)
+        #expect(model.current?.id != pending.id)
+        #expect(model.cards.count == 2)
     }
 
     @Test("a session with nothing to decide says so rather than showing an empty stack")
@@ -132,9 +170,9 @@ struct ReviewModelTests {
         let model = makeModel(repository)
         await model.load()
 
-        await model.drop()
+        await model.archive()
 
-        #expect(model.tally.dropped == 1)
+        #expect(model.tally.archived == 1)
         #expect(await repository.stored.count == 1, "nothing may be destroyed by a review")
         #expect(await repository.stored.first?.state == .archived(at: epoch))
     }
@@ -147,10 +185,10 @@ struct ReviewModelTests {
 
         await model.act()
         await model.snooze()
-        await model.drop()
+        await model.archive()
 
         #expect(model.isFinished)
-        #expect(model.tally == ReviewModel.Tally(acted: 1, snoozed: 1, dropped: 1))
+        #expect(model.tally == ReviewModel.Tally(acted: 1, snoozed: 1, archived: 1))
         #expect(model.tally.total == 3)
     }
 
@@ -235,4 +273,66 @@ struct ReviewModelTests {
         #expect(model.tally.total == 0)
         #expect(!model.isFinished)
     }
+
+    @Test("a decision on a later card preserves the current card and its draft answer")
+    func laterCardDecision() async throws {
+        let first = fading("First")
+        let second = fading("Second")
+        let third = fading("Third")
+        let repository = SpyRepository([first, second, third])
+        let model = makeModel(repository)
+        await model.load()
+        let current = try #require(model.current)
+        let later = try #require(model.pendingCards.last)
+        model.ambientAnswer = "Keep this draft"
+        await model.archive(id: later.id)
+        #expect(model.current?.id == current.id)
+        #expect(model.pendingCards.count == 2)
+        #expect(model.pendingCards.allSatisfy { $0.id != later.id })
+        #expect(model.tally.archived == 1)
+        #expect(model.ambientAnswer == "Keep this draft")
+        let stored = try #require(await repository.stored.first { $0.id == later.id })
+        #expect(stored.state == .archived(at: epoch))
+        await model.archive(id: later.id)
+        #expect(model.tally.archived == 1)
+    }
+
+    @Test("a failed review decision preserves the card, answer and tally for retry")
+    func failedDecisionKeepsCard() async {
+        let thought = fading("Keep me available")
+        let model = ReviewModel(
+            repository: FailedReviewRepository(thought: thought),
+            intelligence: StubIntelligence(),
+            clock: StubClock(now: epoch)
+        )
+        await model.load()
+        model.ambientAnswer = "A draft answer"
+        await model.act()
+        #expect(model.current?.id == thought.id)
+        #expect(model.position == 0)
+        #expect(model.tally.total == 0)
+        #expect(model.ambientAnswer == "A draft answer")
+        #expect(model.lastError != nil)
+        #expect(!model.isDeciding)
+    }
+}
+
+private struct ReviewWriteFailure: Error {}
+
+private actor FailedReviewRepository: ThoughtRepository {
+    let thought: Thought
+    init(thought: Thought) {
+        self.thought = thought
+    }
+
+    func thoughts(in scope: ThoughtScope) async throws -> [Thought] {
+        [thought]
+    }
+
+    func add(_ thought: Thought) async throws {}
+    func update(_ thought: Thought) async throws {
+        throw ReviewWriteFailure()
+    }
+
+    func delete(id: Thought.ID) async throws {}
 }

@@ -16,13 +16,18 @@ public struct CaptureView: View {
 
     /// Asks from outside the screen — a widget, Siri, Control Center — to focus the field.
     private let focus: CaptureFocus?
+    private let onCreateList: () -> Void
 
     /// Whether the first-run explanation has been dismissed by hand. Cleared by `--reset-store`.
     @AppStorage("capture.hintDismissed") private var hintDismissed = false
     @FocusState private var isFieldFocused: Bool
+    @Environment(\.keyboardVisibility) private var keyboard
+    private var keyboardIsVisible: Bool {
+        keyboard?.isVisible == true
+    }
 
-    /// The diameter of the save control, grown to stay a 44pt target.
-    @ScaledMetric(relativeTo: .body) private var controlSize: CGFloat = 52
+    /// The diameter of the keyboard controls, with room around their fixed-size glyphs.
+    private let controlSize: CGFloat = 52
 
     /// Watched so a habit marked elsewhere is reflected here without a relaunch.
     private let changes: (any ThoughtChangeObserving)?
@@ -38,12 +43,14 @@ public struct CaptureView: View {
         model: CaptureModel,
         habits: DailyHabitsModel? = nil,
         changes: (any ThoughtChangeObserving)? = nil,
-        focus: CaptureFocus? = nil
+        focus: CaptureFocus? = nil,
+        onCreateList: @escaping () -> Void = {}
     ) {
         _model = State(initialValue: model)
         _habits = State(initialValue: habits)
         self.changes = changes
         self.focus = focus
+        self.onCreateList = onCreateList
     }
 
     public var body: some View {
@@ -51,16 +58,12 @@ public struct CaptureView: View {
         // it. A ZStack over an ignoresSafeArea colour proposed an unstable width, which let the
         // widest row size the whole column — so opening advanced grew the field and card sideways.
         VStack(alignment: .leading, spacing: Spacing.regular) {
-            // The text block sits a little down the page rather than jammed against the top
-            // margin. With the well gone the placeholder was floating alone at the very top of an
-            // otherwise empty screen, which read as a page that had failed to load (ADR-0041).
-            Spacer(minLength: 0)
-                .frame(height: Spacing.section)
-
+            // Writing has a reserved area before the smaller habit cards.
             well
 
-            if model.lastError != nil {
-                Text("Couldn't save that. Your text is still here — try again.")
+            if let error = model.lastError {
+                Text((error as? ListSharingError)?
+                    .localizedDescription ?? "Couldn't save that. Your text is still here — try again.")
                     .font(Typography.caption)
                     .foregroundStyle(Palette.fading)
                     .accessibilityIdentifier("capture.error")
@@ -126,18 +129,19 @@ public struct CaptureView: View {
             // Only while the keyboard is up. The bar exists to sit on the keyboard, and with the
             // keyboard down its dismiss control pointed at nothing while stranding a grey slab in
             // the middle of an otherwise quiet page.
-            if isFieldFocused {
+            if isFieldFocused, keyboardIsVisible || model.canSave {
                 controls
             }
         }
         // ADR-0047 revises ADR-0008's mechanism, not its promise: the field is the first thing on
         // screen and still takes no navigation to reach, but the keyboard no longer comes up
         // uninvited, because it would bury the habits that now share the page.
-        .task { await habits?.load() }
+        .task { await habits?.load(); await model.loadLists() }
         .task {
             guard let changes else { return }
             for await _ in changes.changes {
                 await habits?.load()
+                await model.loadLists()
             }
         }
         // A capture may be a habit, and a mark changes what the strip should say.
@@ -190,23 +194,23 @@ public struct CaptureView: View {
         !isFieldFocused && !model.canSave
     }
 
-    /// The field: the page itself, not a box drawn on it.
-    ///
-    /// No recess and no border. The metaphor is paper, and paper does not have a well cut into it
-    /// — the well made the largest thing on the most important screen look like one field on a
-    /// form (ADR-0039).
+    /// A spacious writing area that remains recognizable as an editable field when empty.
     private var well: some View {
-        TextField("What's on your mind?", text: $model.text, axis: .vertical)
-            .font(Typography.capture)
-            .foregroundStyle(Palette.ink)
-            .tint(Palette.accentText)
-            .focused($isFieldFocused)
-            .accessibilityIdentifier("capture.field")
-            .accessibilityLabel("Capture a thought")
-            .frame(maxWidth: .infinity, alignment: .topLeading)
-            // The whole page is the tap target, not just the line of text on it.
-            .contentShape(.rect)
-            .onTapGesture { isFieldFocused = true }
+        TextField(
+            "What's on your mind?", text: $model.text,
+            prompt: Text("What's on your mind?").foregroundStyle(Palette.inkMuted), axis: .vertical
+        )
+        .font(Typography.capture)
+        .foregroundStyle(Palette.ink)
+        .tint(Palette.accentText)
+        .focused($isFieldFocused)
+        .accessibilityIdentifier("capture.field")
+        .accessibilityLabel("Capture a thought")
+        .lineLimit(5 ... 8)
+        .frame(maxWidth: .infinity, minHeight: 160, alignment: .topLeading)
+        // The whole page is the tap target, not just the line of text on it.
+        .contentShape(.rect)
+        .onTapGesture { isFieldFocused = true }
     }
 
     /// The save control, sitting on the keyboard rather than in the page.
@@ -220,31 +224,39 @@ public struct CaptureView: View {
     /// completely, and without this the capture screen had no exit at all (ADR-0043).
     private var controls: some View {
         HStack(spacing: Spacing.snug) {
-            dismissButton
+            GlassListPicker(
+                selection: Binding(
+                    get: { model.selectedListID?.uuidString },
+                    set: { model.selectedListID = $0.flatMap(UUID.init(uuidString:)) }
+                ),
+                choices: model.lists.map { .init(
+                    id: $0.id.uuidString,
+                    name: $0.name,
+                    detail: $0.sharing?.summary
+                ) },
+                unselectedLabel: "Automatic", identifier: "capture.lists",
+                controlSize: controlSize,
+                onCreate: onCreateList,
+                onClose: { isFieldFocused = true }
+            )
             Spacer(minLength: 0)
             if model.canSave {
                 saveButton
             }
+            if keyboardIsVisible {
+                dismissButton
+            }
         }
         .padding(.horizontal, Spacing.loose)
         .padding(.vertical, Spacing.regular)
-        .background(.bar)
         .motion(Motion.commit, value: model.canSave)
     }
 
     /// Puts the keyboard away, which is the only way off this screen when the keyboard covers the
     /// tab bar.
     private var dismissButton: some View {
-        Button(action: dismissField) {
-            Image(systemName: "keyboard.chevron.compact.down")
-                .font(Typography.title)
-                .foregroundStyle(Palette.inkMuted)
-                .frame(width: controlSize, height: controlSize)
-                .contentShape(.rect)
-        }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier("capture.dismissKeyboard")
-        .accessibilityLabel("Hide keyboard")
+        KeyboardDismissButton(action: dismissField)
+            .accessibilityIdentifier("capture.dismissKeyboard")
     }
 
     /// The round save control: a tick that commits the thought and clears the field.
@@ -253,14 +265,14 @@ public struct CaptureView: View {
             Task { await model.save() }
         } label: {
             Image(systemName: "checkmark")
-                .font(Typography.title)
-                .foregroundStyle(Palette.raised)
+                .font(Typography.controlSymbol)
+                .foregroundStyle(Palette.onAccent)
                 .frame(width: controlSize, height: controlSize)
                 .background {
                     Circle().fill(model.canSave ? Palette.accent : Palette.inkMuted.opacity(0.35))
                 }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressFeedbackStyle())
         .disabled(!model.canSave)
         .accessibilityIdentifier("capture.save")
         .accessibilityLabel("Save")

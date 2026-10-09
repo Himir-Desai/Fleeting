@@ -227,3 +227,128 @@ struct CaptureClassificationTests {
         #expect(stored?.kindSource == .unclassified)
     }
 }
+
+extension CaptureModelTests {
+    @Test("sharing failures preserve the entire capture draft")
+    func sharingFailurePreservesDraft() async {
+        let (model, _) = makeModel(repository: SpyRepository(failing: ListSharingError.readOnly))
+        model.text = "Private words\nkeep them"
+        model.selectedListID = UUID()
+        await model.save()
+        #expect(model.text == "Private words\nkeep them")
+        #expect(model.lastError as? ListSharingError == .readOnly)
+        #expect(model.savedCount == 0)
+        #expect(!model.isSaving)
+    }
+
+    @Test("a capture in a shared list reports manual archiving instead of a misleading expiry")
+    func sharedCaptureReceipt() async {
+        let list = ThoughtList(name: "Together", defaultKind: .todo, sharing: ListSharing(role: .editor))
+        let repository = SpyRepository()
+        let model = CaptureModel(
+            repository: repository,
+            intelligence: StubIntelligence(),
+            clock: StubClock(now: epoch),
+            listRepository: ListRepository(list)
+        )
+        await model.loadLists()
+        model.selectedListID = list.id
+        model.text = "Do together"
+        await model.save()
+        #expect(model.receipt?.lifetime == "archive manually")
+        #expect(await repository.stored.first?.listID == list.id)
+    }
+
+    @Test("capture remembers its list and background classification preserves membership")
+    func listCapture() async throws {
+        let repository = SpyRepository()
+        let model = CaptureModel(
+            repository: repository,
+            intelligence: StubIntelligence(result: Classification(
+                kind: .idea,
+                title: nil,
+                confidence: 0.9
+            )),
+            clock: StubClock(now: epoch)
+        )
+        let listID = UUID()
+        model.selectedListID = listID
+        model.text = "A thought in a list"
+        await model.save()
+        await model.classificationTask?.value
+        #expect(try await repository.all().first?.listID == listID)
+        #expect(model.selectedListID == listID)
+        #expect(model.text.isEmpty)
+    }
+
+    @Test("capture into Plan creates a confirmed dated todo")
+    func planCapture() async throws {
+        let (model, repository) = makeModel()
+        model.selectedListID = ThoughtList.planID
+        model.text = "Send draft"
+        await model.save()
+        let thought = try #require(try await repository.all().first)
+        #expect(thought.kind == .todo)
+        #expect(thought.kindSource == .confirmed)
+        #expect(thought.listID == ThoughtList.planID)
+        #expect(try PlanDay(#require(thought.dueAt)) == PlanDay(epoch))
+        #expect(model.classificationTask == nil)
+    }
+}
+
+private actor ListRepository: ThoughtListRepository {
+    private var stored: [ThoughtList]
+    init(_ list: ThoughtList) {
+        stored = [list]
+    }
+
+    func lists() async throws -> [ThoughtList] {
+        [.plan] + stored
+    }
+
+    func saveList(_ list: ThoughtList) async throws {
+        stored = [list]
+    }
+
+    func deleteList(id: UUID) async throws {
+        stored.removeAll { $0.id == id }
+    }
+}
+
+extension CaptureModelTests {
+    @Test("custom list defaults apply at capture, explicit choices override, unsorted still classifies")
+    func listDefaults() async throws {
+        for kind in ThoughtKind.allCases {
+            let list = ThoughtList(name: "Work", defaultKind: kind)
+            let repository = SpyRepository()
+            let model = CaptureModel(
+                repository: repository,
+                intelligence: StubIntelligence(result: Classification(
+                    kind: .idea,
+                    title: nil,
+                    confidence: 0.9
+                )),
+                clock: StubClock(now: epoch),
+                listRepository: ListRepository(list)
+            )
+            await model.loadLists()
+            model.selectedListID = list.id
+            model.text = "A new thought"
+            await model.save()
+            await model.classificationTask?.value
+            let stored = try #require(await repository.stored.first)
+            #expect(stored.listID == list.id)
+            #expect(stored.kind == (kind == .unsorted ? .idea : kind))
+            #expect(stored.kindSource == (kind == .unsorted ? .inferred : .confirmed))
+            #expect(stored.dueAt == nil)
+            if kind == .todo {
+                #expect(model.receipt?.lifetime == "2 weeks")
+            }
+            model.chooseKind(.habit)
+            model.text = "An explicit choice"
+            await model.save()
+            #expect(await repository.stored.last?.kind == .habit)
+            #expect(await repository.stored.last?.listID == list.id)
+        }
+    }
+}

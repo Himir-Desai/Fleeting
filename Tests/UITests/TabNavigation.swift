@@ -2,9 +2,8 @@ import XCTest
 
 /// Moving between the app's three tabs from a UI test.
 ///
-/// The tabs replaced the inbox's old top bar (`inbox.done`, `inbox.settings`) and capture's
-/// browse chip, so every test that used to tap one of those taps a tab instead. Centralised
-/// here so the next navigation change is one edit rather than thirty.
+/// Home, Thoughts and Plan are destinations. Review opens within Thoughts and Settings opens
+/// from the current page's toolbar. Helpers keep those routes consistent across tests.
 extension XCUIApplication {
     /// The tab bar's button for a tab, found by the name shown under its glyph.
     /// - Parameter name: The tab's label.
@@ -23,7 +22,7 @@ extension XCUIApplication {
             // The capture bar's own dismiss control. Tapping background does not reliably put the
             // keyboard down at the accessibility sizes, and a tap at a guessed fraction of the
             // screen lands on whatever the layout moved there since (ADR-0043).
-            let hide = descendants(matching: .any)["capture.dismissKeyboard"].firstMatch
+            let hide = buttons.matching(NSPredicate(format: "label == 'Hide keyboard'")).firstMatch
             if hide.exists {
                 hide.tap()
             } else {
@@ -52,10 +51,13 @@ extension XCUIApplication {
         return descendants(matching: .any)["inbox.summary"].waitForExistence(timeout: timeout)
     }
 
-    /// Switches to the review tab and waits for it to settle on a card or an empty state.
+    /// Opens review from Thoughts and waits for it to settle on a card or an empty state.
     @discardableResult
     func goToReview(timeout: TimeInterval = 15) -> Bool {
-        switchToTab("Review")
+        guard goToThoughts(timeout: timeout) else { return false }
+        let entry = buttons["inbox.review"]
+        guard entry.waitForExistence(timeout: timeout) else { return false }
+        entry.tap()
         let card = staticTexts["review.card"]
         let empty = descendants(matching: .any)["review.empty"]
         let deadline = Date().addingTimeInterval(timeout)
@@ -85,14 +87,16 @@ extension XCUIApplication {
         return true
     }
 
-    /// Switches to the settings tab and waits for the first control it offers.
+    /// Opens Settings from the current page and waits for the first control it offers.
     ///
     /// Waits on the sorting reality line rather than the old `settings.intelligence` element,
     /// which the Settings rewrite removed — leaving this helper returning false forever while
     /// every caller ignored the result.
     @discardableResult
     func goToSettings(timeout: TimeInterval = 10) -> Bool {
-        switchToTab("Settings")
+        let settings = buttons["app.settings"].firstMatch
+        guard settings.waitForExistence(timeout: timeout) else { return false }
+        settings.tap()
         return descendants(matching: .any)["settings.sorting.reality"]
             .waitForExistence(timeout: timeout)
     }

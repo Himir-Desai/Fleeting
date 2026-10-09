@@ -3,13 +3,23 @@ import SwiftUI
 /// The app's type scale. Every style is built from a Dynamic Type text style so that
 /// accessibility sizing works without per-site handling.
 ///
-/// The scale has one deliberate break in it, and it carries a rule: **the serif is for the user's
-/// own words, and the sans is for everything the app says** (ADR-0037). A captured fragment is the
-/// content; the interface around it is furniture. Setting the two in different families is what
-/// makes that legible without a single label.
+/// Serif styles distinguish content and controls through size and weight while scaling with
+/// the user's preferred text size.
 public enum Typography {
     /// The app speaking: an empty state's headline, the end of a review session.
     public static let display = Font.system(.title, design: .serif, weight: .regular)
+
+    /// A toolbar or action glyph; its 44-point tap target scales independently of reading text.
+    public static let controlSymbol = Font.system(size: 20, weight: .medium)
+
+    /// A supporting glyph beside metadata or a disclosure action.
+    public static let secondarySymbol = Font.system(size: 14, weight: .regular)
+
+    /// A primary page heading, aligned with its navigation controls.
+    public static let pageTitle = Font.system(.title2, design: .serif, weight: .semibold)
+
+    /// An empty collection's heading, subordinate to the page title.
+    public static let emptyTitle = Font.system(.title2, design: .serif, weight: .medium)
 
     /// The capture field — the largest comfortable size for one-handed typing.
     ///
@@ -29,13 +39,13 @@ public enum Typography {
     public static let writtenTitle = Font.system(.headline, design: .serif, weight: .semibold)
 
     /// A screen's own headings, and a generated thought title.
-    public static let title = Font.system(.headline, design: .default, weight: .semibold)
+    public static let title = Font.system(.headline, design: .serif, weight: .semibold)
 
     /// A status line's first sentence: the answer, above the explanation.
-    public static let subtitle = Font.system(.subheadline, design: .default, weight: .medium)
+    public static let subtitle = Font.system(.subheadline, design: .serif, weight: .medium)
 
     /// Raw captured text.
-    public static let body = Font.system(.body, design: .default)
+    public static let body = Font.system(.body, design: .serif)
 
     /// A thought's own words at body size: one row in a list of them.
     ///
@@ -45,19 +55,19 @@ public enum Typography {
 
     /// A thought's own words, where they are the subject of the screen rather than one item in a
     /// list. Heavier than ``body`` so metadata beside it recedes.
-    public static let emphasis = Font.system(.body, design: .default, weight: .medium)
+    public static let emphasis = Font.system(.body, design: .serif, weight: .medium)
 
     /// Timestamps, counts, and freshness labels.
-    public static let caption = Font.system(.caption, design: .default)
+    public static let caption = Font.system(.caption, design: .serif)
 
     /// A section's name, set small and wide. Always paired with ``Palette/inkMuted``.
-    public static let label = Font.system(.caption2, design: .default, weight: .semibold)
+    public static let label = Font.system(.caption2, design: .serif, weight: .semibold)
 
     /// A symbol used as illustration rather than as a control — the mark above an empty state.
     public static let symbol = Font.largeTitle
 
     /// A number that is the subject of the surface it is on, such as a widget's live count.
-    public static let numeral = Font.system(.largeTitle, design: .default, weight: .semibold)
+    public static let numeral = Font.system(.largeTitle, design: .serif, weight: .semibold)
 
     /// The tracking applied to ``label``, which is set in small caps and needs the air.
     public static let labelTracking: CGFloat = 0.8
