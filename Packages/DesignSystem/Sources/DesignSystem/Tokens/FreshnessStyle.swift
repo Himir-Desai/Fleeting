@@ -35,23 +35,6 @@ public enum FreshnessStyle {
         return minimumOpacity + (1 - minimumOpacity) * clamped
     }
 
-    /// The font weight that expresses freshness: heavier while fresh, lighter as it fades.
-    ///
-    /// The primary freshness signal where a meter is not drawn (ADR-0025). Kept to three steps and
-    /// never lighter than regular, so a faded thought stays legible under the opacity floor.
-    /// - Parameter freshness: A value within 0...1.
-    /// - Returns: A font weight from `.regular` (faded) to `.semibold` (fresh).
-    public static func weight(for freshness: Double) -> Font.Weight {
-        let clamped = clamp(freshness)
-        if clamped >= 0.66 {
-            return .semibold
-        }
-        if clamped >= 0.33 {
-            return .medium
-        }
-        return .regular
-    }
-
     /// The middle stop of the meter: a thought that has begun to run down but is not yet a
     /// warning.
     ///
@@ -115,8 +98,7 @@ public enum FreshnessStyle {
     ///
     /// A fresh card is ``Palette/raised`` and sits plainly on the page. As it fades the fill is
     /// blended toward ``Palette/surface``, so an expiring thought has visually almost rejoined the
-    /// paper before decay archives it. This is the primary reading of freshness: weight and colour
-    /// alone put the whole signal in the text, where a caption already said it in words.
+    /// paper before decay archives it, independently of the text's constant typography.
     ///
     /// Never reaches the page colour exactly, so a card is always still a card.
     /// - Parameters:

@@ -2,12 +2,7 @@ import Core
 import DesignSystem
 import SwiftUI
 
-/// One live thought in the inbox, its freshness read through weight rather than a meter: fresh
-/// thoughts sit heavier and fuller, fading ones lighten (ADR-0025).
-///
-/// The opacity half of that fade is applied by ``InboxListRow`` to the whole row, so the kind
-/// glyph and the inline action fade in step with the words rather than staying bright over a
-/// faded thought.
+/// Thought text with constant typography, completion strikethrough and expiry metadata.
 struct ThoughtRow: View {
     let thought: Thought
     let freshness: Freshness
@@ -21,7 +16,7 @@ struct ThoughtRow: View {
             Text(thought.body)
                 // The user's own words, so the serif (ADR-0037).
                 .font(Typography.serifBody)
-                .fontWeight(FreshnessStyle.weight(for: freshness.value))
+                .strikethrough(thought.isCompleted)
                 .foregroundStyle(Palette.ink)
                 .lineLimit(typeSize.isAccessibilitySize ? 6 : 3)
                 .opacity(FreshnessStyle.opacity(
@@ -37,7 +32,7 @@ struct ThoughtRow: View {
         .accessibilityValue(spokenFreshness)
     }
 
-    /// The streak and when the thought archives. No meter — freshness is the text's own weight.
+    /// The streak and when the thought archives.
     @ViewBuilder
     private var metadata: some View {
         let layout = typeSize.isAccessibilitySize
@@ -66,9 +61,12 @@ struct ThoughtRow: View {
         }
     }
 
-    /// How much life is left, in words, for VoiceOver — the band the weight is trying to convey.
+    /// Completion or remaining freshness, in words, for VoiceOver.
     private var spokenFreshness: String {
-        switch freshness.band {
+        if thought.isCompleted {
+            return "Done"
+        }
+        return switch freshness.band {
         case .fresh: "fresh"
         case .settling: "settling"
         case .fading: "fading"

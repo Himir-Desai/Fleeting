@@ -187,7 +187,41 @@ public struct Thought: Identifiable, Equatable, Hashable, Sendable {
     /// Marks a todo complete.
     /// - Parameter date: When it was completed.
     public mutating func complete(at date: Date) {
+        guard !isCompleted else { return }
         state = .done(at: date)
+    }
+
+    /// Whether the thought has been completed, preserving its completion date in Plan history.
+    public var isCompleted: Bool {
+        if case .done = state {
+            return true
+        }
+        return false
+    }
+
+    /// The instant a completed thought moves from Thoughts/Lists to their archive.
+    public var completionArchiveDate: Date? {
+        guard case let .done(at) = state else { return nil }
+        return at.addingTimeInterval(.day)
+    }
+
+    /// Whether the thought belongs in the visible Thoughts/Lists stream at an instant.
+    public func isVisibleInThoughts(at date: Date) -> Bool {
+        if let archiveDate = completionArchiveDate {
+            return date < archiveDate
+        }
+        return isAwake(at: date)
+    }
+
+    /// Whether the thought belongs in the Thoughts/Lists archive at an instant.
+    public func isArchivedInThoughts(at date: Date) -> Bool {
+        if let archiveDate = completionArchiveDate {
+            return date >= archiveDate
+        }
+        if case .archived = state {
+            return true
+        }
+        return false
     }
 
     /// Records a habit as kept for this period, extending or restarting its streak.
@@ -293,7 +327,8 @@ public struct Thought: Identifiable, Equatable, Hashable, Sendable {
     /// Whether the thought is asking for attention right now.
     ///
     /// Live and not inside a running snooze. This, not ``ThoughtState/isLive``, is the question
-    /// every surface that shows thoughts to a person should ask.
+    /// surfaces for unfinished thoughts should ask. Thoughts/Lists use ``isVisibleInThoughts(at:)``
+    /// to include recently completed tasks as well.
     /// - Parameter date: The instant to judge at.
     /// - Returns: `true` when the thought is in play right now.
     public func isAwake(at date: Date) -> Bool {

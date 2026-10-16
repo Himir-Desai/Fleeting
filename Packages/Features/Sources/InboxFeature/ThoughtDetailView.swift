@@ -43,12 +43,12 @@ public struct ThoughtDetailView: View {
                 textWell
                 Card {
                     VStack(alignment: .leading, spacing: Spacing.loose) {
-                        typeSection.disabled(!model.thought.canEditContent)
+                        typeSection.disabled(!model.canEdit)
                         Divider().overlay(Palette.separator)
                         listSection
                     }
                 }
-                if let kindAction, model.thought.kind == .habit || model.thought.canEditContent {
+                if let kindAction, model.thought.kind == .habit {
                     KindActionButton(
                         label: kindAction.label,
                         symbol: kindAction.symbol,
@@ -60,11 +60,13 @@ public struct ThoughtDetailView: View {
                             }
                         }
                     }
+                    .disabled(model.isReadOnly)
                 }
                 if model.canUndoHabitKept, let streak = model.thought.streak {
                     StreakSection(streak: streak, cadence: model.thought.cadence) {
                         Task { await model.undoHabitKept() }
                     }
+                    .disabled(model.isReadOnly)
                 }
                 // Only a habit has a rhythm, and it sits with the streak because the two are the
                 // same subject: how often, and how well it has gone (ADR-0048).
@@ -76,15 +78,27 @@ public struct ThoughtDetailView: View {
                             Task { await model.chooseCadence(cadence) }
                         }
                     )
-                    .disabled(!model.thought.canEditContent)
+                    .disabled(!model.canEdit)
                 }
                 if model.thought.sharing == nil {
-                    Card { expirySection }
+                    Card { expirySection }.disabled(!model.canEdit)
                 } else {
                     Text(model.thought
                         .canEditContent ? "Shared thoughts are archived manually." :
                         "View-only shared list. Your habit progress and hiding stay personal.")
                         .font(Typography.caption).foregroundStyle(Palette.inkMuted)
+                }
+                if model.isReadOnly {
+                    Button(model.thought.isCompleted ? "Mark as not done" : "Unarchive") {
+                        Task {
+                            if await model.restore() {
+                                dismiss()
+                            }
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(!model.canRestore)
+                    .accessibilityIdentifier("detail.restore")
                 }
                 actions
             }
@@ -96,17 +110,26 @@ public struct ThoughtDetailView: View {
             isEditing = false
         }
         .pageHeading("Thought")
-        #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-        #endif
-            .task { await model.observeChanges() }
-            .onChange(of: model.isDeleted) { _, deleted in
-                if deleted {
-                    dismiss()
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Save") {
+                    Task { await model.saveText(); isEditing = false }
                 }
+                .disabled(!model.canSaveText)
+                .accessibilityIdentifier("detail.save")
             }
-            // Text is committed when leaving, so an edit is never lost by tapping back.
-            .onDisappear { Task { await model.saveText() } }
+        }
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        #endif
+        .task { await model.observeChanges() }
+        .onChange(of: model.isDeleted) { _, deleted in
+            if deleted {
+                dismiss()
+            }
+        }
+        // Text is committed when leaving, so an edit is never lost by tapping back.
+        .onDisappear { Task { await model.saveText() } }
     }
 
     private var listSection: some View {
@@ -123,7 +146,7 @@ public struct ThoughtDetailView: View {
             .buttonStyle(PressFeedbackStyle())
             .foregroundStyle(Palette.accentText)
             .accessibilityIdentifier("detail.list")
-            .disabled(model.thought.sharing != nil)
+            .disabled(!model.canEdit || model.thought.sharing != nil)
             .popover(isPresented: $isChoosingList) {
                 ListSelectionChoices(
                     choices: model.lists.map { .init(
@@ -160,7 +183,7 @@ public struct ThoughtDetailView: View {
                 .foregroundStyle(Palette.ink)
                 .tint(Palette.accentText)
                 .focused($isEditing)
-                .disabled(!model.thought.canEditContent)
+                .disabled(!model.canEdit)
                 .accessibilityLabel("Thought text")
                 .accessibilityIdentifier("detail.text")
                 .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -192,7 +215,7 @@ public struct ThoughtDetailView: View {
     /// The kind-specific action for the current thought, if any.
     private var kindAction: KindAction? {
         switch model.thought.kind {
-        case .todo: KindAction(label: "Mark done", symbol: "checkmark") { await model.complete() }
+        case .todo: nil
         case .habit:
             KindAction(label: "Continue streak", symbol: "leaf") { await model.markHabitKept() }
         case .idea, .unsorted: nil
@@ -232,8 +255,19 @@ public struct ThoughtDetailView: View {
 
     @ViewBuilder
     private var actionChoices: some View {
-        if model.thought.canEditContent {
+        if model.thought.kind == .todo {
+            actionButton(symbol: "checkmark.circle", label: "Mark done", tint: Palette.accentText) {
+                Task {
+                    if await model.complete() {
+                        dismiss()
+                    }
+                }
+            }
+            .disabled(!model.canEdit)
+        }
+        if model.thought.canEditContent || model.isReadOnly {
             actionButton(symbol: "sparkles", label: "Enhance", tint: Palette.accentText) { onEnhance() }
+                .disabled(!model.canEdit)
         }
         actionButton(symbol: "moon.zzz", label: "Snooze", tint: Palette.accentText) {
             Task {
@@ -242,7 +276,8 @@ public struct ThoughtDetailView: View {
                 }
             }
         }
-        if model.thought.canEditContent {
+        .disabled(model.isReadOnly)
+        if model.thought.canEditContent || model.isReadOnly {
             actionButton(symbol: "archivebox", label: "Archive", tint: Palette.inkMuted) {
                 Task {
                     if await model.archive() {
@@ -250,6 +285,7 @@ public struct ThoughtDetailView: View {
                     }
                 }
             }
+            .disabled(!model.canEdit)
             actionButton(symbol: "trash", label: "Delete", tint: Palette.fading) {
                 Task {
                     if await model.delete() {
@@ -257,6 +293,7 @@ public struct ThoughtDetailView: View {
                     }
                 }
             }
+            .disabled(!model.canEdit)
         }
     }
 

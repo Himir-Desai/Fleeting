@@ -762,6 +762,8 @@ an existing thought" would reuse the same field.
 
 ## ADR-0025 · Freshness reads as weight, not a meter
 
+**Status:** Font-weight treatment superseded by ADR-0070 (2026-10-15).
+
 **Status:** Accepted · Thoughts redesign
 
 **Context.** The inbox row drew freshness three ways at once: an opacity fade, a thin meter, and a
@@ -2303,3 +2305,47 @@ not real-time; no external website or account system is introduced.
 share graph isolation, owner/editor/viewer writes, personal activity, durable offline reopening,
 and focused unsigned UI flows. These do not claim an actual CloudKit invitation was delivered.
 The signed two-account checklist is recorded in ICLOUD.md.
+
+
+## ADR-0070 · v2.1 lifecycle presentation and navigation corrections
+
+**Date:** 2026-10-15
+
+**Context.** The user authorizes only B01–B12 and Q01 from BUGS_V2.1, with tests at the end.
+Completed tasks disappear immediately from Thoughts, their editor still offers Mark done, archive
+rows cannot open, cross-tab routes/filters leak, and glass toolbar surfaces flicker. Task completion
+should remain visible for a day and be excluded from reviews. The expiry-based font-weight feature
+must be removed completely.
+
+**Decision.** Keep the stored completion date and derive a 24-hour Thoughts/Lists archive boundary,
+including shared tasks, rather than converting `.done` to `.archived`. Plan keeps its historical
+completion projection; no schema or repeated shared archive writes are introduced. Reopen preserves
+ID, membership and due day. Archived/completed details enforce a restore-only mode, including model
+mutation guards and sharing permissions. Move task completion into secondary round actions and
+provide an explicit Save control. Persist edited text together with actions that leave the editor.
+
+Split Thoughts/Lists navigation bindings. Switching main pages resets thought filters and dismisses
+old routes in a nonanimated transaction; inner screens and Settings preserve the filter. Retain
+native TabView/tab-anchored popovers, using public UIKit presentation delegates and tab-bar touch
+passthrough to prevent implicit selector dismissal. The top action pill uses its stable themed
+capsule surface instead of dynamic Liquid Glass sampling; floating capture controls retain glass.
+Use a shared keyboard snapshot and active-window geometry so attaching a new page observer cannot
+start from a false local keyboard state. Home's full selected-list text sizes naturally up to
+180 points while leaving the remaining capture controls space.
+
+Remove the freshness font-weight helper and its only production call, updating obsolete comments.
+Preserve freshness's independent expiry, opacity, color, urgency, surface and accessibility behavior.
+Repair CloudKit sharing's missing system type through an explicit DEBUG Development-only schema
+operation on an empty disposable zone, followed by Production schema promotion. Normal launches
+never initialize schema or create fixture shares. Use the persisted native share returned by Core
+Data rather than the pre-persistence instance when presenting the system sharing controller.
+
+**Alternatives and costs.** Replacing the stored done state would erase the completion meaning that
+Plan depends on. A new lifecycle column/migration is unnecessary for a time-derived display rule.
+Replacing the tab bar would disregard the existing native-navigation requirement. Keeping the pill's
+interactive glass shader leaves the reported unstable rendering path in place. Removing all decay
+would exceed the requested font-weight removal. B05/B10 still require runtime verification of their
+intermittent symptoms; source changes alone do not establish that a failure has stopped.
+
+**Validation:** Recorded in BUGS_V2.1 after the final test phase. Newly discovered unrelated issues
+are recorded there without implementation.

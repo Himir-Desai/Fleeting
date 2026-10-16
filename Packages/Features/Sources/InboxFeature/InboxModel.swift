@@ -2,7 +2,7 @@ import Core
 import Foundation
 import Observation
 
-/// State and rules for the list of live thoughts.
+/// State and rules for Thoughts/Lists, including the one-day completed-task window.
 @MainActor
 @Observable
 public final class InboxModel {
@@ -11,7 +11,7 @@ public final class InboxModel {
     public private(set) var listError: String?
     private let listRepository: (any ThoughtListRepository)?
 
-    /// Live thoughts, most recently captured first. Archived thoughts are not shown here.
+    /// Visible thoughts, including tasks completed within the last day, newest captured first.
     public private(set) var thoughts: [Thought] = []
 
     /// Whether the first load has completed, so an empty list can be told apart from an unread one.
@@ -150,8 +150,9 @@ public final class InboxModel {
             }
             try await sweeper.sweep()
             let now = clock.now
-            thoughts = try await repository.thoughts(in: .live).filter { $0.isAwake(at: now) }
-            archivedThoughts = try await repository.thoughts(in: .archived)
+            let all = try await repository.all()
+            thoughts = all.filter { $0.isVisibleInThoughts(at: now) }
+            archivedThoughts = all.filter { $0.isArchivedInThoughts(at: now) }
             reviewCount = selector.count(from: thoughts, at: now)
             lastError = nil
         } catch {
@@ -203,14 +204,14 @@ public final class InboxModel {
     /// - Parameter thought: The thought to evaluate.
     /// - Returns: Freshness within 0...1.
     public func freshness(of thought: Thought) -> Freshness {
-        engine.freshness(of: thought, at: clock.now)
+        thought.isCompleted ? .full : engine.freshness(of: thought, at: clock.now)
     }
 
     /// When a thought will expire if nothing else happens to it.
     /// - Parameter thought: The thought to evaluate.
     /// - Returns: The expiry instant, or `nil` if it no longer decays.
     public func expiryDate(of thought: Thought) -> Date? {
-        engine.expiryDate(of: thought)
+        thought.completionArchiveDate ?? engine.expiryDate(of: thought)
     }
 
     /// Sets a thought aside, holding it at full freshness until the snooze ends.
@@ -244,12 +245,30 @@ public final class InboxModel {
         await persist(corrected, removingFromList: false)
     }
 
-    /// Marks a todo complete, taking it out of the live list without destroying it.
+    /// Completes a todo while keeping it visible for one day before it appears in the archive.
     /// - Parameter thought: The todo to complete.
     public func complete(_ thought: Thought) async {
+        guard thought.canEditContent, thought.state.isLive else { return }
         var completed = thought
         completed.complete(at: clock.now)
-        await persist(completed, removingFromList: true)
+        await persist(completed, removingFromList: false)
+    }
+
+    /// Marks a completed task as not done without changing its identity or due date.
+    public func reopen(_ thought: Thought) async {
+        guard thought.isCompleted, thought.canEditContent else { return }
+        await restore(thought)
+    }
+
+    /// Reloads when the next completed task reaches its one-day archive boundary.
+    public var nextCompletionArchiveDate: Date? {
+        thoughts.compactMap(\.completionArchiveDate).min()
+    }
+
+    /// Suspends until the next completed task's archive boundary.
+    public func waitForCompletionArchive() async throws {
+        guard let next = nextCompletionArchiveDate else { return }
+        try await Task.sleep(for: .seconds(max(0, next.timeIntervalSince(clock.now))))
     }
 
     /// Records a habit as kept, extending its streak and restoring its freshness.
@@ -276,11 +295,13 @@ public final class InboxModel {
     /// Brings an archived thought back to the inbox at full freshness.
     /// - Parameter thought: The archived thought to revive.
     public func restore(_ thought: Thought) async {
+        guard thought.canEditContent else { return }
         var restored = thought
         restored.restore(at: clock.now)
         do {
             try await repository.update(restored)
             archivedThoughts.removeAll { $0.id == thought.id }
+            thoughts.removeAll { $0.id == thought.id }
             thoughts.insert(restored, at: 0)
             reviewCount = selector.count(from: thoughts, at: clock.now)
             lastError = nil
@@ -323,6 +344,7 @@ public final class InboxModel {
             } else if let index = thoughts.firstIndex(where: { $0.id == thought.id }) {
                 thoughts[index] = thought
             }
+            reviewCount = selector.count(from: thoughts, at: clock.now)
             lastError = nil
         } catch {
             lastError = error

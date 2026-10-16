@@ -4,6 +4,27 @@ import Testing
 
 @Suite("Thought")
 struct ThoughtTests {
+    @Test(
+        "completed tasks archive exactly one day later without losing completion history or entering review"
+    )
+    func completedTaskArchiveBoundary() {
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        var thought = Thought(body: "Finish this", capturedAt: now, kind: .todo)
+        thought.complete(at: now)
+        thought.complete(at: now.addingTimeInterval(120))
+        #expect(thought.state == .done(at: now))
+        #expect(thought.isVisibleInThoughts(at: now.addingTimeInterval(.day - 1)))
+        #expect(!thought.isArchivedInThoughts(at: now.addingTimeInterval(.day - 1)))
+        #expect(!thought.isVisibleInThoughts(at: now.addingTimeInterval(.day)))
+        #expect(thought.isArchivedInThoughts(at: now.addingTimeInterval(.day)))
+        #expect(!thought.isAwake(at: now))
+        #expect(ReviewSelector().select(from: [thought], at: now).isEmpty)
+        thought.restore(at: now.addingTimeInterval(.day))
+        #expect(!thought.isCompleted)
+        #expect(thought.completionArchiveDate == nil)
+        #expect(thought.isVisibleInThoughts(at: now.addingTimeInterval(.day)))
+    }
+
     @Test("a fresh capture is unsorted, in the inbox, and has no generated title")
     func captureDefaults() {
         let clock = TestClock()

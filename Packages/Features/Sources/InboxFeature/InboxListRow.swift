@@ -16,16 +16,19 @@ struct InboxListRow: View {
     let onComplete: () -> Void
     let onMarkHabitKept: () -> Void
 
-    @Environment(\.colorSchemeContrast) private var contrast
-
     /// A 44-point target that leaves room for reading text at accessibility sizes.
     private let controlSize: CGFloat = 44
 
     var body: some View {
         HStack(spacing: Spacing.regular) {
+            if thought.kind == .todo {
+                completionButton
+            }
             Button(action: onOpen) {
                 HStack(spacing: Spacing.snug) {
-                    kindGlyph
+                    if thought.kind != .todo {
+                        kindGlyph
+                    }
                     ThoughtRow(thought: thought, freshness: freshness, expiresAt: expiresAt)
                 }
                 .contentShape(.rect)
@@ -56,13 +59,13 @@ struct InboxListRow: View {
             .motion(Motion.decay, value: freshness.value)
         )
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
-            Button(action: onSnooze) {
-                Label("Snooze", systemImage: "moon.zzz")
+            if thought.state.isLive {
+                Button(action: onSnooze) { Label("Snooze", systemImage: "moon.zzz") }
+                    .tint(Palette.inkMuted)
             }
-            .tint(Palette.inkMuted)
         }
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-            if thought.canEditContent {
+            if thought.canEditContent, thought.state.isLive {
                 Button(role: .destructive, action: onDelete) { Label("Delete", systemImage: "trash") }
                 Button(action: onArchive) { Label("Archive", systemImage: "archivebox") }
                     .tint(Palette.inkMuted)
@@ -93,12 +96,7 @@ struct InboxListRow: View {
     @ViewBuilder
     private var inlineAction: some View {
         switch thought.kind {
-        case .todo:
-            if thought
-                .canEditContent
-            {
-                actionChip(symbol: "checkmark", label: "Mark done", action: onComplete)
-            }
+        case .todo: EmptyView()
         case .habit:
             // A sprout, not a flame. A streak is a thing you have grown by tending it; fire is
             // what happens to a thing you neglect (ADR-0042).
@@ -117,23 +115,19 @@ struct InboxListRow: View {
         }
     }
 
-    /// A round chip for the inline action.
-    ///
-    /// Tinted rather than filled: a solid accent disc was the loudest thing in the list, louder
-    /// than the thoughts it sat beside (ADR-0041).
-    private func actionChip(
-        symbol: String,
-        label: String,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            Image(systemName: symbol)
+    /// The same completion control used by the dated Plan checklist.
+    private var completionButton: some View {
+        Button(action: onComplete) {
+            Image(systemName: thought.isCompleted ? "checkmark.circle.fill" : "circle")
                 .font(Typography.controlSymbol)
-                .foregroundStyle(Palette.accentText)
+                .foregroundStyle(thought.isCompleted ? Palette.accentText : Palette.inkMuted)
                 .frame(width: controlSize, height: controlSize)
-                .background { Circle().fill(Palette.accentSoft) }
+                .contentShape(.rect)
         }
         .buttonStyle(PressFeedbackStyle())
-        .accessibilityLabel(label)
+        .disabled(!thought.canEditContent)
+        .accessibilityLabel(thought.isCompleted ? "Mark as not done" : "Mark done")
+        .accessibilityValue(thought.isCompleted ? "Done" : "Not done")
+        .accessibilityIdentifier("row.complete.\(thought.id)")
     }
 }

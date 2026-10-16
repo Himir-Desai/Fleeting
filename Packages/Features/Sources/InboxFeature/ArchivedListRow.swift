@@ -5,23 +5,30 @@ import SwiftUI
 /// One row in the Archived filter: the thought's words and when it was captured, with restore and
 /// permanent delete as swipes.
 ///
-/// Archived thoughts no longer decay, so there is no freshness weight, no inline keep action and
-/// nothing to open — the only moves are bringing it back or destroying it.
+/// Tapping opens the restricted thought editor; restore and delete remain available as swipes.
 struct ArchivedListRow: View {
     let thought: Thought
+    let onOpen: () -> Void
     let onRestore: () -> Void
     let onDelete: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.tight) {
-            Text(thought.body)
-                .font(Typography.body)
-                .foregroundStyle(Palette.ink)
-                .lineLimit(3)
-            Text("captured \(thought.capturedAt, format: .relative(presentation: .named))")
-                .font(Typography.caption)
-                .foregroundStyle(Palette.inkMuted)
+        Button(action: onOpen) {
+            VStack(alignment: .leading, spacing: Spacing.tight) {
+                Text(thought.body)
+                    .font(Typography.body)
+                    .foregroundStyle(Palette.ink)
+                    .strikethrough(thought.isCompleted)
+                    .lineLimit(3)
+                Text("captured \(thought.capturedAt, format: .relative(presentation: .named))")
+                    .font(Typography.caption)
+                    .foregroundStyle(Palette.inkMuted)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(.rect)
         }
+        .buttonStyle(PressFeedbackStyle())
+        .accessibilityIdentifier("row.openArchived")
         .padding(.vertical, Spacing.snug)
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)

@@ -36,6 +36,15 @@ struct InboxFilterMenu: View {
                 .accessibilityLabel("Filter thoughts")
         }
         .accessibilityIdentifier("inbox.filterMenu")
+        .accessibilityValue(selectionLabel)
+    }
+
+    private var selectionLabel: String {
+        switch filter {
+        case .all: "All"
+        case let .kind(kind): KindGlyph.pluralLabel(for: kind)
+        case .archived: "Archived"
+        }
     }
 
     /// The glyph on the control, so the active filter is legible without opening the menu.

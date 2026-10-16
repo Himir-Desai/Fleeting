@@ -11,6 +11,32 @@ import Testing
 @MainActor
 @Suite("InboxModel and the archived filter")
 struct InboxArchiveFilterTests {
+    @Test("completion archives after a day, is never reviewed, and reopening cannot duplicate a row")
+    func delayedCompletionAndReopen() async {
+        let task = Thought(body: "Do it", capturedAt: epoch, kind: .todo)
+        let repository = SpyRepository([task])
+        let model = makeModel(repository, at: epoch)
+        await model.load()
+        await model.complete(task)
+        #expect(model.thoughts.first?.isCompleted == true)
+        #expect(model.reviewCount == 0)
+        #expect(model.archivedCount == 0)
+        await model.load()
+        #expect(model.thoughts.count == 1)
+        #expect(model.archivedCount == 0)
+        if let completed = model.thoughts.first {
+            await model.reopen(completed)
+        }
+        #expect(model.thoughts.count == 1)
+        #expect(model.thoughts.first?.state == .inbox)
+        await model.complete(model.thoughts[0])
+        let later = makeModel(repository, at: epoch.addingTimeInterval(.day))
+        await later.load()
+        #expect(later.thoughts.isEmpty)
+        #expect(later.archivedThoughts.first?.id == task.id)
+        #expect(later.archivedThoughts.first?.state == .done(at: epoch))
+    }
+
     private let epoch = Date(timeIntervalSince1970: 1_700_000_000)
 
     private func makeModel(_ repository: SpyRepository, at now: Date) -> InboxModel {

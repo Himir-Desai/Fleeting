@@ -42,7 +42,7 @@ struct InboxListTests {
     @Test("moving an existing thought keeps text, history and an unsaved draft")
     func moveExistingThought() async throws {
         let now = Date(timeIntervalSince1970: 1_790_102_400)
-        let original = Thought(body: "Stored words", capturedAt: now, kind: .todo, state: .done(at: now))
+        let original = Thought(body: "Stored words", capturedAt: now, kind: .todo, state: .active)
         let repository = SpyRepository([original])
         let model = ThoughtDetailModel(thought: original, repository: repository, clock: StubClock(now: now))
         model.draft = "Uncommitted revision"
