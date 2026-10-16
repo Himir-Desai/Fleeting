@@ -401,13 +401,15 @@ Detail and acceptance criteria for each phase in **[docs/ROADMAP.md](docs/ROADMA
 | 9 | Daily plan | Seven-day checklist, explicit daily review, Today/Tomorrow widgets | 🟢 Implemented; device widget validation pending |
 | 2.0 | Thought lists | Glass capture/browse selectors, list editor and shared Plan list | Implemented; bottom-sheet editor and list metadata |
 | 2.0 | iCloud shared lists | Native invitations, permissions, offline storage and personal progress | 🟡 Code and local checks complete; signed two-account acceptance pending |
+| 2.1 | Scoped fixes and review context | Task/archive actions, navigation, sharing setup and source-list review labels | 🟡 2.1 (5) uploaded as Internal Only; alpha-group availability verification pending |
 
 ¹ Everything is built and tested except the one thing that needs two signed devices under one iCloud
 account: convergence has not been *observed*.
 
-² TestFlight distribution is being set up with the paid developer team. The regular Xcode project
-and shared scheme are committed for Xcode Cloud; a successful cloud archive/upload is still pending.
-The free personal-team install remains an alternative ([docs/INSTALL.md](docs/INSTALL.md)).
+² TestFlight uploads use the paid developer team, normally signed archives and verified Production
+CloudKit/App Group entitlements. Version 2.1 (5) uploaded successfully as Internal Only; final
+alpha-group availability is being verified. The free personal-team install remains an alternative
+([docs/INSTALL.md](docs/INSTALL.md)).
 
 ## Getting started
 

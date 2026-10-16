@@ -631,7 +631,9 @@ and Debug/optimized Release simulator app/widget builds pass. Simulator iCloud r
 successful Development share/link generation; after the user's Console deployment, Production
 matches the reviewed schema and a Production fixture generates a real share URL. Both empty fixture
 zones were removed and the normal app restored. B01's configuration repair is verified; native
-list/two-account acceptance remains unverified. Intermittent phone flicker still needs observation. No release or upload is part of this scope.
+list/two-account acceptance remains unverified. Intermittent phone flicker still needs observation.
+The initial implementation scope excluded releases; the user subsequently authorized alpha
+publication, recorded below.
 
 
 Review clarification (2026-10-15): N01's global thought-review count/session is intentional, so
@@ -649,3 +651,11 @@ completion slot, with Archive/Unarchive separate. All actions stay in one horizo
 wrapping captions and horizontal scrolling at accessibility sizes. The separate restore button is
 removed. All three focused task/archive/largest-text UI cases pass; screenshots visually checked,
 with formatting and diff checks passing (ADR-0072).
+
+Alpha publication (2026-10-15): user authorizes release to the existing Internal Tester Group.
+Version 2.1 (5), source release commit `38ab961`, archived normally and uploaded successfully with
+Production CloudKit and TestFlight Internal Only. The local export and exact upload-staged IPA
+both pass the distribution verifier for app/widget signatures and required capabilities. Apple
+acknowledged processing at 19:54 local time. Final processing/group availability is pending
+verification; browser access currently has no connected browser. No external group was modified.
+Release evidence and the remaining handoff are tracked in [INSTALL.md](INSTALL.md).

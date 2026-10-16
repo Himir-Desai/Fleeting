@@ -159,6 +159,21 @@ custom encryption implementation or third-party cryptography and relies on Apple
 system for CloudKit security. This release metadata avoids a repeated missing-compliance gate.
 
 Archive: `/tmp/Fleeting-2.1-5-alpha.xcarchive`. Local export:
-`/tmp/fleeting21-alpha-export/Fleeting.ipa`. Run the distribution verifier on the final local IPA
-and the exact IPA staged by the upload exporter. Upload/processing and Internal Tester Group
-assignment must be verified before describing this release as available to alpha testers.
+`/tmp/fleeting21-alpha-export/Fleeting.ipa`. Both the final local IPA and the exact IPA staged by
+the upload exporter pass `Tools/verify-distribution.py` for app/widget signatures and all required
+capabilities. Both contain the expected 2.1 (5) version; the main app's encryption declaration is
+verified. The upload uses the same Internal Only and Production export options.
+
+**Upload succeeded at 19:54 local time on 2026-10-15** and Apple acknowledged that the package is
+processing. Source release commit: `38ab961`. A copy of the verified upload-staged package is
+retained at `/tmp/fleeting21-alpha-upload/Fleeting-uploaded.ipa`, SHA-256
+`c4560c4803aa53ea24b58de8884e0ded95b1869e83d5bb1219e6442c03c8a8e8`.
+Upload log: `/tmp/fleeting21-alpha-upload.log`.
+
+Final processing and Internal Tester Group assignment are still unverified. After permissions
+were enabled, the computer helper stopped reporting its startup error, but this session has no
+connected browser and native-app APIs are unavailable. Connect the signed-in App Store Connect
+browser, then verify 2.1 (5) is Testing in the existing **Internal → Tester Group**. Add the build
+there if automatic distribution did not do so; preserve the External group. Prepared What to Test
+text is at `/tmp/fleeting21-alpha-what-to-test.txt`. Do not describe alpha availability as verified
+until this final check is complete.

@@ -644,3 +644,11 @@ from Thoughts or Lists. No completion-label or navigation change is part of Q02.
   checked. Evidence: `/tmp/fleeting21-task-action-row.xcresult`,
   `/tmp/fleeting21-task-action-row-images/`, `/tmp/fleeting21-task-action-row.log`.
   SwiftFormat lint and `git diff --check` pass. No unrelated fixes or full UI suite run.
+
+- **2026-10-15, alpha publication authorized:** Normally signed version 2.1 (5) archived and
+  uploaded successfully with Production CloudKit and Apple's TestFlight Internal Only restriction.
+  Both the local export and exact uploaded package pass app/widget distribution capability and
+  signature checks. Apple acknowledged processing; final processing/Internal Tester Group
+  availability remains unverified while browser connection is unavailable. See
+  [INSTALL.md](INSTALL.md) for artifacts and the remaining distribution check. No external group
+  was modified, and no unrelated app fixes or additional source tests were run for release metadata.
