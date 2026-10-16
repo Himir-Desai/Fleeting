@@ -69,24 +69,34 @@ public struct GlassListPicker: View {
                     .accessibilityIdentifier("\(identifier).edit")
             }
         } label: {
-            Text(compactLabel)
-                .font(Typography.body)
-                .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
-                .foregroundStyle(selection == nil ? Palette.inkMuted : Palette.accentText)
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .padding(.horizontal, Spacing.regular)
-                .frame(width: 96, height: controlSize)
-                .contentShape(.rect)
+            CappedListLabel {
+                Text(selectedName ?? "Lists")
+                    .font(Typography.body)
+                    .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+                    .foregroundStyle(selection == nil ? Palette.inkMuted : Palette.accentText)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .padding(.horizontal, Spacing.regular)
+                    .frame(height: controlSize)
+                    .contentShape(.rect)
+            }
         }
     }
 
     private var selectedName: String? {
         choices.first { $0.id == selection }?.name
     }
+}
 
-    private var compactLabel: String {
-        guard let selectedName else { return "Lists" }
-        return selectedName.count > 10 ? String(selectedName.prefix(10)) + "…" : selectedName
+/// Fits the complete label up to 180 points and the space available beside capture actions.
+private struct CappedListLabel: Layout {
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        guard let label = subviews.first else { return .zero }
+        let natural = label.sizeThatFits(.unspecified)
+        return CGSize(width: min(natural.width, 180, proposal.width ?? 180), height: natural.height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        subviews.first?.place(at: bounds.origin, anchor: .topLeading, proposal: ProposedViewSize(bounds.size))
     }
 }

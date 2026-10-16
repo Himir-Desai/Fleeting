@@ -20,18 +20,23 @@ private struct KeyboardDismissControl: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-        #if os(iOS)
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            if isFocused, keyboard?.isVisible == true {
-                HStack {
-                    Spacer()
-                    KeyboardDismissButton(action: action)
-                        .accessibilityIdentifier(identifier)
+            .onChange(of: isFocused) { _, focused in
+                if focused {
+                    keyboard?.refresh()
                 }
-                .padding(.horizontal, Spacing.loose)
-                .padding(.vertical, Spacing.regular)
             }
-        }
+        #if os(iOS)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if isFocused, keyboard?.isVisible == true {
+                    HStack {
+                        Spacer()
+                        KeyboardDismissButton(action: action)
+                            .accessibilityIdentifier(identifier)
+                    }
+                    .padding(.horizontal, Spacing.loose)
+                    .padding(.vertical, Spacing.regular)
+                }
+            }
         #endif
     }
 }

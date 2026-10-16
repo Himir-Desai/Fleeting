@@ -50,6 +50,9 @@ struct RootView: View {
     }
 
     @State private var selection: AppTab = .newThought
+    @State private var listOpened: Thought?
+    @State private var listSharpening: Thought?
+    @State private var isReviewingLists = false
     @State private var opened: Thought?
     @State private var sharpening: Thought?
     @State private var isReviewing = false
@@ -100,13 +103,17 @@ struct RootView: View {
             .popover(isPresented: $isChoosingList, arrowEdge: .bottom) {
                 listChoices
                     .presentationCompactAdaptation(.popover)
+                    .interactiveDismissDisabled()
+                    .background(ListSelectorPresentation())
             }
 
             Tab("Plan", systemImage: "checklist", value: AppTab.plan) {
                 NavigationStack {
                     PlanView(model: plan, onOpen: { todo in
                         Task {
-                            planOpened = try? await environment.thoughts.all().first { $0.id == todo.id }
+                            let thought = try? await environment.thoughts.all().first { $0.id == todo.id }
+                            guard selection == .plan else { return }
+                            planOpened = thought
                         }
                     }, onReview: {
                         isReviewingTasks = true
@@ -200,7 +207,7 @@ struct RootView: View {
         .task { await environment.prepare() }
         .task {
             environment.sharing?.onAccepted = { id in
-                selection = .lists
+                selectTab(.lists)
                 inbox.selectedListID = id
                 showThoughtsRoot()
                 Task { await inbox.load() }
@@ -264,21 +271,23 @@ struct RootView: View {
 
 extension RootView {
     private func selectTab(_ tab: AppTab) {
-        if tab == .lists {
-            if selection != .lists {
-                inbox.selectedListID = nil; showThoughtsRoot()
+        var transaction = Transaction(animation: nil)
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            if selection != tab {
+                selection = tab
+                inbox.filter = .all
+                inbox.selectedListID = nil
+                showThoughtsRoot()
+                planOpened = nil
+                planSharpening = nil
+                isReviewingTasks = false
             }
-            selection = .lists
-            isChoosingList = true
+        }
+        isChoosingList = tab == .lists
+        if tab == .lists {
             Task { await inbox.load() }
-            return
         }
-        isChoosingList = false
-        inbox.selectedListID = nil
-        if tab == .thoughts {
-            showThoughtsRoot()
-        }
-        selection = tab
     }
 
     private var listChoices: some View {
@@ -314,6 +323,9 @@ extension RootView {
         opened = nil
         sharpening = nil
         isReviewing = false
+        listOpened = nil
+        listSharpening = nil
+        isReviewingLists = false
     }
 
     private func openURL(_ url: URL) {
@@ -347,18 +359,22 @@ extension RootView {
     /// The existing-thoughts tab: the inbox, with a thought's detail, a review and sharpening
     /// reachable from it as pushes. The archive is a filter within the inbox, not a page.
     private func thoughtsTab(isListDestination: Bool) -> some View {
-        NavigationStack {
+        let opened = isListDestination ? $listOpened : $opened
+        let sharpening = isListDestination ? $listSharpening : $sharpening
+        let reviewing = isListDestination ? $isReviewingLists : $isReviewing
+        return NavigationStack {
             InboxView(
                 model: inbox,
                 changes: environment.changes,
                 storageIsDegraded: environment.storageIsDegraded,
                 isListDestination: isListDestination,
-                onReview: { isReviewing = true },
-                onOpen: { opened = $0 },
+                onReview: { reviewing.wrappedValue = true },
+                onOpen: { opened.wrappedValue = $0 },
                 onSettings: { isShowingSettings = true },
-                onEditList: { editingList = $0 }
+                onEditList: { editingList = $0 },
+                onShareList: { list in Task { await environment.sharing?.shareList(list) } }
             )
-            .navigationDestination(item: $opened) { thought in
+            .navigationDestination(item: opened) { thought in
                 ThoughtDetailView(
                     model: ThoughtDetailModel(
                         thought: thought,
@@ -367,17 +383,17 @@ extension RootView {
                         clock: environment.clock,
                         listRepository: environment.lists
                     ),
-                    onEnhance: { sharpening = thought },
+                    onEnhance: { sharpening.wrappedValue = thought },
                     onAddList: addListForThought,
                     onEditLists: manageListsForThought
                 )
                 .toolbar { settingsToolbar }
             }
-            .navigationDestination(isPresented: $isReviewing) {
+            .navigationDestination(isPresented: reviewing) {
                 thoughtReview
                     .toolbar { settingsToolbar }
             }
-            .navigationDestination(item: $sharpening) { thought in
+            .navigationDestination(item: sharpening) { thought in
                 SharpenView(
                     model: SharpenModel(
                         thought: thought,

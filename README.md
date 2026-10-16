@@ -124,7 +124,7 @@ Home’s draft. Edit lists opens a bottom sheet showing Plan and custom lists to
 Create list button stacks the same form above it. Plan has no edit or delete controls; deleting a
 custom list keeps its thoughts. Creation has a cross at the left and Create at the right. Default
 types use the same four round icons as thought properties, and deletion uses the same trash action.
-The selected list can be edited directly from its toolbar. Thought properties use the same list
+The selected list can be edited or shared directly from its toolbar. Thought properties use the same list
 selector and management actions, with No list for removing saved assignment. List editing preserves
 its vertical spacing while using larger, slightly inset names and a circular close control.
 A shared glass keyboard-down control is available throughout capture, Plan, thought editing, list
@@ -135,9 +135,17 @@ Its week picker, completion history, daily review and widgets remain available. 
 migrate into Plan. Automatic capture still files to-dos there; choosing a custom list keeps its
 to-dos in that collection.
 
+Completed tasks show a checked circle and strikethrough in Thoughts and Lists for 24 hours, then
+move into Archived. Plan retains their completion history. Tapping an archived or completed thought
+opens its usual editor with only Unarchive / Mark as not done enabled. Active task editing has an
+explicit Save action; Mark done is a separate secondary action. Thought typography stays constant
+as expiry approaches. Filters reset when switching main pages and stay while opening a thought or
+Settings. The Lists selector stays open until choosing an option or switching pages.
+
 ### Shared lists — collaborate through iCloud
 
-Open a custom list's editor and tap **Share List**. Apple's invitation sheet handles links,
+Use the share icon in a custom list's top-right action pill, or its editor's **Share List** button.
+Apple's invitation sheet handles links,
 Messages, AirDrop and sharing permissions; **Manage Sharing** handles participants, access changes,
 stopping sharing or leaving. Sharing starts with invited people only, with view/edit options and
 an optional anyone-with-the-link setting. Participants need Fleeting and iCloud; no Fleeting server

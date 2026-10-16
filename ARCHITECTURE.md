@@ -69,7 +69,7 @@ Fleeting/
 ├── .github/workflows/ci.yml         ← build · test · lint on every push
 │
 ├── docs/
-│   ├── BUGS_V2.1.md                 ← v2.1 reports and investigation; fixes require explicit authorization
+│   ├── BUGS_V2.1.md                 ← v2.1 scoped fixes, evidence and newly discovered deferred issues
 │   ├── DECISIONS.md                 ← ADR log: every significant choice + alternatives
 │   ├── DESIGN_AUDIT.md             ← app-wide Apple-design findings, changes and visual verification
 │   ├── screenshots/list-sheets/   ← first list-sheet revision, retained as history
@@ -92,10 +92,11 @@ Fleeting/
 │   │   └── CaptureThoughtIntent.swift ← Siri and Shortcuts capture without opening the app
 │   ├── Navigation/
 │   │   ├── AppTab.swift             ← Home · Thoughts · Lists · Plan native tab identities
+│   │   ├── ListSelectorPresentation.swift ← keeps the chooser open except for explicit options/tab changes
 │   │   ├── NativeListChoices.swift  ← domain adapter for shared list-choice rows
 │   │   └── RootView.swift           ← tab content and sheet routing; shared keyboard observation
 │   ├── Sharing/
-│   │   ├── DevelopmentCloudSchema.swift ← explicitly requested DEBUG-only schema initialization
+│   │   ├── DevelopmentCloudSchema.swift ← explicit DEBUG model/sharing schema initialization in Development
 │   │   ├── ListSharingCoordinator.swift ← native invitations/management; exact-list routing after import
 │   │   └── ShareInvitationHandler.swift ← cold/warm scene delegates and pending invitation queue
 │   └── Resources/
@@ -263,13 +264,13 @@ Fleeting/
 │   │   │   │   ├── ReviewAction.swift ← shared capsule decision for thought/task review
 │   │   │   │   ├── ReviewActionRow.swift ← one adaptive set of review decisions
 │   │   │   │   ├── PressFeedbackStyle.swift ← immediate feedback on custom controls
-│   │   │   │   ├── ToolbarPill.swift  ← balanced glass action groups and floating control treatment
+│   │   │   │   ├── ToolbarPill.swift  ← stable themed action capsules; separate floating glass controls
 │   │   │   │   ├── StatusBlock.swift    ← an answer and its explanation; every Settings row
 │   │   │   │   ├── SectionLabel.swift   ← a section's name, small and wide
 │   │   │   │   └── EmptyState.swift     ← what a screen says when it has nothing to show
 │   │   │   └── Modifiers/
 │   │   │       ├── PageHeading.swift ← left-aligned headings including selected list titles
-│   │   │       ├── KeyboardVisibility.swift ← live keyboard state per page/modal presentation
+│   │   │       ├── KeyboardVisibility.swift ← shared keyboard snapshot, reconciled against active window geometry
 │   │   │       ├── KeyboardDismissControl.swift ← focused-field accessory for all editing flows
 │   │   │       ├── MotionModifier.swift ← the one place animation is applied; honours Reduce Motion
 │   │   │       └── ElevationModifier.swift ← the one place elevation is drawn; shadow or hairline
@@ -346,6 +347,7 @@ Fleeting/
         ├── CapturePathTests.swift      `swift test` on one package runs its suite in isolation.
         ├── ListFollowupTests.swift ← empty Lists destination, cleared ticks, shared assignment and editor chrome
         ├── NativeNavigationTests.swift ← four permanent tabs, destination selection and repeatable popover
+        ├── V21RegressionTests.swift ← restricted editors, completion/reopen, tab cleanup, filters and list controls
         ├── InputControlsTests.swift ← keyboard dismissal in Plan, detail, review and sharpening
         └── TabNavigation.swift      ← the one place tests know how the tabs are reached
                                      ← CapturePathTests: launch → typing is unobstructed; habits on home (ADR-0047)
@@ -631,3 +633,27 @@ Validation map:
 
 Shared-list visual evidence lives in docs/screenshots/shared-lists/shared-list-largest-light.png;
 DESIGN_AUDIT.md records native-control reuse, viewer affordances and the preview's limits.
+
+
+## v2.1 scoped corrections (ADR-0070)
+
+Thoughts and Lists have independent detail/review routes. Main-page switches clear their routes,
+Plan detail routes and the thought filter in a nonanimated transaction; opening Settings or a
+thought does not reset filtering. ListSelectorPresentation restricts native popover dismissal while
+passing touches through to the native tab bar. Explicit choices and tab switches own closing it.
+
+Thought completion remains `.done(at:)` in storage so Plan history and completion dates survive.
+`Thought.isVisibleInThoughts(at:)` includes completed tasks for 24 hours; `isArchivedInThoughts(at:)`
+then includes them in the archive. InboxModel reads both partitions together and reloads at the
+next boundary. `isAwake` stays false for done tasks, preserving review/nudge/widget exclusions.
+No schema migration or shared-content archive write is needed for this presentation transition.
+
+ThoughtDetailModel owns lifecycle and permission guards. Archived/completed details disable content
+and actions except restore/reopen. Save is explicit and exit still saves live drafts; task completion
+persists pending edits in the same update. Task completion is a secondary round action. Row task
+circles and strikethrough replace the duplicate kind/action ticks. Font weight no longer depends
+on freshness; opacity, expiry, rails, card surfaces and review/archiving policies remain independent.
+
+Home's list label measures its full text up to 180 points and the available space. ToolbarPill uses
+a themed opaque capsule rather than a live glass effect; floating keyboard/list controls keep glass.
+KeyboardVisibility shares one snapshot and reconciles it using active-window keyboard geometry.
