@@ -2349,3 +2349,27 @@ intermittent symptoms; source changes alone do not establish that a failure has 
 
 **Validation:** Recorded in BUGS_V2.1 after the final test phase. Newly discovered unrelated issues
 are recorded there without implementation.
+
+
+## ADR-0071 · Thought review resurfaces eligible thoughts across all lists
+
+**Date:** 2026-10-15
+
+**Context.** N01 initially described a selected list's review count/session spanning other lists as
+an issue. The user confirms this is intended: with ten lists, someone should not have to open each
+one, and an old forgotten list must still resurface through a review opened on another page.
+
+**Decision.** Keep thought review and its invitation/count global regardless of the list/page used
+to open it. Existing review eligibility and session limits continue to apply. Record Q02 to show
+each reviewed thought's source list, including clear context for unfiled thoughts, and to communicate
+the global scope of review invitations. This update records the product direction; the presentation
+improvement has not been implemented.
+
+**Alternative and cost.** Restricting the session to the selected list would make its contents match
+the browsing context, but would require visiting every list and could leave forgotten lists unseen.
+Global review preserves discovery; it needs source-list context so people understand why each card
+appears and can act with confidence.
+
+**Consequences.** N01 is closed as intended behavior. Preserve the existing global review behavior;
+Q02 tracks the UX improvement separately. No app source or review-selection rules change in this
+clarification.

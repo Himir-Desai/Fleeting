@@ -632,3 +632,9 @@ successful Development share/link generation; after the user's Console deploymen
 matches the reviewed schema and a Production fixture generates a real share URL. Both empty fixture
 zones were removed and the normal app restored. B01's configuration repair is verified; native
 list/two-account acceptance remains unverified. Intermittent phone flicker still needs observation. No release or upload is part of this scope.
+
+
+Review clarification (2026-10-15): N01's global thought-review count/session is intentional, so
+forgotten lists can resurface without being opened. Q02 records source-list labels on review cards
+and clear global review invitations as a future UX improvement; it is not implemented in this
+update. See ADR-0071.

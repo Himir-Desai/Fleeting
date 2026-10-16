@@ -385,6 +385,26 @@ inspection alone.
 task completion; completion stays easy to find when intended. Preserve habit-action behavior,
 accessibility targets and shared-list permissions. No visual redesign applied.
 
+### 2. Q02 — Show source lists during global thought reviews
+
+**Status:** User-requested UX improvement recorded on 2026-10-15; not implemented in this update.
+
+**Requested:** Keep thought reviews global across lists, regardless of the page/list used to open
+Review. Show which list each reviewed thought belongs to, with a clear label for unfiled thoughts.
+Review invitations on frequently used pages should communicate the global need for review, so
+people discover thoughts in lists they have forgotten to open. Make the invitation's global scope
+clear when entering from a particular list.
+
+**Why:** Someone with ten lists should not have to visit each one to review. A list created three
+months ago may never be reopened; its eligible thoughts still need to resurface elsewhere.
+
+**Acceptance for a future implementation:** Review cards identify their source list, entering from
+one list continues to surface eligible thoughts across all lists, and review counts/invitations
+retain that global scope. Existing review eligibility and session limits continue to apply.
+Presentation and entry-point placement can be decided during implementation.
+
+**Related:** N01 is confirmed intentional behavior, not a list-scoping bug. See ADR-0071.
+
 ## Dependencies and remaining uncertainties
 
 - **B02 + B09 + Q01:** One lifecycle-aware editor, with clear restore/reopen and edit-saving behavior.
@@ -542,15 +562,27 @@ part of this repair.
 
 ## Newly discovered issues — logged only
 
-### N01 — A selected list's review count/session spans other lists
+### N01 — Global review scope confirmed intentional
 
-**Observed in source, not fixed:** `InboxModel.load` calculates `reviewCount` from the entire
+**Disposition — 2026-10-15:** Closed as intended behavior after user clarification. Preserve the
+global review count/session even when Review opens from a selected list.
+
+**Source observation retained:** `InboxModel.load` calculates `reviewCount` from the entire
 `thoughts` array. `RootView.thoughtReview` creates a ReviewModel without the selected-list scope.
-Consequently, the review invitation on a selected list may count and review thoughts from other
-collections. This is outside B01–B12/Q01 and remains deferred. Reproduce and decide intended scope
-before a separately authorized change.
+This lets eligible thoughts from forgotten lists resurface through a review opened elsewhere.
+
+**Product rationale:** A person with ten lists should not have to open each list to review. A list
+created three months ago and forgotten must still contribute eligible thoughts to global review.
+The earlier suggestion to restrict Review to the selected list is withdrawn.
+
+**UX follow-up:** Q02 records source-list labels on review cards and clear global review invitations.
+No review-scoping code was changed. See ADR-0071.
 
 ## Implementation history
 
 - **2026-10-15:** User authorized fixing existing reports only, logging new issues without fixing
   them, and running tests only at the end. Implementation recorded above; N01 logged without a fix.
+
+- **2026-10-15, review clarification:** User confirms N01's global review scope is intentional.
+  Closed N01 as expected behavior and recorded Q02 for source-list context/global review invitations.
+  Documentation only; review logic and app UI are unchanged.

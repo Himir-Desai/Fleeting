@@ -211,7 +211,9 @@ Each card contains the same native decision controls as daily task review. Swipe
 or right to keep active; vertical gestures scroll the cards. A return date explains the pause.
 
 Open it from the **thoughts to review** invitation directly below the count on Thoughts.
-Review is a short activity within that page, never a separate tab or a launch interruption.
+Thought review draws eligible thoughts from all lists, including when opened from a selected list,
+so an old forgotten list can resurface without being opened. Review is a short activity within that
+page, never a separate tab or a launch interruption.
 A short session you finish beats a complete one you abandon. Idea cards arrive with one ambient
 sharpening question attached, so the ritual quietly does double duty.
 
