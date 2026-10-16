@@ -144,3 +144,21 @@ Update through TestFlight without uninstalling: capture in build 3 used the app'
 store, and the existing local-to-App-Group migration preserves it when capabilities return.
 This fixes the demonstrated signing omission; live invitation acceptance still needs a second
 iCloud account. Package/UI source behavior is unchanged, so existing source tests were not rerun.
+
+## v2.1 alpha release · 2026-10-15
+
+The user authorized publishing the completed v2.1 fixes to the existing internal alpha testers.
+The app and widget are version **2.1 (5)**. The release includes the completed-task action-row
+correction and global review source-list context; see [BUGS_V2.1.md](BUGS_V2.1.md) for the scoped
+changes, validation and remaining live-device acceptance checks.
+
+Use a normally signed Release archive, Production CloudKit export and
+`testFlightInternalTestingOnly=true`. Keep `manageAppVersionAndBuildNumber=false` so the verified
+build number is preserved. The app declares `ITSAppUsesNonExemptEncryption=false`: it has no
+custom encryption implementation or third-party cryptography and relies on Apple's operating
+system for CloudKit security. This release metadata avoids a repeated missing-compliance gate.
+
+Archive: `/tmp/Fleeting-2.1-5-alpha.xcarchive`. Local export:
+`/tmp/fleeting21-alpha-export/Fleeting.ipa`. Run the distribution verifier on the final local IPA
+and the exact IPA staged by the upload exporter. Upload/processing and Internal Tester Group
+assignment must be verified before describing this release as available to alpha testers.
