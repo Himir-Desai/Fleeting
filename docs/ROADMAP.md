@@ -624,11 +624,11 @@ acceptance, not confirmation that a live invitation or collaborative edit succee
 issues logged only and all tests deferred until the implementation is complete. Current changes
 cover restore-only archived/completed editors, top-level list sharing, tab/filter cleanup, stable
 pills, adaptive list labels, persistent selector presentation, keyboard state, one-day completed
-task visibility, task controls and removal of expiry-based font weight. Sharing also requires the
-missing CloudKit system type to be created in Development and promoted to Production. Final test
+task visibility, task controls and removal of expiry-based font weight. The missing CloudKit
+sharing type was created in Development and deployed to Production. Final test
 results and limits are recorded in the bug tracker: 372 package tests, nine focused UI cases,
 and Debug/optimized Release simulator app/widget builds pass. Simulator iCloud relogin enabled
-successful Development share/link generation. The reviewed delta is only cloudkit.share. B01
-remains open pending Production promotion through Console and real Production link verification.
-Management API authentication works; intermittent phone
-flicker still needs observation. No release or upload is part of this scope.
+successful Development share/link generation; after the user's Console deployment, Production
+matches the reviewed schema and a Production fixture generates a real share URL. Both empty fixture
+zones were removed and the normal app restored. B01's configuration repair is verified; native
+list/two-account acceptance remains unverified. Intermittent phone flicker still needs observation. No release or upload is part of this scope.

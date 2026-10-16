@@ -211,8 +211,12 @@ readiness blocker, even when the management token works.
 
 
 2026-10-15: simulator iCloud relogin resolved the account-readiness blocker. The isolated Development
-fixture created a real share with a populated URL and deleted its empty zone. Fresh schema exports
-show exactly one added Development type, `cloudkit.share`, still absent from Production. CLI schema
-validation explicitly rejects Production (`endpoint not applicable in the environment 'production'`).
-The reviewed Console deployment and Production link verification remain pending; details and logs
-are recorded in BUGS_V2.1.
+fixture created a real share with a populated URL and deleted its empty zone. The user then deployed
+the reviewed `cloudkit.share` addition through Console. A fresh authenticated export confirms
+Production now matches Development, with no unrelated schema changes. A separately verified
+**Production-entitled** fixture successfully saved a real share with a populated URL and removed
+its empty zone. The normal app was restored without a data reset. This verifies the missing-type
+repair and Production sharing primitive; native list UI/Core Data sharing and two-account
+invitation/edit acceptance remain unverified. Details and logs are recorded in BUGS_V2.1.
+CLI schema validation explicitly rejects Production (`endpoint not applicable in the environment
+'production'`); Console was needed for the deployment.

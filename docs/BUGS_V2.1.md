@@ -413,7 +413,7 @@ remaining service/device limits are recorded below.
 
 | Reports | Implementation | Status |
 | --- | --- | --- |
-| B01 | Explicit DEBUG sharing-type initialization in an empty disposable Development zone; present Core Data's persisted share | **Open:** Development share/link generation succeeds; reviewed cloudkit.share addition awaits Production promotion and end-to-end verification |
+| B01 | Explicit DEBUG sharing-type initialization in an empty disposable Development zone; present Core Data's persisted share | **Schema repair verified:** Production has cloudkit.share and generates a real share URL; native-list/two-account acceptance remains unverified |
 | B02, B09 | Tappable archive rows; lifecycle-aware detail with only restore/reopen enabled; permission guards | Model and focused archive/Plan UI checks pass |
 | B03 | Fourth custom-list toolbar action invokes existing native share/manage service | Toolbar UI check passes; actual link creation remains B01 |
 | B04, B07 | Separate per-tab routes; nonanimated cleanup and filter reset only on main-page switches | Filter/Settings, editor removal and draft persistence UI checks pass; exact animation frames not measured |
@@ -519,6 +519,26 @@ part of this repair.
   Authorization for B01 already exists; this manual handoff is needed because computer access
   fails, not because another approval is required. Afterward, export Production to confirm the
   type and verify actual Production link creation. B01 remains open until that verification.
+
+### B01 Production verification — 2026-10-15
+
+- After the user's Console deployment, an authenticated Production schema export confirms that
+  `cloudkit.share` is present. The complete Production schema now matches the reviewed Development
+  export byte-for-byte. Comparing with the pre-deployment Production export shows exactly the
+  expected added system type; no existing app record types, fields or grants changed.
+  Snapshot: `/tmp/fleeting21-production-verified.ckdb`.
+- Verified the isolated helper's Xcode-generated simulator entitlements explicitly specify
+  **Production** and `iCloud.com.himirdesai.Fleeting`. With the account available, it successfully
+  created an empty Production zone, saved a real `CKShare`, confirmed a populated share URL, and
+  deleted that same fixture zone. Log: `/tmp/fleeting21-production-share-verification.log`.
+- The currently installed app was backed up before this check, restored immediately afterward,
+  and confirmed to launch normally. The helper did not open the thought database, add participants,
+  reset/seed/delete the data container, or retain the empty test zone.
+- **The missing-Production-type configuration fault is repaired and Production share/link
+  generation is verified.** The deleted fixture's URL is not a live invitation. This primitive
+  check does not establish the native list-sharing UI/Core Data flow or invitation acceptance and
+  collaborative editing on a second account; those acceptance checks remain unverified. No extra
+  code changes or release/upload were performed during this verification.
 
 ## Newly discovered issues — logged only
 
