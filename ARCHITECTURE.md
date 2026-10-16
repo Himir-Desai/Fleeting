@@ -506,6 +506,12 @@ any pending card while preserving another card's draft answer. `ThoughtReviewTes
 Archive, Hide for 7 days and Keep active behavior. Horizontal shortcuts remain; vertical gestures
 scroll the card list. Neither review action deletes a record.
 
+For Q02, RootView injects Core's ThoughtListRepository into ReviewModel to resolve each card's source
+name. Names refresh on load/store changes without restarting the session; metadata failure preserves
+known context and leaves decisions usable. ReviewView displays named/No list/unavailable context,
+while InboxView and the session header identify the global scope. ReviewModelTests and the focused
+ThoughtReviewTests case cover cross-list cards, names, refresh/failure and selected-list entry.
+
 `ReviewFeature/HorizontalReviewGesture.swift` rejects vertical drags before recognition so the
 scrolling review stays usable, and passes horizontal translation/velocity to the card. The shared
 review action row uses one live set of controls, avoiding duplicate adaptive-button instances.

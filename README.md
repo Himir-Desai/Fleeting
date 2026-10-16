@@ -212,8 +212,9 @@ or right to keep active; vertical gestures scroll the cards. A return date expla
 
 Open it from the **thoughts to review** invitation directly below the count on Thoughts.
 Thought review draws eligible thoughts from all lists, including when opened from a selected list,
-so an old forgotten list can resurface without being opened. Review is a short activity within that
-page, never a separate tab or a launch interruption.
+so an old forgotten list can resurface without being opened. The invitation says **Across all lists**,
+and each review card identifies its source list, with **No list** for unfiled thoughts. Review is a
+short activity within that page, never a separate tab or a launch interruption.
 A short session you finish beats a complete one you abandon. Idea cards arrive with one ambient
 sharpening question attached, so the ritual quietly does double duty.
 

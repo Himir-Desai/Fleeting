@@ -144,17 +144,21 @@ public struct InboxView: View {
 
             if model.reviewCount >= 1 {
                 Button(action: onReview) {
-                    Label(
-                        "\(model.reviewCount) \(model.reviewCount == 1 ? "thought" : "thoughts") to review",
-                        systemImage: "clock.arrow.circlepath"
-                    )
-                    .font(Typography.subtitle)
-                    .foregroundStyle(Palette.accentText)
+                    VStack(alignment: .leading, spacing: Spacing.tight) {
+                        Label(
+                            "\(model.reviewCount) \(model.reviewCount == 1 ? "thought" : "thoughts") to review",
+                            systemImage: "clock.arrow.circlepath"
+                        )
+                        .font(Typography.subtitle)
+                        .foregroundStyle(Palette.accentText)
+                        Text("Across all lists")
+                            .font(Typography.caption).foregroundStyle(Palette.inkMuted)
+                    }
                 }
                 .buttonStyle(PressFeedbackStyle())
                 .accessibilityIdentifier("inbox.review")
-                .accessibilityLabel("\(model.reviewCount) need a decision")
-                .accessibilityHint("Opens a short session to decide what to keep")
+                .accessibilityLabel("\(model.reviewCount) need a decision across all lists")
+                .accessibilityHint("Opens a short review of thoughts from all lists, including No list")
             }
         }
     }

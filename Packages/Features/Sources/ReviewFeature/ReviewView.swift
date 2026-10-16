@@ -60,6 +60,9 @@ public struct ReviewView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.loose) {
                 Text("A fresh start").font(Typography.display).foregroundStyle(Palette.ink)
+                Text("Thoughts from across all lists")
+                    .font(Typography.subtitle).foregroundStyle(Palette.inkMuted)
+                    .accessibilityIdentifier("review.scope")
                 Text(
                     "Keep active refreshes it now. \(model.hideTitle) pauses visibility. Archive saves it in Archived without deleting it."
                 )
@@ -92,6 +95,12 @@ public struct ReviewView: View {
             canArchive: thought.canEditContent
         ) {
             VStack(alignment: .leading, spacing: Spacing.regular) {
+                Label(model.sourceListName(for: thought), systemImage: "list.bullet")
+                    .font(Typography.caption).foregroundStyle(Palette.inkMuted)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("List: \(model.sourceListName(for: thought))")
+                    .accessibilityIdentifier("review.sourceList" + suffix)
                 Text(thought.body).font(Typography.serifBody).foregroundStyle(Palette.ink)
                     .accessibilityIdentifier("review.card" + suffix)
                 Text(thought.capturedAt, format: .dateTime.month(.abbreviated).day())

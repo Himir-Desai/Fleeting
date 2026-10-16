@@ -2362,16 +2362,31 @@ an issue. The user confirms this is intended: with ten lists, someone should not
 one, and an old forgotten list must still resurface through a review opened on another page.
 
 **Decision.** Keep thought review and its invitation/count global regardless of the list/page used
-to open it. Existing review eligibility and session limits continue to apply. Record Q02 to show
-each reviewed thought's source list, including clear context for unfiled thoughts, and to communicate
-the global scope of review invitations. This update records the product direction; the presentation
-improvement has not been implemented.
+to open it. Existing review eligibility and session limits continue to apply. Q02 shows each
+reviewed thought's source list, including No list for unfiled thoughts, and communicates the global
+scope of the existing review invitation and session header. The user subsequently authorizes this
+presentation improvement on 2026-10-15.
+
+Inject Core's ThoughtListRepository into ReviewModel from the composition root to read source names
+at load and on store changes. Keep review usable when metadata cannot load: retain known names and
+label unresolved membership List unavailable. Names remain metadata rather than being copied into
+the thought; a rename must not reset the session or its decisions. Use quiet caption text with a
+list glyph above each card's body, allowing long names and Dynamic Type to wrap.
 
 **Alternative and cost.** Restricting the session to the selected list would make its contents match
 the browsing context, but would require visiting every list and could leave forgotten lists unseen.
 Global review preserves discovery; it needs source-list context so people understand why each card
-appears and can act with confidence.
+appears and can act with confidence. Copying list names into thought records would duplicate
+independently mutable metadata; resolving names through the existing Core protocol keeps feature
+layers independent, at the cost of a metadata read on load/refresh.
 
-**Consequences.** N01 is closed as intended behavior. Preserve the existing global review behavior;
-Q02 tracks the UX improvement separately. No app source or review-selection rules change in this
-clarification.
+**Consequences.** N01 is closed as intended behavior. Q02 implements the source/context improvement
+while preserving global review behavior, eligibility and session limits. Existing review entry
+points remain on Thoughts/Lists; the capture field remains unobstructed. The user accepts N02's
+existing completion-button wording, which stays unchanged.
+
+
+**Q02 verification (2026-10-15).** All 18 ReviewModel tests and both focused UI checks pass, including
+review entered from a selected list with named/unfiled cards and operability at the largest text
+size. Normal/large-text screenshots were visually checked. Evidence and metadata failure/rename
+coverage are recorded in BUGS_V2.1.

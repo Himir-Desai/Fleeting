@@ -635,9 +635,12 @@ list/two-account acceptance remains unverified. Intermittent phone flicker still
 
 
 Review clarification (2026-10-15): N01's global thought-review count/session is intentional, so
-forgotten lists can resurface without being opened. Q02 records source-list labels on review cards
-and clear global review invitations as a future UX improvement; it is not implemented in this
-update. See ADR-0071.
+forgotten lists can resurface without being opened. The user subsequently authorizes Q02: review
+cards now identify their source list, and the existing Thoughts/Lists invitation and review header
+make the global scope explicit. Source names refresh without restarting decisions, with clear
+unfiled/unavailable labels. All 18 ReviewModel tests and both focused cross-list/largest-text UI
+checks pass; screenshots, formatting and diff checked. N02 is closed as accepted behavior without
+an app change. See ADR-0071.
 
 
 Archive action refinement (2026-10-15): the existing thought-detail Archive action becomes Unarchive

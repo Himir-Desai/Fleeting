@@ -424,7 +424,8 @@ extension RootView {
                 engine: environment.engine,
                 intelligence: environment.intelligence,
                 changes: environment.changes,
-                clock: environment.clock
+                clock: environment.clock,
+                listRepository: environment.lists
             )
         )
     }

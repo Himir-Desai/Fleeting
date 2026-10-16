@@ -44,7 +44,8 @@ Persistence is two invocations, never one: `--filter PersistenceTests` and
 
 ## Working rhythm
 **v2.1 fixes are authorized for the existing reports only** (2026-10-15). Fix B01–B12 and Q01 in
-[docs/BUGS_V2.1.md](docs/BUGS_V2.1.md). Log newly discovered issues there without fixing them.
+[docs/BUGS_V2.1.md](docs/BUGS_V2.1.md). The user also authorizes Q02's source-list context and global
+review invitation UI (2026-10-15). Log other newly discovered issues there without fixing them.
 The user explicitly requests tests only at the end of the implementation, not after each change.
 
 **Teaching is paused** (2026-08-18). Do not explain Swift concepts or run comprehension checks

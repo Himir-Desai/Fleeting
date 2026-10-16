@@ -2,7 +2,8 @@
 
 Created: 2026-10-08 · Last updated: 2026-10-15
 
-**Current phase: scoped fixes authorized (2026-10-15).** Fix only the existing B01–B12 and Q01.
+**Current phase: scoped fixes authorized (2026-10-15).** Fix B01–B12, Q01, and the subsequently
+authorized Q02 review-context UI enhancement.
 Log newly discovered issues without fixing them. The user requests tests at the end of the complete
 implementation, not after each change. Earlier investigation notes below are retained as history;
 current implementation and validation status are tracked separately.
@@ -392,7 +393,8 @@ accessibility targets and shared-list permissions. No visual redesign applied.
 
 ### 2. Q02 — Show source lists during global thought reviews
 
-**Status:** User-requested UX improvement recorded on 2026-10-15; not implemented in this update.
+**Status:** Implementation authorized on 2026-10-15. Source-list labels and global review copy
+implemented; 18 ReviewModel tests and both focused UI checks pass.
 
 **Requested:** Keep thought reviews global across lists, regardless of the page/list used to open
 Review. Show which list each reviewed thought belongs to, with a clear label for unfiled thoughts.
@@ -406,7 +408,20 @@ months ago may never be reopened; its eligible thoughts still need to resurface 
 **Acceptance for a future implementation:** Review cards identify their source list, entering from
 one list continues to surface eligible thoughts across all lists, and review counts/invitations
 retain that global scope. Existing review eligibility and session limits continue to apply.
-Presentation and entry-point placement can be decided during implementation.
+The existing Thoughts/Lists invitation now says **Across all lists**, and the session header says
+**Thoughts from across all lists**. Each card shows its named list or **No list** for unfiled
+thoughts. Unavailable metadata uses **List unavailable**; known names survive a failed refresh.
+Names refresh with store changes without restarting the review or resetting completed decisions.
+
+**Validation:** After implementation, 18 ReviewModel tests pass, including cross-list selection,
+source names, unfiled/unavailable labels, renames, retained context on read failure and preserved
+decisions. Two focused UI cases pass: review entered from a selected list shows both a named list
+and No list, and review decisions remain reachable at the largest Dynamic Type size. Captured
+normal/large-text screenshots were visually checked; the long source name is readable and the
+metadata wraps at accessibility sizes. SwiftFormat lint and `git diff --check` pass.
+Logs: `/tmp/fleeting21-review-context-model.log`, `/tmp/fleeting21-review-context-ui.log`;
+result/screenshots: `/tmp/fleeting21-review-context.xcresult`,
+`/tmp/fleeting21-review-context-images/`. The full UI suite was not run.
 
 **Related:** N01 is confirmed intentional behavior, not a list-scoping bug. See ADR-0071.
 
@@ -449,6 +464,7 @@ remaining service/device limits are recorded below.
 | B11 | Completed circles/strikethrough; 24-hour display-to-archive transition retaining done date and Plan history; reviews remain excluded | Core/model boundary, repeat-completion, review exclusion and Plan persistence checks pass |
 | B12 | Remove expiry-based font-weight function, call site and obsolete active-code comments | Source search finds no remaining Swift dependency; package tests and app build pass |
 | Q01 | Task completion moved into secondary actions; explicit Save; draft saved with completion | Draft/completion model checks and edit-persistence UI check pass |
+| Q02 / N01 clarification | Source-list context on review cards; global scope in Thoughts/Lists invitations and session header | 18 ReviewModel tests, cross-list entry UI and largest-text review UI pass; screenshots checked |
 
 The one-day interpretation is 24 hours after completion; Plan history is retained. Shared completed
 tasks use the same visibility boundary without changing the shared record's lifecycle date.
@@ -583,6 +599,14 @@ The earlier suggestion to restrict Review to the selected list is withdrawn.
 **UX follow-up:** Q02 records source-list labels on review cards and clear global review invitations.
 No review-scoping code was changed. See ADR-0071.
 
+### N02 — Existing review completion wording accepted
+
+**Disposition — 2026-10-15:** Closed as accepted behavior. The user confirms the current wording is
+fine; preserve the existing **Back to Thoughts** label and dismiss behavior.
+
+**Source observation retained:** `ReviewView.summary` uses this label for the same review opened
+from Thoughts or Lists. No completion-label or navigation change is part of Q02.
+
 ## Implementation history
 
 - **2026-10-15:** User authorized fixing existing reports only, logging new issues without fixing
@@ -597,3 +621,8 @@ No review-scoping code was changed. See ADR-0071.
   slot for restore/reopen, retaining model guards and disabled editing. Both existing focused UI
   cases pass after implementation, including restore/reopen and absence of the separate button.
   Result: `/tmp/fleeting21-archive-action.xcresult`; SwiftFormat lint and `git diff --check` pass.
+
+- **2026-10-15, Q02 implementation:** User authorizes the N01-related UI enhancement. Added source
+  list labels to review cards and global-scope text to the existing invitation/session. Kept global
+  selection and eligibility rules intact. User accepts N02 as-is; closed without app changes.
+  18 ReviewModel tests and both focused UI cases pass; screenshots, formatting and diff checked.
