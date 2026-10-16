@@ -1,6 +1,6 @@
 # Fleeting v2.1 — bugs and UX requests
 
-Created: 2026-10-08 · Last updated: 2026-10-15
+Created: 2026-10-08 · Last updated: 2026-10-16
 
 **Current phase: scoped fixes authorized (2026-10-15).** Fix B01–B12, Q01, and the subsequently
 authorized Q02 review-context UI enhancement.
@@ -652,3 +652,11 @@ from Thoughts or Lists. No completion-label or navigation change is part of Q02.
   availability remains unverified while browser connection is unavailable. See
   [INSTALL.md](INSTALL.md) for artifacts and the remaining distribution check. No external group
   was modified, and no unrelated app fixes or additional source tests were run for release metadata.
+
+- **2026-10-16, external beta upload:** User additionally authorizes the existing external beta
+  group. Version 2.1 (6) uploaded successfully with external testing eligibility, using the same
+  validated app source. The local export and exact upload-staged app/widget package pass signing
+  and capability checks. Apple acknowledged processing. Browser access still returns no available
+  browser, so external-group assignment, beta review submission and tester availability remain
+  incomplete; no external group has been changed. [INSTALL.md](INSTALL.md) records artifacts and
+  the precise remaining handoff. No unrelated fixes or repeat source tests were introduced.

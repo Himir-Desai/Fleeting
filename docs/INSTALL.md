@@ -186,9 +186,35 @@ version **2.1 (6)** from the same validated app source, with a normally signed R
 Production CloudKit and `testFlightInternalTestingOnly=false`. Keep the build number fixed during
 export. This is a TestFlight beta release; public App Store submission is outside this request.
 
-Verify both the local export and exact upload-staged package with `Tools/verify-distribution.py`.
-After processing, add build 6 to the existing external group and submit to TestFlight App Review
-if Apple requires it, enabling distribution to that group after approval. Preserve existing
-testers and public-link settings. Browser connection, review submission and beta availability
-are not yet verified. Existing source tests cover the unchanged app implementation; no repeat
-source test run is needed for the build-number/export-option change.
+**Upload succeeded on 2026-10-16**, and Apple acknowledged that the package is processing.
+Source release commit: `987db0c`. Both the local export and exact upload-staged IPA pass
+`Tools/verify-distribution.py`, including app/widget signatures, Production CloudKit and App Group
+capabilities. The 2.1 (6) versions, encryption declaration and external-eligible export option were
+also checked. The unchanged app implementation retains its existing source-test validation; no
+repeat source test run was needed for the build-number/export-option change.
+
+Archive: `/tmp/Fleeting-2.1-6-beta.xcarchive`. Local export:
+`/tmp/fleeting21-beta-export/Fleeting.ipa`. Exact upload-staged package copy:
+`/tmp/fleeting21-beta-upload/Fleeting-uploaded.ipa`, SHA-256
+`a88a6794b39019b925129b479b99db40b1f2afefe9535d691eac7222590de772`.
+Upload log: `/tmp/fleeting21-beta-upload.log`. Prepared What to Test text:
+`/tmp/fleeting21-beta-what-to-test.txt`.
+
+**External distribution is not completed.** The browser inventory remains empty and binding
+App Store Connect returns `No browser is available`, including after the user's connection retry
+and a fresh helper session. An App Store Connect API credential is not available to this task; the saved Xcode account
+successfully uploads but does not provide group/review management through the export command.
+Final processing, external-group assignment, review submission and tester availability remain
+unverified. No external group or tester/public-link settings have been changed yet.
+
+To finish in the connected browser or manually:
+
+1. App Store Connect → Fleeting → TestFlight → **External Testing → Tester Group**.
+2. Add Builds → choose **2.1 (6)** once processing finishes.
+3. Use the prepared What to Test notes and select **Automatically notify testers**.
+4. Choose **Submit Review** or **Start Testing**, as Apple offers. Reuse the existing review
+   contact information. Confirm the group lists build 6 as Waiting for Review/In Review or Testing;
+   only Testing establishes that the external release is available.
+
+This handoff is required by the unavailable browser connection, not another approval requirement.
+The user has already authorized external beta publication and its necessary review submission.

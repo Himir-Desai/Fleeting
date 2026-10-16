@@ -659,3 +659,10 @@ both pass the distribution verifier for app/widget signatures and required capab
 acknowledged processing at 19:54 local time. Final processing/group availability is pending
 verification; browser access currently has no connected browser. No external group was modified.
 Release evidence and the remaining handoff are tracked in [INSTALL.md](INSTALL.md).
+
+External beta publication (authorized 2026-10-15, upload completed 2026-10-16): version 2.1 (6)
+uses the same validated app source and a normally signed archive with external testing eligibility.
+Both local and upload-staged IPA capability/signature checks pass, and Apple acknowledged
+processing. Source release commit: `987db0c`. Assignment to the existing External Tester Group
+and TestFlight App Review submission remain incomplete because no browser is connected; external
+tester availability is not claimed. The exact remaining steps are in [INSTALL.md](INSTALL.md).
