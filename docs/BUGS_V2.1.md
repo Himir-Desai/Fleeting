@@ -413,7 +413,7 @@ remaining service/device limits are recorded below.
 
 | Reports | Implementation | Status |
 | --- | --- | --- |
-| B01 | Explicit DEBUG sharing-type initialization in an empty disposable Development zone; present Core Data's persisted share | **Open:** code builds; live schema creation/promotion and link verification blocked by access/signing |
+| B01 | Explicit DEBUG sharing-type initialization in an empty disposable Development zone; present Core Data's persisted share | **Open:** code builds; live repair awaits simulator iCloud readiness and Console access |
 | B02, B09 | Tappable archive rows; lifecycle-aware detail with only restore/reopen enabled; permission guards | Model and focused archive/Plan UI checks pass |
 | B03 | Fourth custom-list toolbar action invokes existing native share/manage service | Toolbar UI check passes; actual link creation remains B01 |
 | B04, B07 | Separate per-tab routes; nonanimated cleanup and filter reset only on main-page switches | Filter/Settings, editor removal and draft persistence UI checks pass; exact animation frames not measured |
@@ -451,14 +451,14 @@ This avoids depending on a particular participant or background sweep to perform
 
 ### B01 execution/access limit — still open
 
-Computer access fails before showing a permission prompt (`Sky Computer Use native pipe startup
-failed`). Apple Development signing of the temporary fixture build failed with
+The earlier attempt failed before showing a computer-access prompt (`Sky Computer Use native pipe
+startup failed`). Apple Development signing of the temporary fixture build failed with
 `errSecInternalComponent`; an ad-hoc Development-entitled copy installed but iOS refused to launch
 it. The normal simulator app was restored and launched without reset. The schema helper did not
 execute, and no sharing schema or Production configuration change is claimed.
 
-At the user's request, checked the browser-free route: `xcrun cktool get-teams` reports **no
-management token** in arguments, environment or built-in storage. Apple's supported
+The first browser-free attempt, `xcrun cktool get-teams`, reported **no management token**
+in arguments, environment or built-in storage. The retry below supersedes that authentication blocker. Apple's supported
 [cktool workflow](https://developer.apple.com/icloud/ck-tool/) requires a locally saved management
 token, exports either environment, and documents schema imports for Development. The documented
 [Production promotion](https://developer.apple.com/documentation/CloudKit/deploying-an-icloud-container-s-schema)
@@ -467,6 +467,34 @@ can be saved locally with `xcrun cktool save-token --type management`; do not pu
 this file or chat. B01 still requires Development share creation, reviewed Production deployment,
 and actual link creation/acceptance verification. No environment reset or user-data deletion is
 part of this repair.
+
+### B01 authenticated retry — 2026-10-15
+
+- Management authentication now succeeds: `cktool get-teams` returns the intended developer team.
+  Exported Development and Production schemas successfully using the saved token, without reading
+  the token itself or putting credentials into commands, logs or this file. The two exports are
+  identical and contain the four app record types plus Users, with no `cloudkit.share` declaration.
+  Snapshots: `/tmp/fleeting21-development.ckdb` and `/tmp/fleeting21-production.ckdb`.
+- Apple Development signing also succeeds now. Directly signing iOS entitlements into the temporary
+  fixture still caused simulator launch error 163. A temporary **CloudKit-only Xcode project**
+  resolves that launch issue using Xcode's standard simulator entitlement handling; verified its
+  `app-Simulated.xcent` specifies **Development** and only Fleeting's intended container. This is
+  separate from the normal app and never opens its thought database or initializes Core Data.
+  An empty code-signature entitlement dictionary alone is therefore insufficient to judge a
+  simulator binary: inspect its simulated entitlements too. This qualifies the October 8 note.
+- The Xcode-built helper launches, but repeatedly receives `CKAccountStatus.temporarilyUnavailable`
+  (raw value 4). A read-only identity lookup succeeds; the subsequent account-status check still
+  returns 4. The zone/share write guard never passes. **No fixture zone, share, schema import or
+  Production deployment occurred.** Apple's [account-status guidance](https://developer.apple.com/documentation/cloudkit/ckaccountstatus/temporarilyunavailable)
+  says the iCloud account exists but is not ready for CloudKit operations; wait for available status.
+- The original installed app was backed up, restored after the attempts, and confirmed to launch
+  normally. No data-container reset, seeding or deletion was performed. The simulator remains
+  booted for the user to check Settings → Apple Account → iCloud for verification/setup prompts.
+- Computer access still fails at native-pipe startup. Management API authentication is resolved;
+  current blockers are simulator iCloud readiness for native share creation and Console access for
+  the documented Production promotion. B01 remains open. Logs:
+  `/tmp/fleeting21-schema-xcode.log`, `/tmp/fleeting21-schema-xcode-run.log`,
+  `/tmp/fleeting21-schema-account-final.log`.
 
 ## Newly discovered issues — logged only
 

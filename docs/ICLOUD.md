@@ -199,3 +199,12 @@ Production, but document imports for Development; the documented
 [Production deployment](https://developer.apple.com/documentation/CloudKit/deploying-an-icloud-container-s-schema)
 still uses Console's reviewed Deploy Schema Changes flow. A signed-in simulator or browser session
 does not supply `cktool` with a management token automatically.
+
+
+For simulator schema fixtures, use Xcode's normal simulator build path with the intended Development
+CloudKit entitlements. Check the generated `app-Simulated.xcent`; the code signature's entitlement
+dictionary may be empty even when Xcode embeds the simulator capabilities correctly. The isolated
+v2.1 CloudKit-only fixture launches this way, while manually embedding iOS CloudKit entitlements in
+the host code signature was refused with launch error 163. The account must report `.available`
+before the fixture creates its empty zone/share. `.temporarilyUnavailable` is a separate iCloud
+readiness blocker, even when the management token works.
