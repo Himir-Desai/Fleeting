@@ -627,7 +627,8 @@ pills, adaptive list labels, persistent selector presentation, keyboard state, o
 task visibility, task controls and removal of expiry-based font weight. Sharing also requires the
 missing CloudKit system type to be created in Development and promoted to Production. Final test
 results and limits are recorded in the bug tracker: 372 package tests, nine focused UI cases,
-and Debug/optimized Release simulator app/widget builds pass. B01 remains open because live schema
-repair and real link verification await simulator iCloud readiness and Console access (management
-API authentication now works); intermittent phone
+and Debug/optimized Release simulator app/widget builds pass. Simulator iCloud relogin enabled
+successful Development share/link generation. The reviewed delta is only cloudkit.share. B01
+remains open pending Production promotion through Console and real Production link verification.
+Management API authentication works; intermittent phone
 flicker still needs observation. No release or upload is part of this scope.

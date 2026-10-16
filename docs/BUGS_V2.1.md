@@ -413,7 +413,7 @@ remaining service/device limits are recorded below.
 
 | Reports | Implementation | Status |
 | --- | --- | --- |
-| B01 | Explicit DEBUG sharing-type initialization in an empty disposable Development zone; present Core Data's persisted share | **Open:** code builds; live repair awaits simulator iCloud readiness and Console access |
+| B01 | Explicit DEBUG sharing-type initialization in an empty disposable Development zone; present Core Data's persisted share | **Open:** Development share/link generation succeeds; reviewed cloudkit.share addition awaits Production promotion and end-to-end verification |
 | B02, B09 | Tappable archive rows; lifecycle-aware detail with only restore/reopen enabled; permission guards | Model and focused archive/Plan UI checks pass |
 | B03 | Fourth custom-list toolbar action invokes existing native share/manage service | Toolbar UI check passes; actual link creation remains B01 |
 | B04, B07 | Separate per-tab routes; nonanimated cleanup and filter reset only on main-page switches | Filter/Settings, editor removal and draft persistence UI checks pass; exact animation frames not measured |
@@ -495,6 +495,30 @@ part of this repair.
   the documented Production promotion. B01 remains open. Logs:
   `/tmp/fleeting21-schema-xcode.log`, `/tmp/fleeting21-schema-xcode-run.log`,
   `/tmp/fleeting21-schema-account-final.log`.
+
+### B01 after simulator iCloud relogin — 2026-10-15
+
+- The simulator now reports the account **available**. The isolated, Development-entitled
+  CloudKit-only helper successfully creates a new empty zone, saves a real `CKShare`, and confirms
+  that its URL is populated. It then successfully deletes that same fixture zone. No participants
+  were added and no thought-store access, reset or seeding occurred. The deleted fixture's URL is
+  not a persistent invitation and does not establish cross-account acceptance.
+- The original app was backed up again, restored after the helper completed, and confirmed to
+  launch normally. Log: `/tmp/fleeting21-schema-relogin-run.log`.
+- Fresh authenticated exports confirm **Development now contains `cloudkit.share` and Production
+  does not**. The exact schema delta is one added system record type, with its standard metadata
+  and `cloudkit.thumbnailImageData`, `cloudkit.title`, `cloudkit.type` fields and generated grants.
+  There are no modifications to the four existing app types or Users. Snapshots:
+  `/tmp/fleeting21-development-after-share.ckdb`, `/tmp/fleeting21-production-after-share.ckdb`.
+- Production **validation only**, with no import, returns:
+  `BadRequestException: endpoint not applicable in the environment 'production'`.
+  Computer access still returns `Sky Computer Use native pipe startup failed`, so the reviewed
+  Production deployment cannot be completed through the currently available interfaces.
+- User-facing next step: CloudKit Console → `iCloud.com.himirdesai.Fleeting` → Development →
+  **Deploy Schema Changes**; confirm that the only new record type is `cloudkit.share`, then Deploy.
+  Authorization for B01 already exists; this manual handoff is needed because computer access
+  fails, not because another approval is required. Afterward, export Production to confirm the
+  type and verify actual Production link creation. B01 remains open until that verification.
 
 ## Newly discovered issues — logged only
 
