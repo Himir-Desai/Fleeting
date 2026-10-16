@@ -177,3 +177,18 @@ browser, then verify 2.1 (5) is Testing in the existing **Internal → Tester Gr
 there if automatic distribution did not do so; preserve the External group. Prepared What to Test
 text is at `/tmp/fleeting21-alpha-what-to-test.txt`. Do not describe alpha availability as verified
 until this final check is complete.
+
+## v2.1 external beta release · 2026-10-15
+
+The user subsequently authorized distribution to the existing **External → Tester Group** as
+well. Build 5's Internal Only restriction cannot be removed from that uploaded build. Prepare
+version **2.1 (6)** from the same validated app source, with a normally signed Release archive,
+Production CloudKit and `testFlightInternalTestingOnly=false`. Keep the build number fixed during
+export. This is a TestFlight beta release; public App Store submission is outside this request.
+
+Verify both the local export and exact upload-staged package with `Tools/verify-distribution.py`.
+After processing, add build 6 to the existing external group and submit to TestFlight App Review
+if Apple requires it, enabling distribution to that group after approval. Preserve existing
+testers and public-link settings. Browser connection, review submission and beta availability
+are not yet verified. Existing source tests cover the unchanged app implementation; no repeat
+source test run is needed for the build-number/export-option change.
