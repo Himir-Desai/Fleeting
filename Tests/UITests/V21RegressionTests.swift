@@ -24,14 +24,51 @@ final class V21RegressionTests: XCTestCase {
         XCTAssertTrue(text.waitForExistence(timeout: 5))
         XCTAssertFalse(text.isEnabled)
         XCTAssertFalse(app.buttons["detail.save"].isEnabled)
-        let restore = app.buttons["detail.action.archive"]
+        let restore = app.buttons["detail.action.complete"]
         reveal(restore, app: app)
-        XCTAssertEqual(restore.label, "Mark as not done")
+        XCTAssertEqual(restore.label, "Mark not done")
         XCTAssertTrue(restore.isEnabled)
+        XCTAssertEqual(app.buttons["detail.action.archive"].label, "Archive")
+        XCTAssertFalse(app.buttons["detail.action.archive"].isEnabled)
+        XCTAssertFalse(app.buttons["Mark done"].exists)
         XCTAssertFalse(app.buttons["detail.restore"].exists)
+        assertTaskActionsShareOneRow(app, fullyVisible: true)
+        snapshot("Completed task actions in one row", app: app)
         restore.tap()
         XCTAssertTrue(checkbox.waitForExistence(timeout: 5))
         XCTAssertEqual(checkbox.value as? String, "Not done")
+        app.buttons["Edit Finish v2.1 task"].tap()
+        XCTAssertTrue(text.waitForExistence(timeout: 5))
+        let complete = app.buttons["detail.action.complete"]
+        reveal(complete, app: app)
+        XCTAssertEqual(complete.label, "Mark done")
+        XCTAssertTrue(complete.isEnabled)
+        XCTAssertTrue(app.buttons["detail.action.archive"].isEnabled)
+        assertTaskActionsShareOneRow(app, fullyVisible: true)
+        snapshot("Active task actions in one row", app: app)
+        complete.tap()
+        XCTAssertTrue(app.staticTexts["1 of 1 done"].waitForExistence(timeout: 5))
+    }
+
+    func testCompletedTaskActionsStayInOneScrollableRowAtLargestText() {
+        let app = launch(largestText: true)
+        app.tabButton("Plan").tap()
+        let input = app.textFields["plan.input"]
+        XCTAssertTrue(input.waitForExistence(timeout: 5))
+        input.tap()
+        input.typeText("Large task\n")
+        dismissKeyboard(app, identifier: "plan.dismissKeyboard")
+        app.buttons["Large task"].tap()
+        app.buttons["Edit Large task"].tap()
+        XCTAssertTrue(app.textFields["detail.text"].waitForExistence(timeout: 5))
+        let restore = app.buttons["detail.action.complete"]
+        reveal(restore, app: app)
+        XCTAssertEqual(restore.label, "Mark not done")
+        assertTaskActionsShareOneRow(app, fullyVisible: false)
+        snapshot("Large text task actions in one scrollable row", app: app)
+        restore.tap()
+        XCTAssertTrue(app.buttons["Large task"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.buttons["Large task"].value as? String, "Not done")
     }
 
     func testArchivedThoughtOpensRestrictedEditorAndRestores() {
@@ -135,12 +172,42 @@ final class V21RegressionTests: XCTestCase {
         XCTAssertTrue(app.buttons["inbox.editSelectedList"].exists)
     }
 
-    private func launch(demo: Bool = false) -> XCUIApplication {
+    private func launch(demo: Bool = false, largestText: Bool = false) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["--reset-store"] + (demo ? ["--seed-demo"] : [])
+        if largestText {
+            app.launchArguments += [
+                "-UIPreferredContentSizeCategoryName",
+                "UICTContentSizeCategoryAccessibilityXXXL"
+            ]
+        }
         app.launch()
         XCTAssertTrue(app.textFields["capture.field"].waitForExistence(timeout: 10))
         return app
+    }
+
+    private func assertTaskActionsShareOneRow(_ app: XCUIApplication, fullyVisible: Bool) {
+        let row = app.scrollViews["detail.actions"]
+        let first = app.buttons["detail.action.complete"]
+        let actions = ["complete", "enhance", "snooze", "archive", "delete"].map {
+            app.buttons["detail.action." + $0]
+        }
+        for action in actions {
+            XCTAssertTrue(action.exists)
+            XCTAssertEqual(action.frame.minY, first.frame.minY, accuracy: 2)
+            XCTAssertGreaterThanOrEqual(action.frame.width, 44)
+            if fullyVisible {
+                XCTAssertGreaterThanOrEqual(action.frame.minX, row.frame.minX - 1)
+                XCTAssertLessThanOrEqual(action.frame.maxX, row.frame.maxX + 1)
+            }
+        }
+    }
+
+    private func snapshot(_ name: String, app: XCUIApplication) {
+        let shot = XCTAttachment(screenshot: app.screenshot())
+        shot.name = name
+        shot.lifetime = .keepAlways
+        add(shot)
     }
 
     private func dismissKeyboard(_ app: XCUIApplication, identifier: String) {

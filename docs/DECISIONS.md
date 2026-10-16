@@ -2321,9 +2321,9 @@ must be removed completely.
 including shared tasks, rather than converting `.done` to `.archived`. Plan keeps its historical
 completion projection; no schema or repeated shared archive writes are introduced. Reopen preserves
 ID, membership and due day. Archived/completed details enforce a restore-only mode, including model
-mutation guards and sharing permissions. Per the user's archive-action refinement, reuse the
-Archive action's existing position for Unarchive / Mark as not done, with the restore icon and
-permission-aware enabled state; a separate restore button is unnecessary. Move task completion into
+mutation guards and sharing permissions. Reuse the Archive position for Unarchive on archived
+thoughts. Completed tasks use Mark not done in their completion slot (ADR-0072); a separate restore
+button is unnecessary. Move task completion into
 secondary round actions and provide an explicit Save control. Persist edited text together with actions that leave the editor.
 
 Split Thoughts/Lists navigation bindings. Switching main pages resets thought filters and dismisses
@@ -2390,3 +2390,30 @@ existing completion-button wording, which stays unchanged.
 review entered from a selected list with named/unfiled cards and operability at the largest text
 size. Normal/large-text screenshots were visually checked. Evidence and metadata failure/rename
 coverage are recorded in BUGS_V2.1.
+
+
+## ADR-0072 · Completion and archive keep their own action slots
+
+**Date:** 2026-10-15
+
+**Context.** The user's completed-task screenshot shows a disabled Mark done control and Mark as
+not done in the archive slot. The five long-labelled actions trigger a two-column grid. The user
+wants completion to toggle in its original position and all actions to remain in one row; the
+existing Archive/Unarchive behavior for archived thoughts is accepted.
+
+**Decision.** Toggle Mark done / Mark not done in the first task action, using the existing guarded
+complete/restore model paths. The archive slot toggles Archive / Unarchive only for archived state;
+it stays disabled for completed tasks. Stable action identifiers follow these semantic slots.
+Keep a single horizontal row, sharing available width between visible controls, with centered,
+wrapping captions. Scale the minimum slot width with Dynamic Type and allow horizontal scrolling
+when necessary so large text remains readable. The round controls retain their 52-point targets.
+
+**Alternatives and cost.** Reusing the archive slot for task undo leaves the completion control
+misleading. A grid breaks the requested row. Shrinking text or tap targets to force accessibility
+sizes into the viewport harms readability and interaction. The horizontal row may require a sideways
+scroll at accessibility sizes, while ordinary sizes keep all five controls visible.
+
+**Verification:** All three focused task/archive/largest-text UI checks pass. Normal-size tests
+verify five action frames share one row inside the viewport; the completion slot completes and
+reopens tasks while Archive stays distinct. Normal/large-text screenshots were visually checked.
+Evidence is recorded in BUGS_V2.1.

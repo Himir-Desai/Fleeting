@@ -12,6 +12,7 @@ public struct ThoughtDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @FocusState private var isEditing: Bool
     @State private var isChoosingList = false
+    @ScaledMetric(relativeTo: .caption) private var minimumActionWidth: CGFloat = 52
 
     private let onEnhance: () -> Void
     private let onAddList: (@escaping (ThoughtList) -> Void) -> Void
@@ -230,28 +231,52 @@ public struct ThoughtDetailView: View {
         }
     }
 
-    /// Enhance, snooze, archive and delete, as labelled round chips.
+    /// One horizontal row of labelled actions, scrollable when larger text needs more room.
     private var actions: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(alignment: .top, spacing: Spacing.regular) { actionChoices }
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: Spacing.loose) {
+        ScrollView(.horizontal) {
+            HStack(alignment: .top, spacing: Spacing.tight) {
                 actionChoices
             }
         }
-        .frame(maxWidth: .infinity)
+        .scrollIndicators(.hidden)
+        .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+        .accessibilityIdentifier("detail.actions")
+    }
+
+    /// The number of visible action slots used to share the available row width.
+    private var actionCount: Int {
+        1 + (model.thought.kind == .todo ? 1 : 0)
+            + (model.thought.canEditContent || model.isReadOnly ? 3 : 0)
+    }
+
+    private var isArchived: Bool {
+        if case .archived = model.thought.state {
+            return true
+        }
+        return false
     }
 
     @ViewBuilder
     private var actionChoices: some View {
         if model.thought.kind == .todo {
-            actionButton(symbol: "checkmark.circle", label: "Mark done", tint: Palette.accentText) {
+            actionButton(
+                symbol: model.thought.isCompleted ? "arrow.uturn.backward" : "checkmark.circle",
+                label: model.thought.isCompleted ? "Mark not done" : "Mark done",
+                tint: Palette.accentText,
+                identifier: "detail.action.complete"
+            ) {
                 Task {
-                    if await model.complete() {
+                    let succeeded: Bool = if model.thought.isCompleted {
+                        await model.restore()
+                    } else {
+                        await model.complete()
+                    }
+                    if succeeded {
                         dismiss()
                     }
                 }
             }
-            .disabled(!model.canEdit)
+            .disabled(model.thought.isCompleted ? !model.canRestore : !model.canEdit)
         }
         if model.thought.canEditContent || model.isReadOnly {
             actionButton(symbol: "sparkles", label: "Enhance", tint: Palette.accentText) { onEnhance() }
@@ -267,14 +292,13 @@ public struct ThoughtDetailView: View {
         .disabled(model.isReadOnly)
         if model.thought.canEditContent || model.isReadOnly {
             actionButton(
-                symbol: model.isReadOnly ? "arrow.uturn.backward" : "archivebox",
-                label: model.isReadOnly
-                    ? (model.thought.isCompleted ? "Mark as not done" : "Unarchive") : "Archive",
-                tint: model.isReadOnly ? Palette.accentText : Palette.inkMuted,
+                symbol: isArchived ? "arrow.uturn.backward" : "archivebox",
+                label: isArchived ? "Unarchive" : "Archive",
+                tint: isArchived ? Palette.accentText : Palette.inkMuted,
                 identifier: "detail.action.archive"
             ) {
                 Task {
-                    let succeeded: Bool = if model.isReadOnly {
+                    let succeeded: Bool = if isArchived {
                         await model.restore()
                     } else {
                         await model.archive()
@@ -284,7 +308,7 @@ public struct ThoughtDetailView: View {
                     }
                 }
             }
-            .disabled(model.isReadOnly ? !model.canRestore : !model.canEdit)
+            .disabled(isArchived ? !model.canRestore : !model.canEdit)
             actionButton(symbol: "trash", label: "Delete", tint: Palette.fading) {
                 Task {
                     if await model.delete() {
@@ -305,6 +329,12 @@ public struct ThoughtDetailView: View {
         action: @escaping () -> Void
     ) -> some View {
         RoundIconButton(symbol: symbol, label: label, tint: tint, showsLabel: true, action: action)
+            .containerRelativeFrame(.horizontal) { width, _ in
+                max(
+                    minimumActionWidth,
+                    (width - CGFloat(actionCount - 1) * Spacing.tight) / CGFloat(actionCount)
+                )
+            }
             .accessibilityIdentifier(identifier ?? "detail.action.\(label.lowercased())")
     }
 

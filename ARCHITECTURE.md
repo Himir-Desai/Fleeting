@@ -656,7 +656,10 @@ No schema migration or shared-content archive write is needed for this presentat
 
 ThoughtDetailModel owns lifecycle and permission guards. Archived/completed details disable content
 and actions except restore/reopen. Save is explicit and exit still saves live drafts; task completion
-persists pending edits in the same update. Task completion is a secondary round action. Row task
+persists pending edits in the same update. Task completion is a secondary round action, toggling
+Mark done / Mark not done in its own slot. Archive/Unarchive uses a separate slot. The detail actions
+use one horizontal row with equal-width, Dynamic Type-aware slots and wrapping captions; large text
+can scroll the row horizontally (ADR-0072). Row task
 circles and strikethrough replace the duplicate kind/action ticks. Font weight no longer depends
 on freshness; opacity, expiry, rails, card surfaces and review/archiving policies remain independent.
 

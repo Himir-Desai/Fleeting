@@ -86,9 +86,16 @@ thoughts. Only **Unarchive / Mark as not done**, as appropriate, is available; o
 visible but are greyed out and disabled. The archived editor must not permit ordinary editing.
 
 **User refinement — 2026-10-15:** Reuse the existing Archive action in the individual thought page:
-it becomes **Unarchive** for an archived thought. Completed thoughts use **Mark as not done** in
-that same slot. Remove the separate restore button; other restricted controls remain disabled.
-Implemented in ThoughtDetailView; both focused archive/completed-detail UI checks pass.
+it becomes **Unarchive** for an archived thought. Remove the separate restore button; other
+restricted controls remain disabled.
+
+**Task correction — 2026-10-15:** The supplied screenshot shows completed tasks with a disabled
+Mark done action and a separate Mark as not done label in the Archive slot, making the five actions
+fall into a grid. The **completion** action must switch between **Mark done / Mark not done**.
+Archive/Unarchive retains its own slot; Archive is disabled for a completed task. Keep the actions
+in one horizontal row. Equal-width slots and wrapping captions fit five controls at ordinary text
+sizes; larger accessibility text can scroll the same row horizontally. Implementation complete;
+all three focused UI checks pass, with normal/large-text screenshots visually checked.
 
 **Related:** B09 uses this same editor behavior for completed Plan tasks.
 
@@ -454,7 +461,7 @@ remaining service/device limits are recorded below.
 | Reports | Implementation | Status |
 | --- | --- | --- |
 | B01 | Explicit DEBUG sharing-type initialization in an empty disposable Development zone; present Core Data's persisted share | **Schema repair verified:** Production has cloudkit.share and generates a real share URL; native-list/two-account acceptance remains unverified |
-| B02, B09 | Tappable archive rows; lifecycle-aware detail with only restore/reopen enabled; existing Archive action switches to Unarchive / Mark as not done; permission guards | Model checks and refined archive/completed-detail UI checks pass |
+| B02, B09 | Tappable archive rows; lifecycle-aware detail with only restore/reopen enabled; Archive switches to Unarchive for archives; task completion switches to Mark not done for completed tasks; permission guards | All three corrected task/archive/largest-text UI checks pass; screenshots checked |
 | B03 | Fourth custom-list toolbar action invokes existing native share/manage service | Toolbar UI check passes; actual link creation remains B01 |
 | B04, B07 | Separate per-tab routes; nonanimated cleanup and filter reset only on main-page switches | Filter/Settings, editor removal and draft persistence UI checks pass; exact animation frames not measured |
 | B05 | Stable themed capsule replaces the pill's live interactive glass effect | Remediation builds and survives exercised flows; intermittent phone flicker still needs observation |
@@ -626,3 +633,14 @@ from Thoughts or Lists. No completion-label or navigation change is part of Q02.
   list labels to review cards and global-scope text to the existing invitation/session. Kept global
   selection and eligibility rules intact. User accepts N02 as-is; closed without app changes.
   18 ReviewModel tests and both focused UI cases pass; screenshots, formatting and diff checked.
+
+- **2026-10-15, completed-task action correction:** User requests Mark done toggle to Mark not done
+  in its own slot, retaining Archive/Unarchive separately and all actions in a row. Implemented
+  completion/restore routing in the first slot, archive-only restore in the archive slot, equal-width
+  horizontal action layout and centered wrapping captions. All three focused UI cases pass after
+  implementation: active/completed task actions, archive restore, and the largest text size. They
+  verify five controls share a row, all fit the normal viewport, completion/reopen works through
+  the same slot, and completed Archive stays disabled. Normal/large-text screenshots visually
+  checked. Evidence: `/tmp/fleeting21-task-action-row.xcresult`,
+  `/tmp/fleeting21-task-action-row-images/`, `/tmp/fleeting21-task-action-row.log`.
+  SwiftFormat lint and `git diff --check` pass. No unrelated fixes or full UI suite run.

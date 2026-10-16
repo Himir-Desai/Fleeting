@@ -137,8 +137,10 @@ to-dos in that collection.
 
 Completed tasks show a checked circle and strikethrough in Thoughts and Lists for 24 hours, then
 move into Archived. Plan retains their completion history. Tapping an archived or completed thought
-opens its usual editor with only Unarchive / Mark as not done enabled in the existing Archive action's
-place. Active task editing has an explicit Save action; Mark done is a separate secondary action.
+opens its usual restricted editor. Archive becomes Unarchive for archived thoughts; a completed
+task's Mark done action becomes Mark not done in its own slot. Thought actions share one horizontal
+row with wrapping captions, scrolling horizontally when accessibility text needs more space.
+Active task editing has an explicit Save action; task completion is a secondary action.
 Thought typography stays constant as expiry approaches. Filters reset when switching main pages and stay while opening a thought or
 Settings. The Lists selector stays open until choosing an option or switching pages.
 

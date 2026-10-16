@@ -644,6 +644,8 @@ an app change. See ADR-0071.
 
 
 Archive action refinement (2026-10-15): the existing thought-detail Archive action becomes Unarchive
-for archived thoughts, or Mark as not done for completed thoughts. The separate restore button is
-removed. Both focused archived/completed-detail UI cases pass, including restoration and restricted
-editing. SwiftFormat lint and diff checks pass.
+for archived thoughts. The subsequent task correction keeps Mark done / Mark not done in the
+completion slot, with Archive/Unarchive separate. All actions stay in one horizontal row with
+wrapping captions and horizontal scrolling at accessibility sizes. The separate restore button is
+removed. All three focused task/archive/largest-text UI cases pass; screenshots visually checked,
+with formatting and diff checks passing (ADR-0072).
