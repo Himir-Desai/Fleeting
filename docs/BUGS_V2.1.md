@@ -1,12 +1,11 @@
 # Fleeting v2.1 — bugs and UX requests
 
-Created: 2026-10-08 · Last updated: 2026-10-08
+Created: 2026-10-08 · Last updated: 2026-10-15
 
-**Current phase: investigation authorized; fixes not authorized.** On 2026-10-08 the user said:
-“start interrogating the bugs do not fix them yet.” Keep collecting reports, investigating them,
-and maintaining this file. Do not change app code, deploy or initialize CloudKit schemas, or
-implement any item until the user explicitly authorizes fixes. This includes the feature removal
-and UX request. No reported item has been fixed.
+**Current phase: scoped fixes authorized (2026-10-15).** Fix only the existing B01–B12 and Q01.
+Log newly discovered issues without fixing them. The user requests tests at the end of the complete
+implementation, not after each change. Earlier investigation notes below are retained as history;
+current implementation and validation status are tracked separately.
 
 Keep the original numbering and stable IDs when adding details or new reports. Distinguish
 code-confirmed behavior, tested behavior, service observations, and hypotheses. A plausible cause
@@ -405,3 +404,81 @@ accessibility targets and shared-list permissions. No visual redesign applied.
   read-only CloudKit schema observations, 27 passing existing focused tests, simulator signing
   limitations and the user's phone/simulator follow-up for B05/B10. App code and CloudKit
   configuration unchanged; fixes remain unauthorized.
+
+
+## Implementation — 2026-10-15
+
+Implementation was completed before running tests, as requested. Final validation results and
+remaining service/device limits are recorded below.
+
+| Reports | Implementation | Status |
+| --- | --- | --- |
+| B01 | Explicit DEBUG sharing-type initialization in an empty disposable Development zone; present Core Data's persisted share | **Open:** code builds; live schema creation/promotion and link verification blocked by access/signing |
+| B02, B09 | Tappable archive rows; lifecycle-aware detail with only restore/reopen enabled; permission guards | Model and focused archive/Plan UI checks pass |
+| B03 | Fourth custom-list toolbar action invokes existing native share/manage service | Toolbar UI check passes; actual link creation remains B01 |
+| B04, B07 | Separate per-tab routes; nonanimated cleanup and filter reset only on main-page switches | Filter/Settings, editor removal and draft persistence UI checks pass; exact animation frames not measured |
+| B05 | Stable themed capsule replaces the pill's live interactive glass effect | Remediation builds and survives exercised flows; intermittent phone flicker still needs observation |
+| B06 | Full label measured naturally, capped at 180 points and available width | Short/long label sizing UI check passes |
+| B08 | Native popover dismissal guard with native tab-bar touch passthrough | Native-tab, repeated/outside-tap and option-selection UI checks pass |
+| B10 | Shared keyboard state, active-window geometry and visibility reconciliation on reentry | Plan keyboard tab/Settings reentry and existing Return/dismiss UI checks pass; original random trigger unknown |
+| B11 | Completed circles/strikethrough; 24-hour display-to-archive transition retaining done date and Plan history; reviews remain excluded | Core/model boundary, repeat-completion, review exclusion and Plan persistence checks pass |
+| B12 | Remove expiry-based font-weight function, call site and obsolete active-code comments | Source search finds no remaining Swift dependency; package tests and app build pass |
+| Q01 | Task completion moved into secondary actions; explicit Save; draft saved with completion | Draft/completion model checks and edit-persistence UI check pass |
+
+The one-day interpretation is 24 hours after completion; Plan history is retained. Shared completed
+tasks use the same visibility boundary without changing the shared record's lifecycle date.
+This avoids depending on a particular participant or background sweep to perform an archive write.
+
+### Final validation — 2026-10-15
+
+- **372 package tests pass:** Core 124, DesignSystem 22, Features 114, Persistence 52,
+  isolated SchemaMigration 12, Intelligence 36, Notifications 12. Persistence and migration used
+  separate processes. Logs: `/tmp/fleeting21-{core,design,features,persistence,migration,intelligence,notifications}.log`.
+- **Nine distinct targeted UI cases pass** across the final validation runs: V21RegressionTests
+  (five), NativeNavigationTests (two), and PlanTests' Return/keyboard and persisted completion
+  cases (two). Tests use the isolated **Fleeting v2.1 Regression** iOS 27 simulator; no reset/seeding
+  was performed on the user's signed-in simulator. The full UI suite was not run.
+- The first UI pass exposed a blank chooser caused by delegate forwarding and presentation inside
+  a nonanimated transaction. Explicit delegate forwarding and separate chooser presentation fixed
+  it; both native-navigation cases and the list sizing/share case passed on rerun. The draft-save
+  assertion originally searched an offscreen virtualized row; filtering to Ideas and locating the
+  row button verifies the saved text and now passes. Evidence: `/tmp/fleeting21-ui.xcresult`,
+  `/tmp/fleeting21-navigation.log`, `/tmp/fleeting21-edit.xcresult`.
+- Debug app/test compilation and optimized **Release app + widget simulator builds pass**.
+  Changed Swift files pass SwiftFormat lint; `git diff --check` passes. No release/upload performed.
+- B05's intermittent phone behavior and B07's exact rendered transition frames have not been
+  observed directly; model/UI success is not proof of every random rendering sequence.
+
+### B01 execution/access limit — still open
+
+Computer access fails before showing a permission prompt (`Sky Computer Use native pipe startup
+failed`). Apple Development signing of the temporary fixture build failed with
+`errSecInternalComponent`; an ad-hoc Development-entitled copy installed but iOS refused to launch
+it. The normal simulator app was restored and launched without reset. The schema helper did not
+execute, and no sharing schema or Production configuration change is claimed.
+
+At the user's request, checked the browser-free route: `xcrun cktool get-teams` reports **no
+management token** in arguments, environment or built-in storage. Apple's supported
+[cktool workflow](https://developer.apple.com/icloud/ck-tool/) requires a locally saved management
+token, exports either environment, and documents schema imports for Development. The documented
+[Production promotion](https://developer.apple.com/documentation/CloudKit/deploying-an-icloud-container-s-schema)
+uses Console's Deploy Schema Changes. No unsupported authenticated endpoint was assumed. A token
+can be saved locally with `xcrun cktool save-token --type management`; do not put credentials in
+this file or chat. B01 still requires Development share creation, reviewed Production deployment,
+and actual link creation/acceptance verification. No environment reset or user-data deletion is
+part of this repair.
+
+## Newly discovered issues — logged only
+
+### N01 — A selected list's review count/session spans other lists
+
+**Observed in source, not fixed:** `InboxModel.load` calculates `reviewCount` from the entire
+`thoughts` array. `RootView.thoughtReview` creates a ReviewModel without the selected-list scope.
+Consequently, the review invitation on a selected list may count and review thoughts from other
+collections. This is outside B01–B12/Q01 and remains deferred. Reproduce and decide intended scope
+before a separately authorized change.
+
+## Implementation history
+
+- **2026-10-15:** User authorized fixing existing reports only, logging new issues without fixing
+  them, and running tests only at the end. Implementation recorded above; N01 logged without a fix.

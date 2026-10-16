@@ -37,22 +37,23 @@ public extension CollaborationRepository {
                     else { request.finish(.failure(ListSharingError.unavailable)); return }
                     share[CKShare.SystemFieldKey.title] = title as CKRecordValue
                     share.publicPermission = .none
-                    self.store.container.persistUpdatedShare(share, in: self.store.privateStore) { _, error in
-                        Task { @MainActor in
-                            if let error {
-                                request.finish(.failure(error)); return
+                    self.store.container
+                        .persistUpdatedShare(share, in: self.store.privateStore) { persistedShare, error in
+                            Task { @MainActor in
+                                if let error {
+                                    request.finish(.failure(error)); return
+                                }
+                                do {
+                                    try self.listRow(listID)?.setValue(true, forKey: "sharingEnabled")
+                                    try self.save()
+                                    request.finish(.success(CollaborationShare(
+                                        share: persistedShare ?? share,
+                                        container: container,
+                                        listID: listID
+                                    )))
+                                } catch { request.finish(.failure(error)) }
                             }
-                            do {
-                                try self.listRow(listID)?.setValue(true, forKey: "sharingEnabled")
-                                try self.save()
-                                request.finish(.success(CollaborationShare(
-                                    share: share,
-                                    container: container,
-                                    listID: listID
-                                )))
-                            } catch { request.finish(.failure(error)) }
                         }
-                    }
                 }
             }
             Task { @MainActor in

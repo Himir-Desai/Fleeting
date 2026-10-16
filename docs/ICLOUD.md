@@ -174,3 +174,28 @@ unsigned archive used as a signing fallback, not the production schema. Build 4 
 signed archive and explicitly exports the Production iCloud environment. Both the local export
 and exact staged upload IPA passed the new distribution verifier for app and widget. Do not
 uninstall build 3 before updating; the existing local-store import preserves its captured thoughts.
+
+
+## v2.1 sharing-system schema repair
+
+Initializing Core Data's model schema does not establish that `cloudkit.share` exists. B01's server
+error specifically identifies the missing sharing system type. For an explicitly signed **Debug
+Development-environment** run, `--initialize-cloudkit-sharing-schema` creates a CKShare in a new,
+empty disposable zone and removes that zone afterward. It adds no participants, exposes no list
+content, and does not touch the app's Core Data zones. Verify Development signing before running;
+never use this launch argument against Production. Normal launches and Release builds never run it.
+
+After successful creation, inspect Development Record Types for `cloudkit.share`, review the exact
+schema deployment preview, and promote that type to Production. Reinspect Production and verify
+link creation using the production-signed build. Invitation acceptance and collaborative edits
+still need two accounts. Do not reset environments or delete user stores to repair this issue.
+Current execution/verification evidence belongs to BUGS_V2.1; this procedure alone is not a claim
+that deployment or cross-account sharing succeeded.
+
+For browser-free inspection, Apple's `cktool` requires a management token saved locally with
+`xcrun cktool save-token --type management`. Do not commit or paste tokens into logs/chat. Its
+[supported schema commands](https://developer.apple.com/icloud/ck-tool/) export Development or
+Production, but document imports for Development; the documented
+[Production deployment](https://developer.apple.com/documentation/CloudKit/deploying-an-icloud-container-s-schema)
+still uses Console's reviewed Deploy Schema Changes flow. A signed-in simulator or browser session
+does not supply `cktool` with a management token automatically.
