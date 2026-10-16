@@ -24,10 +24,11 @@ final class V21RegressionTests: XCTestCase {
         XCTAssertTrue(text.waitForExistence(timeout: 5))
         XCTAssertFalse(text.isEnabled)
         XCTAssertFalse(app.buttons["detail.save"].isEnabled)
-        let restore = app.buttons["detail.restore"]
+        let restore = app.buttons["detail.action.archive"]
         reveal(restore, app: app)
         XCTAssertEqual(restore.label, "Mark as not done")
         XCTAssertTrue(restore.isEnabled)
+        XCTAssertFalse(app.buttons["detail.restore"].exists)
         restore.tap()
         XCTAssertTrue(checkbox.waitForExistence(timeout: 5))
         XCTAssertEqual(checkbox.value as? String, "Not done")
@@ -44,12 +45,12 @@ final class V21RegressionTests: XCTestCase {
         XCTAssertTrue(text.waitForExistence(timeout: 5))
         XCTAssertFalse(text.isEnabled)
         XCTAssertFalse(app.buttons["detail.list"].isEnabled)
-        let restore = app.buttons["detail.restore"]
+        let restore = app.buttons["detail.action.archive"]
         reveal(restore, app: app)
         XCTAssertEqual(restore.label, "Unarchive")
-        let archive = app.buttons["detail.action.archive"]
-        reveal(archive, app: app)
-        XCTAssertFalse(archive.isEnabled)
+        XCTAssertTrue(restore.isEnabled)
+        XCTAssertFalse(app.buttons["detail.restore"].exists)
+        XCTAssertFalse(app.buttons["detail.action.enhance"].isEnabled)
         XCTAssertFalse(app.buttons["detail.action.delete"].isEnabled)
         reveal(restore, app: app)
         restore.tap()

@@ -638,3 +638,9 @@ Review clarification (2026-10-15): N01's global thought-review count/session is 
 forgotten lists can resurface without being opened. Q02 records source-list labels on review cards
 and clear global review invitations as a future UX improvement; it is not implemented in this
 update. See ADR-0071.
+
+
+Archive action refinement (2026-10-15): the existing thought-detail Archive action becomes Unarchive
+for archived thoughts, or Mark as not done for completed thoughts. The separate restore button is
+removed. Both focused archived/completed-detail UI cases pass, including restoration and restricted
+editing. SwiftFormat lint and diff checks pass.

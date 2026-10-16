@@ -84,6 +84,11 @@ environment reset or permission change was performed during this investigation.
 thoughts. Only **Unarchive / Mark as not done**, as appropriate, is available; other buttons stay
 visible but are greyed out and disabled. The archived editor must not permit ordinary editing.
 
+**User refinement — 2026-10-15:** Reuse the existing Archive action in the individual thought page:
+it becomes **Unarchive** for an archived thought. Completed thoughts use **Mark as not done** in
+that same slot. Remove the separate restore button; other restricted controls remain disabled.
+Implemented in ThoughtDetailView; both focused archive/completed-detail UI checks pass.
+
 **Related:** B09 uses this same editor behavior for completed Plan tasks.
 
 **Investigation — code-confirmed:** [ArchivedListRow](../Packages/Features/Sources/InboxFeature/ArchivedListRow.swift#L10)
@@ -434,7 +439,7 @@ remaining service/device limits are recorded below.
 | Reports | Implementation | Status |
 | --- | --- | --- |
 | B01 | Explicit DEBUG sharing-type initialization in an empty disposable Development zone; present Core Data's persisted share | **Schema repair verified:** Production has cloudkit.share and generates a real share URL; native-list/two-account acceptance remains unverified |
-| B02, B09 | Tappable archive rows; lifecycle-aware detail with only restore/reopen enabled; permission guards | Model and focused archive/Plan UI checks pass |
+| B02, B09 | Tappable archive rows; lifecycle-aware detail with only restore/reopen enabled; existing Archive action switches to Unarchive / Mark as not done; permission guards | Model checks and refined archive/completed-detail UI checks pass |
 | B03 | Fourth custom-list toolbar action invokes existing native share/manage service | Toolbar UI check passes; actual link creation remains B01 |
 | B04, B07 | Separate per-tab routes; nonanimated cleanup and filter reset only on main-page switches | Filter/Settings, editor removal and draft persistence UI checks pass; exact animation frames not measured |
 | B05 | Stable themed capsule replaces the pill's live interactive glass effect | Remediation builds and survives exercised flows; intermittent phone flicker still needs observation |
@@ -586,3 +591,9 @@ No review-scoping code was changed. See ADR-0071.
 - **2026-10-15, review clarification:** User confirms N01's global review scope is intentional.
   Closed N01 as expected behavior and recorded Q02 for source-list context/global review invitations.
   Documentation only; review logic and app UI are unchanged.
+
+- **2026-10-15, archive action refinement:** User requests the existing Archive action become
+  Unarchive in archived detail, replacing the separate restore button. Implemented the same action
+  slot for restore/reopen, retaining model guards and disabled editing. Both existing focused UI
+  cases pass after implementation, including restore/reopen and absence of the separate button.
+  Result: `/tmp/fleeting21-archive-action.xcresult`; SwiftFormat lint and `git diff --check` pass.

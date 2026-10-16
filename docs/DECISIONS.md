@@ -2321,8 +2321,10 @@ must be removed completely.
 including shared tasks, rather than converting `.done` to `.archived`. Plan keeps its historical
 completion projection; no schema or repeated shared archive writes are introduced. Reopen preserves
 ID, membership and due day. Archived/completed details enforce a restore-only mode, including model
-mutation guards and sharing permissions. Move task completion into secondary round actions and
-provide an explicit Save control. Persist edited text together with actions that leave the editor.
+mutation guards and sharing permissions. Per the user's archive-action refinement, reuse the
+Archive action's existing position for Unarchive / Mark as not done, with the restore icon and
+permission-aware enabled state; a separate restore button is unnecessary. Move task completion into
+secondary round actions and provide an explicit Save control. Persist edited text together with actions that leave the editor.
 
 Split Thoughts/Lists navigation bindings. Switching main pages resets thought filters and dismisses
 old routes in a nonanimated transaction; inner screens and Settings preserve the filter. Retain

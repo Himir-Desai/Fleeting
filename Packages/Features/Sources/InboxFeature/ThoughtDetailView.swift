@@ -88,18 +88,6 @@ public struct ThoughtDetailView: View {
                         "View-only shared list. Your habit progress and hiding stay personal.")
                         .font(Typography.caption).foregroundStyle(Palette.inkMuted)
                 }
-                if model.isReadOnly {
-                    Button(model.thought.isCompleted ? "Mark as not done" : "Unarchive") {
-                        Task {
-                            if await model.restore() {
-                                dismiss()
-                            }
-                        }
-                    }
-                    .buttonStyle(.bordered)
-                    .disabled(!model.canRestore)
-                    .accessibilityIdentifier("detail.restore")
-                }
                 actions
             }
             .padding(Spacing.loose)
@@ -278,14 +266,25 @@ public struct ThoughtDetailView: View {
         }
         .disabled(model.isReadOnly)
         if model.thought.canEditContent || model.isReadOnly {
-            actionButton(symbol: "archivebox", label: "Archive", tint: Palette.inkMuted) {
+            actionButton(
+                symbol: model.isReadOnly ? "arrow.uturn.backward" : "archivebox",
+                label: model.isReadOnly
+                    ? (model.thought.isCompleted ? "Mark as not done" : "Unarchive") : "Archive",
+                tint: model.isReadOnly ? Palette.accentText : Palette.inkMuted,
+                identifier: "detail.action.archive"
+            ) {
                 Task {
-                    if await model.archive() {
+                    let succeeded: Bool = if model.isReadOnly {
+                        await model.restore()
+                    } else {
+                        await model.archive()
+                    }
+                    if succeeded {
                         dismiss()
                     }
                 }
             }
-            .disabled(!model.canEdit)
+            .disabled(model.isReadOnly ? !model.canRestore : !model.canEdit)
             actionButton(symbol: "trash", label: "Delete", tint: Palette.fading) {
                 Task {
                     if await model.delete() {
@@ -302,10 +301,11 @@ public struct ThoughtDetailView: View {
         symbol: String,
         label: String,
         tint: Color,
+        identifier: String? = nil,
         action: @escaping () -> Void
     ) -> some View {
         RoundIconButton(symbol: symbol, label: label, tint: tint, showsLabel: true, action: action)
-            .accessibilityIdentifier("detail.action.\(label.lowercased())")
+            .accessibilityIdentifier(identifier ?? "detail.action.\(label.lowercased())")
     }
 
     /// The custom-expiry toggle, which applies or clears the override as it flips.
