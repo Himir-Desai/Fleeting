@@ -4,8 +4,8 @@
 > forbidden in it, and where to put a new thing. It is kept current as the app is built — if you are
 > a future session picking this repo up, read this before opening any Swift file.
 >
-> **Last updated:** iCloud list collaboration — the existing SwiftData model/store now opens
-> through native Core Data sharing, with private personal activity (ADR-0069).
+> **Last updated:** v2.1 completion, task/archive action slots, global review context and current
+> screenshot documentation (ADR-0070–0072).
 
 ---
 
@@ -29,7 +29,7 @@ Dependencies point **downward only**. `Core` is the floor and imports nothing.
 ```
         App  ·  Widgets            ← composition roots, wiring only
               ↓
-           Features                ← Capture, Inbox, Sharpen, Review, Settings
+           Features                ← Capture, Inbox/Lists, Plan, Sharpen, Review, Settings
               ↓
   DesignSystem   Intelligence      ← presentation vocabulary · LLM abstraction
               ↓         ↓
@@ -77,6 +77,7 @@ Fleeting/
 │   ├── screenshots/native-bar/   ← prior native 3/4-tab revision, retained as history
 │   ├── screenshots/permanent-native-tabs/ ← prior selector-preserves-page revision
 │   ├── screenshots/list-destination-followup/ ← empty Lists, shared assignment, row type and circular close
+│   ├── screenshots/v2.1/            ← current README assets; named light/dark app tours plus review/accessibility evidence
 │   ├── ROADMAP.md                   ← phases, scope, acceptance criteria
 │   └── ICLOUD.md                    ← signing, production schema and two-device acceptance
 │

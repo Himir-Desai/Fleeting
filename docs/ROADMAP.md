@@ -618,7 +618,7 @@ App Store Connect subsequently reports the owner's phone installed 2.0 (4); this
 acceptance, not confirmation that a live invitation or collaborative edit succeeded.
 
 
-## 2.1 · Scoped bug fixes 🟡
+## 2.1 · Scoped bug fixes 🟢
 
 2026-10-15: user authorizes B01–B12 and Q01 from [BUGS_V2.1.md](BUGS_V2.1.md), with unrelated new
 issues logged only and all tests deferred until the implementation is complete. Current changes
@@ -666,3 +666,10 @@ Both local and upload-staged IPA capability/signature checks pass, and Apple ack
 processing. Source release commit: `987db0c`. Assignment to the existing External Tester Group
 and TestFlight App Review submission remain incomplete because no browser is connected; external
 tester availability is not claimed. The exact remaining steps are in [INSTALL.md](INSTALL.md).
+
+Completion accepted (2026-10-17): the user confirms v2.1 is done and authorizes integration into
+main and a remote push. Refresh the README's features, four-tab navigation, lifecycle and data-flow
+diagrams, build instructions, validation evidence and screenshots for the accepted version.
+Screenshot tours use the isolated regression simulator only. Preserve the historical live-device
+and TestFlight availability limits above; accepting the implementation does not retroactively
+verify those service/device observations. New app issues remain separate work.

@@ -1,12 +1,13 @@
 # Fleeting v2.1 — bugs and UX requests
 
-Created: 2026-10-08 · Last updated: 2026-10-16
+Created: 2026-10-08 · Last updated: 2026-10-17
 
-**Current phase: scoped fixes authorized (2026-10-15).** Fix B01–B12, Q01, and the subsequently
-authorized Q02 review-context UI enhancement.
-Log newly discovered issues without fixing them. The user requests tests at the end of the complete
-implementation, not after each change. Earlier investigation notes below are retained as history;
-current implementation and validation status are tracked separately.
+**Current phase: v2.1 accepted as complete (2026-10-17).** The user authorizes the README/screenshot
+refresh, merge into main and remote push. B01–B12, Q01 and the later-authorized Q02 enhancement
+are the accepted implementation scope. Preserve the detailed validation and live-device/service
+limits below; implementation acceptance is separate from unobserved tester distribution or
+cross-account acceptance. Log new app issues without fixing them unless separately authorized.
+Earlier investigation and implementation notes remain as history.
 
 Keep the original numbering and stable IDs when adding details or new reports. Distinguish
 code-confirmed behavior, tested behavior, service observations, and hypotheses. A plausible cause
@@ -613,6 +614,32 @@ fine; preserve the existing **Back to Thoughts** label and dismiss behavior.
 
 **Source observation retained:** `ReviewView.summary` uses this label for the same review opened
 from Thoughts or Lists. No completion-label or navigation change is part of Q02.
+
+### N03 — Task expiry wording can imply automatic archiving (logged only)
+
+**Discovered during README screenshot review — 2026-10-17.** Active to-dos still show copy such
+as “archives tomorrow” in Thoughts and “Archives tomorrow” on thought-review cards, although
+`ArchiveSweeper.sweep()` explicitly excludes unfinished to-dos and the built-in Plan list from
+automatic expiry archiving. This is a presentation/lifecycle wording mismatch, not evidence that
+an unfinished task was actually archived. Screenshot evidence:
+`screenshots/v2.1/light/02-thoughts.png` and `screenshots/v2.1/review-source-lists.png`.
+
+`ThoughtRow.metadata` and `ReviewView` display the freshness expiry date using archive wording;
+the protected-task behavior remains unchanged. Future wording should distinguish freshness from
+automatic archiving for protected tasks. No app change or additional reproduction was attempted;
+deferred to separately authorized work after the accepted v2.1 baseline.
+
+## Documentation and integration
+
+**2026-10-17:** The user accepts v2.1 as complete and authorizes the current README/screenshots
+refresh, merge into main and remote push. README now describes current features, four-tab routes,
+completion/archive rules, global review, package dependencies and control/data flow. The screenshot
+refresh adds 36 current light/dark tour captures and retains two v2.1 refinement captures with
+documented provenance. The two selected screenshot tours pass in each appearance after correcting
+the new driver's initial empty-field wait to account for iOS exposing its placeholder value.
+That correction changes only screenshot automation, not app behavior. N03 is logged without a fix.
+GitHub Markdown rendering, local links/images, image integrity, formatting and diff checks are
+verified before integration. Historical source-test and distribution evidence above is retained.
 
 ## Implementation history
 
