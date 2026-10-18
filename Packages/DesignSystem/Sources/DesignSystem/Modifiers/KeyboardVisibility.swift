@@ -8,8 +8,37 @@ import SwiftUI
 @MainActor
 @Observable
 public final class KeyboardVisibilityState {
-    public fileprivate(set) var isVisible = false
+    /// The keyboard snapshot shared by pages and stacked presentations.
+    public static let shared = KeyboardVisibilityState()
+    public private(set) var isVisible = false
     public init() {}
+
+    /// Reconciles visibility with the active window's current keyboard geometry.
+    public func refresh() {
+        #if os(iOS)
+            guard let window = activeWindow else { return }
+            let frame = window.keyboardLayoutGuide.layoutFrame
+            isVisible = frame.height > window.safeAreaInsets.bottom + 1
+                && frame.minY < window.bounds.maxY
+        #endif
+    }
+
+    #if os(iOS)
+        private var activeWindow: UIWindow? {
+            UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+                .filter { $0.activationState == .foregroundActive }
+                .flatMap(\.windows).first { $0.isKeyWindow }
+        }
+
+        fileprivate func update(from notification: Notification) {
+            guard let window = activeWindow,
+                  let frame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect
+            else { refresh(); return }
+            let local = window.convert(frame, from: window.screen.coordinateSpace)
+            let overlap = window.bounds.intersection(local)
+            isVisible = !overlap.isNull && overlap.height > window.safeAreaInsets.bottom + 1
+        }
+    #endif
 }
 
 public extension EnvironmentValues {
@@ -25,7 +54,8 @@ public extension View {
 }
 
 private struct KeyboardVisibility: ViewModifier {
-    @State private var keyboard = KeyboardVisibilityState()
+    @State private var keyboard = KeyboardVisibilityState.shared
+    @Environment(\.scenePhase) private var scenePhase
 
     func body(content: Content) -> some View {
         content.environment(\.keyboardVisibility, keyboard)
@@ -33,15 +63,21 @@ private struct KeyboardVisibility: ViewModifier {
             .onReceive(NotificationCenter.default
                 .publisher(for: UIResponder.keyboardWillChangeFrameNotification))
             { note in
-                guard let frame = note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect,
-                      let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene
-                else { return }
-                keyboard.isVisible = frame.height > 0 && frame.minY < scene.screen.bounds.maxY
+                keyboard.update(from: note)
             }
             .onReceive(NotificationCenter.default
-                .publisher(for: UIResponder.keyboardWillHideNotification))
+                .publisher(for: UIResponder.keyboardDidChangeFrameNotification))
+            { note in keyboard.update(from: note) }
+            .onReceive(NotificationCenter.default
+                .publisher(for: UIResponder.keyboardDidHideNotification))
             { _ in
-                keyboard.isVisible = false
+                keyboard.refresh()
+            }
+            .onAppear { keyboard.refresh() }
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active {
+                    keyboard.refresh()
+                }
             }
         #endif
     }

@@ -15,6 +15,21 @@ public final class ThoughtDetailModel {
     /// The thought as it currently stands, updated after each action.
     public private(set) var thought: Thought
 
+    /// Whether this thought is archived or completed and can only be restored.
+    public var isReadOnly: Bool {
+        !thought.state.isLive
+    }
+
+    /// Whether content and properties are editable in this session.
+    public var canEdit: Bool {
+        !isReadOnly && thought.canEditContent
+    }
+
+    /// Whether this user may restore the archived or completed thought.
+    public var canRestore: Bool {
+        isReadOnly && thought.canEditContent
+    }
+
     /// The editable raw text. Committed on demand, never on every keystroke.
     public var draft: String
 
@@ -33,9 +48,11 @@ public final class ThoughtDetailModel {
 
     /// Changes collection membership without rewriting the thought or its captured date.
     public func moveToList(_ id: UUID?) async {
+        guard canEdit else { return }
         do {
             guard var latest = try await repository.all().first(where: { $0.id == thought.id })
             else { return }
+            guard latest.state.isLive, latest.canEditContent else { return }
             latest.listID = id
             if id == ThoughtList.planID {
                 if latest.kind != .todo {
@@ -127,13 +144,14 @@ public final class ThoughtDetailModel {
     /// Whether the draft differs from what is stored and is worth committing.
     public var canSaveText: Bool {
         let trimmed = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-        return !trimmed.isEmpty && trimmed != thought.body
+        return canEdit && !trimmed.isEmpty && trimmed != thought.body
     }
 
     /// Commits the edited text, if it changed. Counts as deliberate action.
     public func saveText() async {
         guard canSaveText else { return }
-        var revised = thought
+        guard var revised = try? await repository.all().first(where: { $0.id == thought.id }),
+              revised.state.isLive, revised.canEditContent else { return }
         revised.revise(body: draft.trimmingCharacters(in: .whitespacesAndNewlines), at: clock.now)
         await persist(revised)
     }
@@ -141,7 +159,7 @@ public final class ThoughtDetailModel {
     /// Sets the thought's kind by hand, which classification will then never overwrite.
     /// - Parameter kind: The chosen kind.
     public func chooseKind(_ kind: ThoughtKind) async {
-        guard kind != thought.kind else { return }
+        guard canEdit, kind != thought.kind else { return }
         var corrected = thought
         corrected.confirmKind(kind, at: clock.now)
         if kind != .todo, corrected.listID == ThoughtList.planID {
@@ -156,22 +174,37 @@ public final class ThoughtDetailModel {
 
     /// Applies the current expiry wheels, or clears the override when custom expiry is off.
     public func applyExpiry() async {
+        guard canEdit else { return }
         var updated = thought
         updated.setCustomLifetime(customLifetime)
         await persist(updated)
     }
 
-    /// Marks a to-do complete, taking it out of the live list.
+    /// Saves a task's edited words and completes it once, retaining it in Thoughts for one day.
     @discardableResult
     public func complete() async -> Bool {
+        guard canEdit, thought.kind == .todo else { return false }
         var completed = thought
+        if canSaveText {
+            completed.revise(body: draft.trimmingCharacters(in: .whitespacesAndNewlines), at: clock.now)
+        }
         completed.complete(at: clock.now)
         return await persist(completed)
+    }
+
+    /// Restores a completed or archived thought to its existing list and due day.
+    @discardableResult
+    public func restore() async -> Bool {
+        guard canRestore else { return false }
+        var restored = thought
+        restored.restore(at: clock.now)
+        return await persist(restored)
     }
 
     /// Records a habit as kept, extending its streak and restoring its freshness.
     @discardableResult
     public func markHabitKept() async -> Bool {
+        guard !isReadOnly else { return false }
         var kept = thought
         kept.markHabitKept(at: clock.now)
         return await persist(kept)
@@ -182,6 +215,7 @@ public final class ThoughtDetailModel {
     /// Marking is one tap in a list, so it is a tap people make by accident. Without this the only
     /// way back was to let the whole streak lapse (ADR-0044).
     public func undoHabitKept() async {
+        guard !isReadOnly else { return }
         var undone = thought
         undone.undoHabitKept()
         await persist(undone)
@@ -192,7 +226,7 @@ public final class ThoughtDetailModel {
     /// Remembered as a decision, so classification will not talk the user out of it later.
     /// - Parameter cadence: The chosen cadence.
     public func chooseCadence(_ cadence: HabitCadence) async {
-        guard cadence != thought.cadence else { return }
+        guard canEdit, cadence != thought.cadence else { return }
         var updated = thought
         updated.setCadence(cadence)
         await persist(updated)
@@ -212,6 +246,7 @@ public final class ThoughtDetailModel {
     /// - Parameter days: How long to snooze for.
     @discardableResult
     public func snooze(forDays days: Double) async -> Bool {
+        guard !isReadOnly else { return false }
         var snoozed = thought
         snoozed.snooze(until: clock.now.addingTimeInterval(days * .day), at: clock.now)
         return await persist(snoozed)
@@ -220,6 +255,7 @@ public final class ThoughtDetailModel {
     /// Archives the thought by hand.
     @discardableResult
     public func archive() async -> Bool {
+        guard canEdit else { return false }
         var archived = thought
         archived.archive(at: clock.now)
         return await persist(archived)
@@ -228,6 +264,7 @@ public final class ThoughtDetailModel {
     /// Permanently deletes the thought. The only path here that destroys anything.
     @discardableResult
     public func delete() async -> Bool {
+        guard canEdit else { return false }
         do {
             try await repository.delete(id: thought.id)
             lastError = nil
@@ -250,8 +287,12 @@ public final class ThoughtDetailModel {
     @discardableResult
     private func persist(_ thought: Thought) async -> Bool {
         do {
-            try await repository.update(thought)
-            self.thought = thought
+            var updated = thought
+            if canSaveText {
+                updated.revise(body: draft.trimmingCharacters(in: .whitespacesAndNewlines), at: clock.now)
+            }
+            try await repository.update(updated)
+            self.thought = updated
             lastError = nil
             changes.notify()
             return true

@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Equal-size toolbar actions with balanced padding inside one glass capsule.
+/// Equal-size toolbar actions inside one stable, themed capsule.
 public struct ToolbarPill<Content: View>: View {
     private let content: Content
 
@@ -15,7 +15,8 @@ public struct ToolbarPill<Content: View>: View {
             .buttonStyle(PillActionStyle())
             .padding(.horizontal, Spacing.snug)
             .padding(.vertical, Spacing.tight)
-            .floatingGlass()
+            .background(Palette.raised, in: Capsule())
+            .overlay { Capsule().strokeBorder(Palette.separator, lineWidth: 1) }
             .fixedSize()
             .foregroundStyle(Palette.accentText)
             .accessibilityElement(children: .contain)

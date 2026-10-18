@@ -762,6 +762,8 @@ an existing thought" would reuse the same field.
 
 ## ADR-0025 · Freshness reads as weight, not a meter
 
+**Status:** Font-weight treatment superseded by ADR-0070 (2026-10-15).
+
 **Status:** Accepted · Thoughts redesign
 
 **Context.** The inbox row drew freshness three ways at once: an opacity fade, a thin meter, and a
@@ -2303,3 +2305,115 @@ not real-time; no external website or account system is introduced.
 share graph isolation, owner/editor/viewer writes, personal activity, durable offline reopening,
 and focused unsigned UI flows. These do not claim an actual CloudKit invitation was delivered.
 The signed two-account checklist is recorded in ICLOUD.md.
+
+
+## ADR-0070 · v2.1 lifecycle presentation and navigation corrections
+
+**Date:** 2026-10-15
+
+**Context.** The user authorizes only B01–B12 and Q01 from BUGS_V2.1, with tests at the end.
+Completed tasks disappear immediately from Thoughts, their editor still offers Mark done, archive
+rows cannot open, cross-tab routes/filters leak, and glass toolbar surfaces flicker. Task completion
+should remain visible for a day and be excluded from reviews. The expiry-based font-weight feature
+must be removed completely.
+
+**Decision.** Keep the stored completion date and derive a 24-hour Thoughts/Lists archive boundary,
+including shared tasks, rather than converting `.done` to `.archived`. Plan keeps its historical
+completion projection; no schema or repeated shared archive writes are introduced. Reopen preserves
+ID, membership and due day. Archived/completed details enforce a restore-only mode, including model
+mutation guards and sharing permissions. Reuse the Archive position for Unarchive on archived
+thoughts. Completed tasks use Mark not done in their completion slot (ADR-0072); a separate restore
+button is unnecessary. Move task completion into
+secondary round actions and provide an explicit Save control. Persist edited text together with actions that leave the editor.
+
+Split Thoughts/Lists navigation bindings. Switching main pages resets thought filters and dismisses
+old routes in a nonanimated transaction; inner screens and Settings preserve the filter. Retain
+native TabView/tab-anchored popovers, using public UIKit presentation delegates and tab-bar touch
+passthrough to prevent implicit selector dismissal. The top action pill uses its stable themed
+capsule surface instead of dynamic Liquid Glass sampling; floating capture controls retain glass.
+Use a shared keyboard snapshot and active-window geometry so attaching a new page observer cannot
+start from a false local keyboard state. Home's full selected-list text sizes naturally up to
+180 points while leaving the remaining capture controls space.
+
+Remove the freshness font-weight helper and its only production call, updating obsolete comments.
+Preserve freshness's independent expiry, opacity, color, urgency, surface and accessibility behavior.
+Repair CloudKit sharing's missing system type through an explicit DEBUG Development-only schema
+operation on an empty disposable zone, followed by Production schema promotion. Normal launches
+never initialize schema or create fixture shares. Use the persisted native share returned by Core
+Data rather than the pre-persistence instance when presenting the system sharing controller.
+
+**Alternatives and costs.** Replacing the stored done state would erase the completion meaning that
+Plan depends on. A new lifecycle column/migration is unnecessary for a time-derived display rule.
+Replacing the tab bar would disregard the existing native-navigation requirement. Keeping the pill's
+interactive glass shader leaves the reported unstable rendering path in place. Removing all decay
+would exceed the requested font-weight removal. B05/B10 still require runtime verification of their
+intermittent symptoms; source changes alone do not establish that a failure has stopped.
+
+**Validation:** Recorded in BUGS_V2.1 after the final test phase. Newly discovered unrelated issues
+are recorded there without implementation.
+
+
+## ADR-0071 · Thought review resurfaces eligible thoughts across all lists
+
+**Date:** 2026-10-15
+
+**Context.** N01 initially described a selected list's review count/session spanning other lists as
+an issue. The user confirms this is intended: with ten lists, someone should not have to open each
+one, and an old forgotten list must still resurface through a review opened on another page.
+
+**Decision.** Keep thought review and its invitation/count global regardless of the list/page used
+to open it. Existing review eligibility and session limits continue to apply. Q02 shows each
+reviewed thought's source list, including No list for unfiled thoughts, and communicates the global
+scope of the existing review invitation and session header. The user subsequently authorizes this
+presentation improvement on 2026-10-15.
+
+Inject Core's ThoughtListRepository into ReviewModel from the composition root to read source names
+at load and on store changes. Keep review usable when metadata cannot load: retain known names and
+label unresolved membership List unavailable. Names remain metadata rather than being copied into
+the thought; a rename must not reset the session or its decisions. Use quiet caption text with a
+list glyph above each card's body, allowing long names and Dynamic Type to wrap.
+
+**Alternative and cost.** Restricting the session to the selected list would make its contents match
+the browsing context, but would require visiting every list and could leave forgotten lists unseen.
+Global review preserves discovery; it needs source-list context so people understand why each card
+appears and can act with confidence. Copying list names into thought records would duplicate
+independently mutable metadata; resolving names through the existing Core protocol keeps feature
+layers independent, at the cost of a metadata read on load/refresh.
+
+**Consequences.** N01 is closed as intended behavior. Q02 implements the source/context improvement
+while preserving global review behavior, eligibility and session limits. Existing review entry
+points remain on Thoughts/Lists; the capture field remains unobstructed. The user accepts N02's
+existing completion-button wording, which stays unchanged.
+
+
+**Q02 verification (2026-10-15).** All 18 ReviewModel tests and both focused UI checks pass, including
+review entered from a selected list with named/unfiled cards and operability at the largest text
+size. Normal/large-text screenshots were visually checked. Evidence and metadata failure/rename
+coverage are recorded in BUGS_V2.1.
+
+
+## ADR-0072 · Completion and archive keep their own action slots
+
+**Date:** 2026-10-15
+
+**Context.** The user's completed-task screenshot shows a disabled Mark done control and Mark as
+not done in the archive slot. The five long-labelled actions trigger a two-column grid. The user
+wants completion to toggle in its original position and all actions to remain in one row; the
+existing Archive/Unarchive behavior for archived thoughts is accepted.
+
+**Decision.** Toggle Mark done / Mark not done in the first task action, using the existing guarded
+complete/restore model paths. The archive slot toggles Archive / Unarchive only for archived state;
+it stays disabled for completed tasks. Stable action identifiers follow these semantic slots.
+Keep a single horizontal row, sharing available width between visible controls, with centered,
+wrapping captions. Scale the minimum slot width with Dynamic Type and allow horizontal scrolling
+when necessary so large text remains readable. The round controls retain their 52-point targets.
+
+**Alternatives and cost.** Reusing the archive slot for task undo leaves the completion control
+misleading. A grid breaks the requested row. Shrinking text or tap targets to force accessibility
+sizes into the viewport harms readability and interaction. The horizontal row may require a sideways
+scroll at accessibility sizes, while ordinary sizes keep all five controls visible.
+
+**Verification:** All three focused task/archive/largest-text UI checks pass. Normal-size tests
+verify five action frames share one row inside the viewport; the completion slot completes and
+reopens tasks while Archive stays distinct. Normal/large-text screenshots were visually checked.
+Evidence is recorded in BUGS_V2.1.

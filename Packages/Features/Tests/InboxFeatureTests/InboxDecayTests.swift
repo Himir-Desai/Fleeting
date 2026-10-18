@@ -188,7 +188,7 @@ struct InboxKindTests {
         #expect(model.expiryDate(of: model.thoughts[0]) == epoch.addingTimeInterval(90 * .day))
     }
 
-    @Test("completing a todo takes it out of the live list without destroying it")
+    @Test("completing a todo keeps a checked task visible for one day without destroying it")
     func completingATodo() async {
         let thought = inferred("call the dentist", as: .todo)
         let repository = SpyRepository([thought])
@@ -197,7 +197,7 @@ struct InboxKindTests {
 
         await model.complete(thought)
 
-        #expect(model.thoughts.isEmpty)
+        #expect(model.thoughts.first?.isCompleted == true)
         #expect(await repository.thoughts.count == 1)
         #expect(await repository.thoughts.first?.state == .done(at: epoch))
     }

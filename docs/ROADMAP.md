@@ -616,3 +616,60 @@ App Store Connect completed processing and confirms only the Internal Tester Gro
 live cross-account sharing remains unverified.
 App Store Connect subsequently reports the owner's phone installed 2.0 (4); this is distribution
 acceptance, not confirmation that a live invitation or collaborative edit succeeded.
+
+
+## 2.1 · Scoped bug fixes 🟢
+
+2026-10-15: user authorizes B01–B12 and Q01 from [BUGS_V2.1.md](BUGS_V2.1.md), with unrelated new
+issues logged only and all tests deferred until the implementation is complete. Current changes
+cover restore-only archived/completed editors, top-level list sharing, tab/filter cleanup, stable
+pills, adaptive list labels, persistent selector presentation, keyboard state, one-day completed
+task visibility, task controls and removal of expiry-based font weight. The missing CloudKit
+sharing type was created in Development and deployed to Production. Final test
+results and limits are recorded in the bug tracker: 372 package tests, nine focused UI cases,
+and Debug/optimized Release simulator app/widget builds pass. Simulator iCloud relogin enabled
+successful Development share/link generation; after the user's Console deployment, Production
+matches the reviewed schema and a Production fixture generates a real share URL. Both empty fixture
+zones were removed and the normal app restored. B01's configuration repair is verified; native
+list/two-account acceptance remains unverified. Intermittent phone flicker still needs observation.
+The initial implementation scope excluded releases; the user subsequently authorized alpha
+publication, recorded below.
+
+
+Review clarification (2026-10-15): N01's global thought-review count/session is intentional, so
+forgotten lists can resurface without being opened. The user subsequently authorizes Q02: review
+cards now identify their source list, and the existing Thoughts/Lists invitation and review header
+make the global scope explicit. Source names refresh without restarting decisions, with clear
+unfiled/unavailable labels. All 18 ReviewModel tests and both focused cross-list/largest-text UI
+checks pass; screenshots, formatting and diff checked. N02 is closed as accepted behavior without
+an app change. See ADR-0071.
+
+
+Archive action refinement (2026-10-15): the existing thought-detail Archive action becomes Unarchive
+for archived thoughts. The subsequent task correction keeps Mark done / Mark not done in the
+completion slot, with Archive/Unarchive separate. All actions stay in one horizontal row with
+wrapping captions and horizontal scrolling at accessibility sizes. The separate restore button is
+removed. All three focused task/archive/largest-text UI cases pass; screenshots visually checked,
+with formatting and diff checks passing (ADR-0072).
+
+Alpha publication (2026-10-15): user authorizes release to the existing Internal Tester Group.
+Version 2.1 (5), source release commit `38ab961`, archived normally and uploaded successfully with
+Production CloudKit and TestFlight Internal Only. The local export and exact upload-staged IPA
+both pass the distribution verifier for app/widget signatures and required capabilities. Apple
+acknowledged processing at 19:54 local time. Final processing/group availability is pending
+verification; browser access currently has no connected browser. No external group was modified.
+Release evidence and the remaining handoff are tracked in [INSTALL.md](INSTALL.md).
+
+External beta publication (authorized 2026-10-15, upload completed 2026-10-16): version 2.1 (6)
+uses the same validated app source and a normally signed archive with external testing eligibility.
+Both local and upload-staged IPA capability/signature checks pass, and Apple acknowledged
+processing. Source release commit: `987db0c`. Assignment to the existing External Tester Group
+and TestFlight App Review submission remain incomplete because no browser is connected; external
+tester availability is not claimed. The exact remaining steps are in [INSTALL.md](INSTALL.md).
+
+Completion accepted (2026-10-17): the user confirms v2.1 is done and authorizes integration into
+main and a remote push. Refresh the README's features, four-tab navigation, lifecycle and data-flow
+diagrams, build instructions, validation evidence and screenshots for the accepted version.
+Screenshot tours use the isolated regression simulator only. Preserve the historical live-device
+and TestFlight availability limits above; accepting the implementation does not retroactively
+verify those service/device observations. New app issues remain separate work.

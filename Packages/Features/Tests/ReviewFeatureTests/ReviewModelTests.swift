@@ -58,6 +58,76 @@ private struct StubIntelligence: IntelligenceService {
 @MainActor
 @Suite("ReviewModel")
 struct ReviewModelTests {
+    @Test("global review cards identify their source lists and distinguish unfiled from unavailable lists")
+    func globalSourceLists() async {
+        let work = ThoughtList(name: "Work")
+        let forgotten = ThoughtList(name: "Forgotten projects")
+        var first = fading("Work thought")
+        first.listID = work.id
+        var second = fading("Forgotten thought")
+        second.listID = forgotten.id
+        let unfiled = fading("Unfiled thought")
+        var unavailable = fading("Imported thought")
+        unavailable.listID = UUID()
+        let all = [first, second, unfiled, unavailable]
+        let model = ReviewModel(
+            repository: SpyRepository(all),
+            intelligence: StubIntelligence(),
+            clock: StubClock(now: epoch),
+            listRepository: ReviewListRepository([work, forgotten])
+        )
+
+        await model.load()
+
+        #expect(Set(model.cards.map(\.id)) == Set(all.map(\.id)))
+        #expect(model.sourceListName(for: first) == "Work")
+        #expect(model.sourceListName(for: second) == "Forgotten projects")
+        #expect(model.sourceListName(for: unfiled) == "No list")
+        #expect(model.sourceListName(for: unavailable) == "List unavailable")
+    }
+
+    @Test("list renames refresh without resetting decisions, and read failures retain known context")
+    func refreshSourceLists() async throws {
+        var list = ThoughtList(name: "Old name")
+        var first = fading("First")
+        first.listID = list.id
+        var second = fading("Second")
+        second.listID = list.id
+        let lists = ReviewListRepository([list])
+        let model = ReviewModel(
+            repository: SpyRepository([first, second]),
+            intelligence: StubIntelligence(),
+            clock: StubClock(now: epoch),
+            listRepository: lists
+        )
+        await model.load()
+        await model.act()
+        let pendingID = model.current?.id
+        list.name = "Renamed list"
+        try await lists.saveList(list)
+
+        await model.refreshPending()
+
+        #expect(model.sourceListName(for: second) == "Renamed list")
+        #expect(model.tally.acted == 1)
+        #expect(model.current?.id == pendingID)
+        await lists.failReads()
+        await model.refreshPending()
+        #expect(model.sourceListName(for: second) == "Renamed list")
+        #expect(model.tally.acted == 1)
+        #expect(model.current?.id == pendingID)
+
+        let withoutMetadata = ReviewModel(
+            repository: SpyRepository([first]),
+            intelligence: StubIntelligence(),
+            clock: StubClock(now: epoch),
+            listRepository: lists
+        )
+        await withoutMetadata.load()
+        #expect(withoutMetadata.cards.map(\.id) == [first.id])
+        #expect(withoutMetadata.sourceListName(for: first) == "List unavailable")
+    }
+
     @Test("view-only review permits personal decisions but refuses shared archive and sharpening")
     func viewOnlyReview() async {
         let thought = Thought(
@@ -318,6 +388,33 @@ struct ReviewModelTests {
 }
 
 private struct ReviewWriteFailure: Error {}
+
+private actor ReviewListRepository: ThoughtListRepository {
+    private var stored: [ThoughtList]
+    private var readsFail = false
+
+    init(_ lists: [ThoughtList]) {
+        stored = lists
+    }
+
+    func lists() async throws -> [ThoughtList] {
+        guard !readsFail else { throw ReviewWriteFailure() }
+        return [.plan] + stored
+    }
+
+    func saveList(_ list: ThoughtList) async throws {
+        stored.removeAll { $0.id == list.id }
+        stored.append(list)
+    }
+
+    func deleteList(id: UUID) async throws {
+        stored.removeAll { $0.id == id }
+    }
+
+    func failReads() {
+        readsFail = true
+    }
+}
 
 private actor FailedReviewRepository: ThoughtRepository {
     let thought: Thought

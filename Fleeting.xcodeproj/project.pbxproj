@@ -32,6 +32,7 @@
 		6C109AD98811688150499901 /* CaptureControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BB1C4BCFFEA3E7A5918E667 /* CaptureControl.swift */; };
 		765F33F905718234A03BA7C7 /* PerformanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A109425BA406AB2E636C02F0 /* PerformanceTests.swift */; };
 		78B0A8D0E85EF539F9AA8990 /* DailyPlanWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72977DD9B74CA2A4CEC2CD36 /* DailyPlanWidget.swift */; };
+		7DE4CFF41CAC0E0ED5A77AAF /* ListSelectorPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEE1746AE9BB9A25F9766583 /* ListSelectorPresentation.swift */; };
 		838D4FA8D30DDD19B08E2C0B /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 1EA73C5FB86CDABCF05103D2 /* PrivacyInfo.xcprivacy */; };
 		8C64F45E922522D8DC92A622 /* IntelligenceFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9ABCBD8B3F56BA2BAE5BB79 /* IntelligenceFactory.swift */; };
 		90F8B3DDA577382E950A3319 /* FleetingWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A3821BEDB4AF4DA366141AA /* FleetingWidgetBundle.swift */; };
@@ -59,6 +60,7 @@
 		E0EF91352166520258E088CB /* WidgetCompletion.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF280FAB7E8897C7582BAC4B /* WidgetCompletion.swift */; };
 		E823289437846C40262870E4 /* NativeNavigationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A160284FA975DDA9E16C1BEB /* NativeNavigationTests.swift */; };
 		E8A4D1727816F94D0CE0C165 /* AppTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C3CAEBDD30069418330E6E8 /* AppTab.swift */; };
+		EC82DFEE37A5DE0252927A22 /* V21RegressionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 258CAF3A0D57571B7FE24B38 /* V21RegressionTests.swift */; };
 		ED3B13C0B9E82AE8DA76BBE8 /* CapturePathTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F4BE6A80F5EA0F861667073 /* CapturePathTests.swift */; };
 		FE7346B76363377E8CAD0AA1 /* DevelopmentCloudSchema.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED918BCE9E41C5CCC0E81453 /* DevelopmentCloudSchema.swift */; };
 /* End PBXBuildFile section */
@@ -105,6 +107,7 @@
 		191E8FDAE4FDDE3F5D74B7EA /* ListSharingCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListSharingCoordinator.swift; sourceTree = "<group>"; };
 		1EA73C5FB86CDABCF05103D2 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		2050A98DB977997005425030 /* ThoughtReviewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThoughtReviewTests.swift; sourceTree = "<group>"; };
+		258CAF3A0D57571B7FE24B38 /* V21RegressionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V21RegressionTests.swift; sourceTree = "<group>"; };
 		2711083FE04F312B6E57B258 /* FleetingWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FleetingWidgets.entitlements; sourceTree = "<group>"; };
 		296430D3AE94DEDE71E78C86 /* FleetingApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FleetingApp.swift; sourceTree = "<group>"; };
 		29B08EFA51DB4BD1A38E86CD /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -134,6 +137,7 @@
 		BACF3041980F2408D3677BEC /* NativeListChoices.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeListChoices.swift; sourceTree = "<group>"; };
 		C1E8D0F835436B790ACBA1E8 /* FleetingUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = FleetingUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		C24E098AB9105E82E284EC09 /* CaptureThoughtIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureThoughtIntent.swift; sourceTree = "<group>"; };
+		CEE1746AE9BB9A25F9766583 /* ListSelectorPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListSelectorPresentation.swift; sourceTree = "<group>"; };
 		CF280FAB7E8897C7582BAC4B /* WidgetCompletion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetCompletion.swift; sourceTree = "<group>"; };
 		D3685FFAA929FBD701425183 /* CaptureWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureWidget.swift; sourceTree = "<group>"; };
 		D43FD9840D025A505CB6FF91 /* AccessibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityTests.swift; sourceTree = "<group>"; };
@@ -293,6 +297,7 @@
 				08A95200B22CF61389BCC9E0 /* SyncTests.swift */,
 				4654FF32A8291ADE6A9DDDAA /* TabNavigation.swift */,
 				2050A98DB977997005425030 /* ThoughtReviewTests.swift */,
+				258CAF3A0D57571B7FE24B38 /* V21RegressionTests.swift */,
 			);
 			path = UITests;
 			sourceTree = "<group>";
@@ -311,6 +316,7 @@
 			isa = PBXGroup;
 			children = (
 				6C3CAEBDD30069418330E6E8 /* AppTab.swift */,
+				CEE1746AE9BB9A25F9766583 /* ListSelectorPresentation.swift */,
 				BACF3041980F2408D3677BEC /* NativeListChoices.swift */,
 				ED128BC0484BE69526BAE733 /* RootView.swift */,
 			);
@@ -478,6 +484,7 @@
 				FE7346B76363377E8CAD0AA1 /* DevelopmentCloudSchema.swift in Sources */,
 				1942ADBB80B1A5E7E4363A09 /* FleetingApp.swift in Sources */,
 				8C64F45E922522D8DC92A622 /* IntelligenceFactory.swift in Sources */,
+				7DE4CFF41CAC0E0ED5A77AAF /* ListSelectorPresentation.swift in Sources */,
 				A48B11357F054E695235F779 /* ListSharingCoordinator.swift in Sources */,
 				1A52957CD8BD89F68B2241F3 /* NativeListChoices.swift in Sources */,
 				AFA439D732A9A7179B567407 /* PlanDemoData.swift in Sources */,
@@ -522,6 +529,7 @@
 				4685CE55F7F38924D81F3434 /* SyncTests.swift in Sources */,
 				35D89F831481980BE11387FD /* TabNavigation.swift in Sources */,
 				BD7E1D447109CF0E73B75D38 /* ThoughtReviewTests.swift in Sources */,
+				EC82DFEE37A5DE0252927A22 /* V21RegressionTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -545,14 +553,14 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = Widgets/FleetingWidgets.entitlements;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 6;
 				INFOPLIST_FILE = Widgets/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.0;
+				MARKETING_VERSION = 2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.himirdesai.Fleeting.Widgets;
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -635,13 +643,13 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = App/Fleeting.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 6;
 				INFOPLIST_FILE = App/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.0;
+				MARKETING_VERSION = 2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.himirdesai.Fleeting;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = 1;
@@ -669,14 +677,14 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = Widgets/FleetingWidgets.entitlements;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 6;
 				INFOPLIST_FILE = Widgets/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.0;
+				MARKETING_VERSION = 2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.himirdesai.Fleeting.Widgets;
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -752,13 +760,13 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = App/Fleeting.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 6;
 				INFOPLIST_FILE = App/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.0;
+				MARKETING_VERSION = 2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.himirdesai.Fleeting;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = 1;

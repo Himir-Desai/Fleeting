@@ -35,18 +35,20 @@ The docs are maintained continuously, without being asked:
 
 ## Testing
 **Never run the full iOS UI suite.** `xcodebuild test` without `-only-testing:` takes ~10 minutes
-and is banned (2026-08-31). The package tests are the feedback loop: all 246 of them run in about
-four seconds with `swift test --package-path Packages/<name>`. If a UI test genuinely has to run,
+and is banned (2026-08-31). Package tests are the feedback loop; run the relevant package with
+`swift test --package-path Packages/<name>`. If a UI test genuinely has to run,
 name the one suite with `-only-testing:FleetingUITests/<Suite>`.
 
 Persistence is two invocations, never one: `--filter PersistenceTests` and
 `--filter SchemaMigrationTests` (ADR-0029 — SwiftData binds an entity name per process).
 
 ## Working rhythm
-**v2.1 is collecting reports only** (2026-10-08). Maintain [docs/BUGS_V2.1.md](docs/BUGS_V2.1.md)
-as the user reports bugs and UX requests. Do not reproduce, investigate, or implement any of those
-items until the user explicitly gives permission to start. This includes the expiry-based thickness
-removal. A new report is authorization to update the tracker, not to fix it.
+**v2.1 is accepted as complete** (2026-10-17). The user authorizes the current README/screenshots
+refresh, merge into main, and remote push. B01–B12, Q01/Q02 and accepted N01/N02 decisions are
+recorded in [docs/BUGS_V2.1.md](docs/BUGS_V2.1.md); preserve their validation limits and release
+receipts. New app issues are logged without a fix unless separately authorized. The user requests
+tests at the end of an implementation, not after each change. Screenshot tours may run as needed
+to create and verify the documentation assets, using only an isolated disposable simulator.
 
 **Teaching is paused** (2026-08-18). Do not explain Swift concepts or run comprehension checks
 unless asked. Build **one roadmap phase at a time**, then stop and report what was added and how to

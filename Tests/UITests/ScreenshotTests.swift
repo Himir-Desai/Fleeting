@@ -6,6 +6,91 @@ import XCTest
 /// working. Attachments are extracted from the result bundle with `xcresulttool`.
 @MainActor
 final class ScreenshotTests: XCTestCase {
+    /// Captures the v2.1 list and restore controls using only disposable fixture records.
+    func testCaptureV21ListsAndRestoreScreenshots() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["--reset-store", "--seed-demo"]
+        app.launch()
+        let field = app.textFields["capture.field"]
+        XCTAssertTrue(field.waitForExistence(timeout: 10))
+        field.tap()
+        app.buttons["capture.lists"].tap()
+        app.buttons["Create list"].tap()
+        let name = app.textFields["lists.name"]
+        XCTAssertTrue(name.waitForExistence(timeout: 5))
+        name.tap()
+        name.typeText("Weekend projects")
+        let description = app.textFields["lists.description"]
+        description.tap()
+        description.typeText("Small ideas worth making time for.")
+        app.buttons["lists.save"].tap()
+        XCTAssertTrue(name.waitForNonExistence(timeout: 5))
+
+        for body in [
+            "a tiny bookshop map for the neighbourhood",
+            "a newsletter about places worth walking to"
+        ] {
+            field.tap()
+            field.typeText(body)
+            app.buttons["capture.save"].tap()
+            let cleared = expectation(for: NSPredicate(format: "value != %@", body), evaluatedWith: field)
+            wait(for: [cleared], timeout: 5)
+        }
+        app.buttons["capture.dismissKeyboard"].tap()
+        snapshot("Home selected list", app: app)
+        app.tabButton("Lists").tap()
+        XCTAssertTrue(app.descendants(matching: .any)["inbox.listChoices"].waitForExistence(timeout: 5))
+        snapshot("Lists picker", app: app)
+        app.buttons["Weekend projects"].tap()
+        XCTAssertTrue(app.buttons["inbox.shareSelectedList"].waitForExistence(timeout: 5))
+        snapshot("Selected list", app: app)
+        app.buttons["inbox.editSelectedList"].tap()
+        XCTAssertTrue(name.waitForExistence(timeout: 5))
+        snapshot("List editor", app: app)
+        app.buttons["lists.cancel"].tap()
+
+        XCTAssertTrue(app.goToThoughts())
+        XCTAssertTrue(app.chooseFilter("Archived"))
+        app.buttons["row.openArchived"].firstMatch.tap()
+        XCTAssertTrue(app.textFields["detail.text"].waitForExistence(timeout: 5))
+        reveal(app.buttons["detail.action.archive"], app: app)
+        XCTAssertEqual(app.buttons["detail.action.archive"].label, "Unarchive")
+        snapshot("Archived thought", app: app)
+
+        app.tabButton("Plan").tap()
+        let input = app.textFields["plan.input"]
+        XCTAssertTrue(input.waitForExistence(timeout: 5))
+        input.tap()
+        input.typeText("Send the weekend plan\n")
+        app.buttons["plan.dismissKeyboard"].tap()
+        let complete = app.buttons["Send the weekend plan"]
+        XCTAssertTrue(complete.waitForExistence(timeout: 5))
+        complete.tap()
+        app.buttons["Edit Send the weekend plan"].tap()
+        XCTAssertTrue(app.textFields["detail.text"].waitForExistence(timeout: 5))
+        reveal(app.buttons["detail.action.complete"], app: app)
+        XCTAssertEqual(app.buttons["detail.action.complete"].label, "Mark not done")
+        snapshot("Completed task", app: app)
+    }
+
+    private func snapshot(_ name: String, app: XCUIApplication) {
+        let shot = XCTAttachment(screenshot: app.screenshot())
+        shot.name = name
+        shot.lifetime = .keepAlways
+        add(shot)
+    }
+
+    private func reveal(_ element: XCUIElement, app: XCUIApplication) {
+        for _ in 0 ..< 8 {
+            if element.exists, element.isHittable {
+                return
+            }
+            app.swipeUp()
+        }
+        XCTAssertTrue(element.isHittable)
+    }
+
     func testCaptureCaptureScreenshot() {
         let app = XCUIApplication()
         app.launchArguments = ["--reset-store"]

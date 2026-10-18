@@ -56,6 +56,8 @@ public final class ReviewModel {
     public var ambientAnswer = ""
 
     private let repository: any ThoughtRepository
+    private let listRepository: (any ThoughtListRepository)?
+    private var sourceLists: [ThoughtList] = [.plan]
     private let selector: ReviewSelector
     private let engine: DecayEngine
     private let intelligence: any IntelligenceService
@@ -72,6 +74,7 @@ public final class ReviewModel {
     ///   - changes: Told when a decision is made, so other screens refresh.
     ///   - clock: Time source for every decision.
     ///   - snoozeDays: How long Snooze sets a thought aside for.
+    ///   - listRepository: Supplies the source-list names shown on review cards.
     public init(
         repository: any ThoughtRepository,
         selector: ReviewSelector = ReviewSelector(),
@@ -79,9 +82,11 @@ public final class ReviewModel {
         intelligence: any IntelligenceService,
         changes: ThoughtChangeNotifier = ThoughtChangeNotifier(),
         clock: any WallClock,
-        snoozeDays: Double = 7
+        snoozeDays: Double = 7,
+        listRepository: (any ThoughtListRepository)? = nil
     ) {
         self.repository = repository
+        self.listRepository = listRepository
         self.selector = selector
         self.engine = engine
         self.intelligence = intelligence
@@ -93,6 +98,12 @@ public final class ReviewModel {
     /// When the displayed thought would archive if no action is taken.
     public func expiryDate(of thought: Thought) -> Date? {
         engine.expiryDate(of: thought)
+    }
+
+    /// The thought's source list, with distinct labels for unfiled and unavailable membership.
+    public func sourceListName(for thought: Thought) -> String {
+        guard let id = thought.listID else { return "No list" }
+        return sourceLists.first { $0.id == id }?.name ?? "List unavailable"
     }
 
     /// The card currently being decided, or `nil` once the session is over.
@@ -140,6 +151,7 @@ public final class ReviewModel {
 
     /// Builds the session.
     public func load() async {
+        await refreshSourceLists()
         let everything = await (try? repository.thoughts(in: .live)) ?? []
         cards = selector.select(from: everything, at: clock.now)
         position = 0
@@ -157,13 +169,21 @@ public final class ReviewModel {
 
     /// Reconciles remaining cards with the latest stored state.
     func refreshPending() async {
-        guard hasLoaded, let latest = try? await repository.thoughts(in: .live) else { return }
+        guard hasLoaded else { return }
+        await refreshSourceLists()
+        guard let latest = try? await repository.thoughts(in: .live) else { return }
         let eligible = Dictionary(
             selector.select(from: latest, at: clock.now).map { ($0.id, $0) },
             uniquingKeysWith: { first, _ in first }
         )
         let decided = Array(cards.prefix(position))
         cards = decided + cards.dropFirst(position).compactMap { eligible[$0.id] }
+    }
+
+    /// Refreshes source names while retaining the last known names if metadata is unavailable.
+    private func refreshSourceLists() async {
+        guard let listRepository, let lists = try? await listRepository.lists() else { return }
+        sourceLists = lists
     }
 
     /// Fetches a question to attach to the current idea card, if it can take one.

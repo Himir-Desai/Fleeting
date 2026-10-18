@@ -34,6 +34,8 @@ public struct RoundIconButton: View {
                     .background { Circle().fill(isSelected ? Palette.accent : Palette.surfaceSunken) }
                 if showsLabel {
                     Text(label).font(Typography.caption).foregroundStyle(Palette.inkMuted)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
         }

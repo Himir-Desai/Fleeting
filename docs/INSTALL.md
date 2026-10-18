@@ -144,3 +144,77 @@ Update through TestFlight without uninstalling: capture in build 3 used the app'
 store, and the existing local-to-App-Group migration preserves it when capabilities return.
 This fixes the demonstrated signing omission; live invitation acceptance still needs a second
 iCloud account. Package/UI source behavior is unchanged, so existing source tests were not rerun.
+
+## v2.1 alpha release · 2026-10-15
+
+The user authorized publishing the completed v2.1 fixes to the existing internal alpha testers.
+The app and widget are version **2.1 (5)**. The release includes the completed-task action-row
+correction and global review source-list context; see [BUGS_V2.1.md](BUGS_V2.1.md) for the scoped
+changes, validation and remaining live-device acceptance checks.
+
+Use a normally signed Release archive, Production CloudKit export and
+`testFlightInternalTestingOnly=true`. Keep `manageAppVersionAndBuildNumber=false` so the verified
+build number is preserved. The app declares `ITSAppUsesNonExemptEncryption=false`: it has no
+custom encryption implementation or third-party cryptography and relies on Apple's operating
+system for CloudKit security. This release metadata avoids a repeated missing-compliance gate.
+
+Archive: `/tmp/Fleeting-2.1-5-alpha.xcarchive`. Local export:
+`/tmp/fleeting21-alpha-export/Fleeting.ipa`. Both the final local IPA and the exact IPA staged by
+the upload exporter pass `Tools/verify-distribution.py` for app/widget signatures and all required
+capabilities. Both contain the expected 2.1 (5) version; the main app's encryption declaration is
+verified. The upload uses the same Internal Only and Production export options.
+
+**Upload succeeded at 19:54 local time on 2026-10-15** and Apple acknowledged that the package is
+processing. Source release commit: `38ab961`. A copy of the verified upload-staged package is
+retained at `/tmp/fleeting21-alpha-upload/Fleeting-uploaded.ipa`, SHA-256
+`c4560c4803aa53ea24b58de8884e0ded95b1869e83d5bb1219e6442c03c8a8e8`.
+Upload log: `/tmp/fleeting21-alpha-upload.log`.
+
+Final processing and Internal Tester Group assignment are still unverified. After permissions
+were enabled, the computer helper stopped reporting its startup error, but this session has no
+connected browser and native-app APIs are unavailable. Connect the signed-in App Store Connect
+browser, then verify 2.1 (5) is Testing in the existing **Internal → Tester Group**. Add the build
+there if automatic distribution did not do so; preserve the External group. Prepared What to Test
+text is at `/tmp/fleeting21-alpha-what-to-test.txt`. Do not describe alpha availability as verified
+until this final check is complete.
+
+## v2.1 external beta release · 2026-10-15
+
+The user subsequently authorized distribution to the existing **External → Tester Group** as
+well. Build 5's Internal Only restriction cannot be removed from that uploaded build. Prepare
+version **2.1 (6)** from the same validated app source, with a normally signed Release archive,
+Production CloudKit and `testFlightInternalTestingOnly=false`. Keep the build number fixed during
+export. This is a TestFlight beta release; public App Store submission is outside this request.
+
+**Upload succeeded on 2026-10-16**, and Apple acknowledged that the package is processing.
+Source release commit: `987db0c`. Both the local export and exact upload-staged IPA pass
+`Tools/verify-distribution.py`, including app/widget signatures, Production CloudKit and App Group
+capabilities. The 2.1 (6) versions, encryption declaration and external-eligible export option were
+also checked. The unchanged app implementation retains its existing source-test validation; no
+repeat source test run was needed for the build-number/export-option change.
+
+Archive: `/tmp/Fleeting-2.1-6-beta.xcarchive`. Local export:
+`/tmp/fleeting21-beta-export/Fleeting.ipa`. Exact upload-staged package copy:
+`/tmp/fleeting21-beta-upload/Fleeting-uploaded.ipa`, SHA-256
+`a88a6794b39019b925129b479b99db40b1f2afefe9535d691eac7222590de772`.
+Upload log: `/tmp/fleeting21-beta-upload.log`. Prepared What to Test text:
+`/tmp/fleeting21-beta-what-to-test.txt`.
+
+**External distribution is not completed.** The browser inventory remains empty and binding
+App Store Connect returns `No browser is available`, including after the user's connection retry
+and a fresh helper session. An App Store Connect API credential is not available to this task; the saved Xcode account
+successfully uploads but does not provide group/review management through the export command.
+Final processing, external-group assignment, review submission and tester availability remain
+unverified. No external group or tester/public-link settings have been changed yet.
+
+To finish in the connected browser or manually:
+
+1. App Store Connect → Fleeting → TestFlight → **External Testing → Tester Group**.
+2. Add Builds → choose **2.1 (6)** once processing finishes.
+3. Use the prepared What to Test notes and select **Automatically notify testers**.
+4. Choose **Submit Review** or **Start Testing**, as Apple offers. Reuse the existing review
+   contact information. Confirm the group lists build 6 as Waiting for Review/In Review or Testing;
+   only Testing establishes that the external release is available.
+
+This handoff is required by the unavailable browser connection, not another approval requirement.
+The user has already authorized external beta publication and its necessary review submission.

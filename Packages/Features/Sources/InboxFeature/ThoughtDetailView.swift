@@ -12,6 +12,7 @@ public struct ThoughtDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @FocusState private var isEditing: Bool
     @State private var isChoosingList = false
+    @ScaledMetric(relativeTo: .caption) private var minimumActionWidth: CGFloat = 52
 
     private let onEnhance: () -> Void
     private let onAddList: (@escaping (ThoughtList) -> Void) -> Void
@@ -43,12 +44,12 @@ public struct ThoughtDetailView: View {
                 textWell
                 Card {
                     VStack(alignment: .leading, spacing: Spacing.loose) {
-                        typeSection.disabled(!model.thought.canEditContent)
+                        typeSection.disabled(!model.canEdit)
                         Divider().overlay(Palette.separator)
                         listSection
                     }
                 }
-                if let kindAction, model.thought.kind == .habit || model.thought.canEditContent {
+                if let kindAction, model.thought.kind == .habit {
                     KindActionButton(
                         label: kindAction.label,
                         symbol: kindAction.symbol,
@@ -60,11 +61,13 @@ public struct ThoughtDetailView: View {
                             }
                         }
                     }
+                    .disabled(model.isReadOnly)
                 }
                 if model.canUndoHabitKept, let streak = model.thought.streak {
                     StreakSection(streak: streak, cadence: model.thought.cadence) {
                         Task { await model.undoHabitKept() }
                     }
+                    .disabled(model.isReadOnly)
                 }
                 // Only a habit has a rhythm, and it sits with the streak because the two are the
                 // same subject: how often, and how well it has gone (ADR-0048).
@@ -76,10 +79,10 @@ public struct ThoughtDetailView: View {
                             Task { await model.chooseCadence(cadence) }
                         }
                     )
-                    .disabled(!model.thought.canEditContent)
+                    .disabled(!model.canEdit)
                 }
                 if model.thought.sharing == nil {
-                    Card { expirySection }
+                    Card { expirySection }.disabled(!model.canEdit)
                 } else {
                     Text(model.thought
                         .canEditContent ? "Shared thoughts are archived manually." :
@@ -96,17 +99,26 @@ public struct ThoughtDetailView: View {
             isEditing = false
         }
         .pageHeading("Thought")
-        #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-        #endif
-            .task { await model.observeChanges() }
-            .onChange(of: model.isDeleted) { _, deleted in
-                if deleted {
-                    dismiss()
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Save") {
+                    Task { await model.saveText(); isEditing = false }
                 }
+                .disabled(!model.canSaveText)
+                .accessibilityIdentifier("detail.save")
             }
-            // Text is committed when leaving, so an edit is never lost by tapping back.
-            .onDisappear { Task { await model.saveText() } }
+        }
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        #endif
+        .task { await model.observeChanges() }
+        .onChange(of: model.isDeleted) { _, deleted in
+            if deleted {
+                dismiss()
+            }
+        }
+        // Text is committed when leaving, so an edit is never lost by tapping back.
+        .onDisappear { Task { await model.saveText() } }
     }
 
     private var listSection: some View {
@@ -123,7 +135,7 @@ public struct ThoughtDetailView: View {
             .buttonStyle(PressFeedbackStyle())
             .foregroundStyle(Palette.accentText)
             .accessibilityIdentifier("detail.list")
-            .disabled(model.thought.sharing != nil)
+            .disabled(!model.canEdit || model.thought.sharing != nil)
             .popover(isPresented: $isChoosingList) {
                 ListSelectionChoices(
                     choices: model.lists.map { .init(
@@ -160,7 +172,7 @@ public struct ThoughtDetailView: View {
                 .foregroundStyle(Palette.ink)
                 .tint(Palette.accentText)
                 .focused($isEditing)
-                .disabled(!model.thought.canEditContent)
+                .disabled(!model.canEdit)
                 .accessibilityLabel("Thought text")
                 .accessibilityIdentifier("detail.text")
                 .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -192,7 +204,7 @@ public struct ThoughtDetailView: View {
     /// The kind-specific action for the current thought, if any.
     private var kindAction: KindAction? {
         switch model.thought.kind {
-        case .todo: KindAction(label: "Mark done", symbol: "checkmark") { await model.complete() }
+        case .todo: nil
         case .habit:
             KindAction(label: "Continue streak", symbol: "leaf") { await model.markHabitKept() }
         case .idea, .unsorted: nil
@@ -219,21 +231,56 @@ public struct ThoughtDetailView: View {
         }
     }
 
-    /// Enhance, snooze, archive and delete, as labelled round chips.
+    /// One horizontal row of labelled actions, scrollable when larger text needs more room.
     private var actions: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(alignment: .top, spacing: Spacing.regular) { actionChoices }
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: Spacing.loose) {
+        ScrollView(.horizontal) {
+            HStack(alignment: .top, spacing: Spacing.tight) {
                 actionChoices
             }
         }
-        .frame(maxWidth: .infinity)
+        .scrollIndicators(.hidden)
+        .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+        .accessibilityIdentifier("detail.actions")
+    }
+
+    /// The number of visible action slots used to share the available row width.
+    private var actionCount: Int {
+        1 + (model.thought.kind == .todo ? 1 : 0)
+            + (model.thought.canEditContent || model.isReadOnly ? 3 : 0)
+    }
+
+    private var isArchived: Bool {
+        if case .archived = model.thought.state {
+            return true
+        }
+        return false
     }
 
     @ViewBuilder
     private var actionChoices: some View {
-        if model.thought.canEditContent {
+        if model.thought.kind == .todo {
+            actionButton(
+                symbol: model.thought.isCompleted ? "arrow.uturn.backward" : "checkmark.circle",
+                label: model.thought.isCompleted ? "Mark not done" : "Mark done",
+                tint: Palette.accentText,
+                identifier: "detail.action.complete"
+            ) {
+                Task {
+                    let succeeded: Bool = if model.thought.isCompleted {
+                        await model.restore()
+                    } else {
+                        await model.complete()
+                    }
+                    if succeeded {
+                        dismiss()
+                    }
+                }
+            }
+            .disabled(model.thought.isCompleted ? !model.canRestore : !model.canEdit)
+        }
+        if model.thought.canEditContent || model.isReadOnly {
             actionButton(symbol: "sparkles", label: "Enhance", tint: Palette.accentText) { onEnhance() }
+                .disabled(!model.canEdit)
         }
         actionButton(symbol: "moon.zzz", label: "Snooze", tint: Palette.accentText) {
             Task {
@@ -242,14 +289,26 @@ public struct ThoughtDetailView: View {
                 }
             }
         }
-        if model.thought.canEditContent {
-            actionButton(symbol: "archivebox", label: "Archive", tint: Palette.inkMuted) {
+        .disabled(model.isReadOnly)
+        if model.thought.canEditContent || model.isReadOnly {
+            actionButton(
+                symbol: isArchived ? "arrow.uturn.backward" : "archivebox",
+                label: isArchived ? "Unarchive" : "Archive",
+                tint: isArchived ? Palette.accentText : Palette.inkMuted,
+                identifier: "detail.action.archive"
+            ) {
                 Task {
-                    if await model.archive() {
+                    let succeeded: Bool = if isArchived {
+                        await model.restore()
+                    } else {
+                        await model.archive()
+                    }
+                    if succeeded {
                         dismiss()
                     }
                 }
             }
+            .disabled(isArchived ? !model.canRestore : !model.canEdit)
             actionButton(symbol: "trash", label: "Delete", tint: Palette.fading) {
                 Task {
                     if await model.delete() {
@@ -257,6 +316,7 @@ public struct ThoughtDetailView: View {
                     }
                 }
             }
+            .disabled(!model.canEdit)
         }
     }
 
@@ -265,10 +325,17 @@ public struct ThoughtDetailView: View {
         symbol: String,
         label: String,
         tint: Color,
+        identifier: String? = nil,
         action: @escaping () -> Void
     ) -> some View {
         RoundIconButton(symbol: symbol, label: label, tint: tint, showsLabel: true, action: action)
-            .accessibilityIdentifier("detail.action.\(label.lowercased())")
+            .containerRelativeFrame(.horizontal) { width, _ in
+                max(
+                    minimumActionWidth,
+                    (width - CGFloat(actionCount - 1) * Spacing.tight) / CGFloat(actionCount)
+                )
+            }
+            .accessibilityIdentifier(identifier ?? "detail.action.\(label.lowercased())")
     }
 
     /// The custom-expiry toggle, which applies or clears the override as it flips.

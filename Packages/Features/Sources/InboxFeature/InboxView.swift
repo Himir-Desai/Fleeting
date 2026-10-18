@@ -14,6 +14,7 @@ public struct InboxView: View {
     private let onSettings: () -> Void
     private let onReview: () -> Void
     private let onEditList: (ThoughtList) -> Void
+    private let onShareList: (ThoughtList) -> Void
     private let onOpen: (Thought) -> Void
 
     /// Creates the inbox.
@@ -34,7 +35,8 @@ public struct InboxView: View {
         onReview: @escaping () -> Void,
         onOpen: @escaping (Thought) -> Void,
         onSettings: @escaping () -> Void = {},
-        onEditList: @escaping (ThoughtList) -> Void = { _ in }
+        onEditList: @escaping (ThoughtList) -> Void = { _ in },
+        onShareList: @escaping (ThoughtList) -> Void = { _ in }
     ) {
         _model = State(initialValue: model)
         self.changes = changes
@@ -44,6 +46,7 @@ public struct InboxView: View {
         self.onOpen = onOpen
         self.onSettings = onSettings
         self.onEditList = onEditList
+        self.onShareList = onShareList
     }
 
     public var body: some View {
@@ -66,6 +69,9 @@ public struct InboxView: View {
         ) {
             ToolbarPill {
                 if let selectedList, !selectedList.isBuiltIn {
+                    Button { onShareList(selectedList) } label: { Image(systemName: "square.and.arrow.up") }
+                        .accessibilityLabel(selectedList.sharing == nil ? "Share list" : "Manage sharing")
+                        .accessibilityIdentifier("inbox.shareSelectedList")
                     Button { onEditList(selectedList) } label: { Image(systemName: "pencil") }
                         .accessibilityLabel("Edit \(selectedList.name)")
                         .accessibilityIdentifier("inbox.editSelectedList")
@@ -77,6 +83,13 @@ public struct InboxView: View {
             }
         }
         .task { await model.load() }
+        .task(id: model.nextCompletionArchiveDate) {
+            guard model.nextCompletionArchiveDate != nil else { return }
+            do {
+                try await model.waitForCompletionArchive()
+                await model.load()
+            } catch { /* Navigation cancels the boundary wait. */ }
+        }
         .task {
             // Classification finishes after capture has moved on; without this the list
             // would show "Unsorted" until the user closed and reopened it.
@@ -131,17 +144,21 @@ public struct InboxView: View {
 
             if model.reviewCount >= 1 {
                 Button(action: onReview) {
-                    Label(
-                        "\(model.reviewCount) \(model.reviewCount == 1 ? "thought" : "thoughts") to review",
-                        systemImage: "clock.arrow.circlepath"
-                    )
-                    .font(Typography.subtitle)
-                    .foregroundStyle(Palette.accentText)
+                    VStack(alignment: .leading, spacing: Spacing.tight) {
+                        Label(
+                            "\(model.reviewCount) \(model.reviewCount == 1 ? "thought" : "thoughts") to review",
+                            systemImage: "clock.arrow.circlepath"
+                        )
+                        .font(Typography.subtitle)
+                        .foregroundStyle(Palette.accentText)
+                        Text("Across all lists")
+                            .font(Typography.caption).foregroundStyle(Palette.inkMuted)
+                    }
                 }
                 .buttonStyle(PressFeedbackStyle())
                 .accessibilityIdentifier("inbox.review")
-                .accessibilityLabel("\(model.reviewCount) need a decision")
-                .accessibilityHint("Opens a short session to decide what to keep")
+                .accessibilityLabel("\(model.reviewCount) need a decision across all lists")
+                .accessibilityHint("Opens a short review of thoughts from all lists, including No list")
             }
         }
     }
@@ -167,6 +184,7 @@ public struct InboxView: View {
                 ForEach(model.filteredThoughts) { thought in
                     ArchivedListRow(
                         thought: thought,
+                        onOpen: { onOpen(thought) },
                         onRestore: { Task { await model.restore(thought) } },
                         onDelete: { Task { await model.delete(thought) } }
                     )
@@ -235,7 +253,13 @@ public struct InboxView: View {
             onSnooze: { Task { await model.snooze(thought, forDays: 7) } },
             onArchive: { Task { await model.archive(thought) } },
             onDelete: { Task { await model.delete(thought) } },
-            onComplete: { Task { await model.complete(thought) } },
+            onComplete: { Task {
+                if thought.isCompleted {
+                    await model.reopen(thought)
+                } else {
+                    await model.complete(thought)
+                }
+            } },
             onMarkHabitKept: { Task { await model.markHabitKept(thought) } }
         )
     }

@@ -25,6 +25,53 @@ final class ThoughtReviewTests: XCTestCase {
         XCTAssertTrue(element.isHittable)
     }
 
+    func testReviewFromOneListShowsNamedAndUnfiledSources() {
+        let app = launch()
+        let body = app.staticTexts["review.card"].label
+        XCTAssertEqual(app.descendants(matching: .any)["review.sourceList"].firstMatch.label, "List: No list")
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        let row = app.buttons.matching(NSPredicate(
+            format: "identifier == 'row.open' AND label CONTAINS %@", body
+        )).firstMatch
+        reveal(row, app: app)
+        row.tap()
+        let selector = app.buttons["detail.list"]
+        reveal(selector, app: app)
+        selector.tap()
+        let choices = app.descendants(matching: .any)["detail.listChoices"]
+        XCTAssertTrue(choices.waitForExistence(timeout: 5))
+        choices.buttons["Add List"].tap()
+        let name = app.textFields["lists.name"]
+        XCTAssertTrue(name.waitForExistence(timeout: 5))
+        let listName = "Forgotten projects and ideas from last spring"
+        name.tap()
+        name.typeText(listName)
+        app.buttons["lists.save"].tap()
+        XCTAssertTrue(name.waitForNonExistence(timeout: 5))
+        XCTAssertEqual(selector.label, listName)
+        app.tabButton("Lists").tap()
+        let navigation = app.descendants(matching: .any)["inbox.listChoices"]
+        XCTAssertTrue(navigation.waitForExistence(timeout: 5))
+        navigation.buttons[listName].tap()
+        let invitation = app.buttons["inbox.review"]
+        XCTAssertTrue(invitation.waitForExistence(timeout: 5))
+        XCTAssertTrue(invitation.label.contains("across all lists"))
+        invitation.tap()
+        XCTAssertTrue(app.staticTexts["review.scope"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.staticTexts["review.scope"].label, "Thoughts from across all lists")
+        let sources = app.descendants(matching: .any).matching(NSPredicate(
+            format: "identifier BEGINSWITH 'review.sourceList'"
+        ))
+        let listed = sources.matching(NSPredicate(format: "label == %@", "List: " + listName)).firstMatch
+        XCTAssertTrue(listed.waitForExistence(timeout: 5))
+        reveal(listed, app: app)
+        XCTAssertTrue(sources.matching(NSPredicate(format: "label == 'List: No list'")).firstMatch.exists)
+        let shot = XCTAttachment(screenshot: app.screenshot())
+        shot.name = "Global review identifies source lists"
+        shot.lifetime = .keepAlways
+        add(shot)
+    }
+
     func testExplicitLabelsAndTaskReviewStyle() {
         let app = launch()
         XCTAssertTrue(app.staticTexts["A fresh start"].exists)
